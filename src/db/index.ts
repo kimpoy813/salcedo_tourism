@@ -29,15 +29,16 @@ async function ensureDatabaseSeeded(db: AppDatabase): Promise<void> {
   }
   if (!g.__cedoSeedPromise) {
     g.__cedoSeedPromise = (async () => {
-      const [existingBrgy, existingSession] = await Promise.all([
+      const [existingBrgy, existingSession, existingRating] = await Promise.all([
         db.select({ id: schema.barangays.id }).from(schema.barangays).limit(1),
         db.select({ id: schema.anonymousSessions.id }).from(schema.anonymousSessions).limit(1),
+        db.select({ id: schema.placeRatings.id }).from(schema.placeRatings).limit(1),
       ]);
       const { seedDatabase, seedSampleActivityData } = await import("./seed-core");
       if (existingBrgy.length === 0) {
         await seedDatabase(db);
       }
-      if (existingSession.length === 0 && !process.env.VITEST) {
+      if ((existingSession.length === 0 || existingRating.length === 0) && !process.env.VITEST) {
         await seedSampleActivityData(db);
       }
       g.__cedoSeeded = true;

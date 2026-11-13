@@ -6,6 +6,18 @@ export const dynamic = "force-dynamic";
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
+    const sortParam = searchParams.get("sort");
+    const sort =
+      sortParam === "name"
+        ? "name"
+        : sortParam === "most_visited"
+        ? "most_visited"
+        : sortParam === "top_rated"
+        ? "top_rated"
+        : sortParam === "featured"
+        ? "featured"
+        : "newest";
+
     const places = await getPublishedPlaces({
       type: searchParams.get("type"),
       categorySlug: searchParams.get("category"),
@@ -13,7 +25,7 @@ export async function GET(req: Request) {
       search: searchParams.get("q") || searchParams.get("search"),
       featuredOnly: searchParams.get("featured") === "true",
       hiddenGemOnly: searchParams.get("hiddenGem") === "true",
-      sort: searchParams.get("sort") === "name" ? "name" : "newest",
+      sort,
     });
 
     return NextResponse.json({ places, count: places.length });

@@ -3,7 +3,16 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import { List, Map as MapIcon, Search, SlidersHorizontal, X } from "lucide-react";
+import {
+  Flame,
+  LayoutGrid,
+  List,
+  Map as MapIcon,
+  Search,
+  SlidersHorizontal,
+  Star,
+  X,
+} from "lucide-react";
 import { PlaceCard, type PlaceCardData } from "./PlaceCard";
 import type { MapBarangayItem } from "./SalcedoMap";
 import { trackSearchEvent } from "@/lib/client/analytics-tracker";
@@ -13,12 +22,14 @@ const SalcedoMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[58vh] rounded-2xl border border-[#EAE7E0] bg-[#EAE6DC] flex items-center justify-center text-xs text-[#616E69]">
+      <div className="h-[58vh] rounded-2xl border border-[#EAE7E0] bg-[#ECE9E0] flex items-center justify-center text-xs text-[#616E69]">
         Loading map...
       </div>
     ),
   }
 );
+
+type DirectorySort = "most_visited" | "top_rated" | "by_category" | "featured" | "name";
 
 interface CategoryItem {
   id: string;
@@ -59,6 +70,16 @@ function DiscoverDirectoryInner({
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  const initialSortParam = searchParams.get("sort");
+  const initialSort: DirectorySort =
+    initialSortParam === "top_rated" ||
+    initialSortParam === "by_category" ||
+    initialSortParam === "featured" ||
+    initialSortParam === "name" ||
+    initialSortParam === "most_visited"
+      ? initialSortParam
+      : "most_visited";
+
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [selectedCategory, setSelectedCategory] = useState(
     searchParams.get("category") || "all"
@@ -67,7 +88,7 @@ function DiscoverDirectoryInner({
     searchParams.get("barangay") || "all"
   );
   const [selectedType, setSelectedType] = useState(searchParams.get("type") || "all");
-  const [sortBy, setSortBy] = useState<"featured" | "name">("featured");
+  const [sortBy, setSortBy] = useState<DirectorySort>(initialSort);
   const [viewMode, setViewMode] = useState<"list" | "map">("list");
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
@@ -106,11 +127,57 @@ function DiscoverDirectoryInner({
       return true;
     });
 
+    if (sortBy === "most_visited") {
+      return [...list].sort(
+        (a, b) => (a.mostVisitedRank ?? 99) - (b.mostVisitedRank ?? 99)
+      );
+    }
+    if (sortBy === "top_rated") {
+      return [...list].sort(
+        (a, b) => (a.topRatedRank ?? 99) - (b.topRatedRank ?? 99)
+      );
+    }
+    if (sortBy === "by_category") {
+      return [...list].sort(
+        (a, b) => (a.categoryRank ?? 99) - (b.categoryRank ?? 99)
+      );
+    }
     if (sortBy === "name") {
       return [...list].sort((a, b) => a.name.localeCompare(b.name));
     }
-    return [...list].sort((a, b) => Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)));
+    return [...list].sort(
+      (a, b) => Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured))
+    );
   }, [initialPlaces, query, selectedCategory, selectedBarangay, selectedType, sortBy]);
+
+  const categorizedGroups = useMemo(() => {
+    if (sortBy !== "by_category") return [];
+    const groups = new Map<
+      string,
+      { slug: string; name: string; places: PlaceCardData[] }
+    >();
+
+    for (const cat of nonEmptyCategories) {
+      groups.set(cat.slug, { slug: cat.slug, name: cat.name, places: [] });
+    }
+
+    for (const p of filteredPlaces) {
+      const slug = p.primaryCategory?.slug || p.placeType;
+      const name = p.primaryCategory?.name || p.placeType;
+      const group = groups.get(slug) ?? { slug, name, places: [] };
+      group.places.push(p);
+      groups.set(slug, group);
+    }
+
+    return Array.from(groups.values())
+      .filter((g) => g.places.length > 0)
+      .map((g) => ({
+        ...g,
+        places: [...g.places].sort(
+          (a, b) => (a.categoryRank ?? 99) - (b.categoryRank ?? 99)
+        ),
+      }));
+  }, [sortBy, filteredPlaces, nonEmptyCategories]);
 
   useEffect(() => {
     if (!query.trim()) return;
@@ -130,14 +197,14 @@ function DiscoverDirectoryInner({
     setSelectedCategory("all");
     setSelectedBarangay("all");
     setSelectedType("all");
-    setSortBy("featured");
+    setSortBy("most_visited");
     router.replace("/app/discover");
   };
 
   const activeFilterCount =
     (selectedBarangay !== "all" ? 1 : 0) +
     (selectedType !== "all" ? 1 : 0) +
-    (sortBy !== "featured" ? 1 : 0);
+    (sortBy === "name" || sortBy === "featured" ? 1 : 0);
 
   const hasFilters =
     query.trim() !== "" ||
@@ -149,7 +216,7 @@ function DiscoverDirectoryInner({
 
   return (
     <div className="space-y-3.5">
-      {/* Sticky Native App Search & Segmented Bar */}
+      {/* Sticky Native App Search, Ranking Tabs & Category Pills */}
       <div className="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2.5 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0] space-y-2.5">
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
@@ -195,6 +262,46 @@ function DiscoverDirectoryInner({
           </button>
         </div>
 
+        {/* Ranking Mode Segmented Bar */}
+        <div className="grid grid-cols-3 rounded-full bg-[#EFECE5] p-0.5 border border-[#EAE7E0]">
+          <button
+            type="button"
+            onClick={() => setSortBy("most_visited")}
+            className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+              sortBy === "most_visited"
+                ? "bg-white text-[#164237] shadow-2xs"
+                : "text-[#616E69]"
+            }`}
+          >
+            <Flame className="w-3 h-3" />
+            Most Visited
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy("top_rated")}
+            className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+              sortBy === "top_rated"
+                ? "bg-white text-[#B88A44] shadow-2xs"
+                : "text-[#616E69]"
+            }`}
+          >
+            <Star className="w-3 h-3" />
+            Top Rated
+          </button>
+          <button
+            type="button"
+            onClick={() => setSortBy("by_category")}
+            className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+              sortBy === "by_category"
+                ? "bg-white text-[#1A2421] shadow-2xs"
+                : "text-[#616E69]"
+            }`}
+          >
+            <LayoutGrid className="w-3 h-3" />
+            Categorized
+          </button>
+        </div>
+
         {/* Clean Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4">
           <button
@@ -237,6 +344,13 @@ function DiscoverDirectoryInner({
         <p className="text-xs text-[#616E69]">
           <strong className="text-[#1A2421] tabular-nums">{filteredPlaces.length}</strong>{" "}
           {filteredPlaces.length === 1 ? "destination" : "destinations"}
+          {sortBy === "most_visited"
+            ? " • ranked by visits"
+            : sortBy === "top_rated"
+            ? " • ranked by tourist stars"
+            : sortBy === "by_category"
+            ? " • grouped by category"
+            : ""}
         </p>
 
         {hasFilters && (
@@ -294,10 +408,46 @@ function DiscoverDirectoryInner({
             Show All
           </button>
         </div>
+      ) : sortBy === "by_category" ? (
+        <div className="space-y-6">
+          {categorizedGroups.map((group) => (
+            <section key={group.slug} className="space-y-2.5">
+              <div className="flex items-center justify-between px-0.5">
+                <h2 className="font-display text-base font-bold text-[#1A2421]">
+                  {group.name}
+                </h2>
+                <span className="text-[11px] font-semibold text-[#616E69] tabular-nums">
+                  Top {group.places.length}
+                </span>
+              </div>
+              <div className="space-y-2.5">
+                {group.places.map((place, idx) => (
+                  <PlaceCard
+                    key={place.id}
+                    place={place}
+                    variant="row"
+                    rankBadge={{ rank: place.categoryRank ?? idx + 1 }}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       ) : (
         <div className="space-y-2.5">
-          {filteredPlaces.map((place) => (
-            <PlaceCard key={place.id} place={place} variant="row" />
+          {filteredPlaces.map((place, idx) => (
+            <PlaceCard
+              key={place.id}
+              place={place}
+              variant="row"
+              rankBadge={
+                sortBy === "most_visited"
+                  ? { rank: place.mostVisitedRank ?? idx + 1 }
+                  : sortBy === "top_rated"
+                  ? { rank: place.topRatedRank ?? idx + 1 }
+                  : null
+              }
+            />
           ))}
         </div>
       )}
@@ -369,8 +519,30 @@ function DiscoverDirectoryInner({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-[#616E69]">Sort</label>
+                <label className="text-xs font-semibold text-[#616E69]">Sort &amp; Rank</label>
                 <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSortBy("most_visited")}
+                    className={`rounded-xl py-2.5 text-xs font-semibold border cursor-pointer ${
+                      sortBy === "most_visited"
+                        ? "bg-[#164237] text-white border-[#164237]"
+                        : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
+                    }`}
+                  >
+                    Most Visited
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSortBy("top_rated")}
+                    className={`rounded-xl py-2.5 text-xs font-semibold border cursor-pointer ${
+                      sortBy === "top_rated"
+                        ? "bg-[#164237] text-white border-[#164237]"
+                        : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
+                    }`}
+                  >
+                    Top Rated
+                  </button>
                   <button
                     type="button"
                     onClick={() => setSortBy("featured")}

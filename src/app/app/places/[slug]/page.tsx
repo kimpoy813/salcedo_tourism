@@ -4,15 +4,19 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  Eye,
+  Flame,
   Globe,
   MapPin,
   Phone,
   ShieldAlert,
+  Star,
 } from "lucide-react";
 import { getPublishedPlaceByIdOrSlug } from "@/lib/queries/public-tourism";
 import {
   PlaceDetailActions,
   PlaceHeroOverlayControls,
+  PlaceRatingsSection,
 } from "@/components/app/PlaceDetailClient";
 import { PlaceCard } from "@/components/app/PlaceCard";
 
@@ -88,6 +92,29 @@ export default async function PlaceDetailPage({
           <h1 className="font-display text-2xl font-bold text-[#1A2421] leading-snug">
             {place.name}
           </h1>
+
+          {/* Live Municipal Rank, Rating & Visit Badges */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {place.ratingCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-white border border-[#EAE7E0] px-2.5 py-1 text-[11px] font-bold text-[#1A2421] tabular-nums">
+                <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
+                {place.averageRating.toFixed(1)}
+                <span className="font-normal text-[#616E69]">({place.ratingCount})</span>
+              </span>
+            )}
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#164237]/10 px-2.5 py-1 text-[11px] font-bold text-[#164237] tabular-nums">
+              <Flame className="w-3 h-3" />#{place.mostVisitedRank} Most Visited
+            </span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] px-2.5 py-1 text-[11px] font-semibold text-[#1A2421] tabular-nums">
+              #{place.categoryRank} in {place.primaryCategory?.name || place.placeType}
+            </span>
+            {place.visitCount > 0 && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] px-2.5 py-1 text-[11px] text-[#616E69] tabular-nums">
+                <Eye className="w-3 h-3" />
+                {place.visitCount} visits
+              </span>
+            )}
+          </div>
 
           <p className="inline-flex items-center gap-1.5 text-xs text-[#616E69]">
             <MapPin className="w-3.5 h-3.5 text-[#1D7874] shrink-0" />
@@ -445,6 +472,13 @@ export default async function PlaceDetailPage({
             )}
           </div>
         </section>
+
+        {/* Tourist Ratings & Account-Free Reviews */}
+        <PlaceRatingsSection
+          placeId={place.id}
+          placeName={place.name}
+          initialSummary={place.ratingsSummary}
+        />
 
         {/* Barangay Context */}
         {place.barangay && (

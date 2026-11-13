@@ -171,6 +171,33 @@ export const placeImages = pgTable(
   (t) => [index("place_images_place_idx").on(t.placeId)]
 );
 
+export const placeRatings = pgTable(
+  "place_ratings",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    placeId: uuid("place_id")
+      .notNull()
+      .references(() => places.id, { onDelete: "cascade" }),
+    anonymousSessionId: uuid("anonymous_session_id").references(
+      () => anonymousSessions.id,
+      { onDelete: "set null" }
+    ),
+    reviewerToken: text("reviewer_token").notNull(),
+    reviewerName: text("reviewer_name").default("Salcedo Visitor").notNull(),
+    originLabel: text("origin_label"),
+    rating: integer("rating").notNull(),
+    comment: text("comment"),
+    travelerType: text("traveler_type").default("Leisure").notNull(),
+    status: contentStatusEnum("status").default("published").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("place_ratings_place_reviewer_idx").on(t.placeId, t.reviewerToken),
+    index("place_ratings_place_status_idx").on(t.placeId, t.status, t.createdAt),
+  ]
+);
+
 export const placeAmenities = pgTable(
   "place_amenities",
   {

@@ -19,13 +19,16 @@ export const SALCEDO_BOUNDS = {
   "east": 120.584303
 } as const;
 
-// World outer ring used for Leaflet inverse-masking so surrounding municipalities are subtly veiled
-export const WORLD_OUTER_RING: LatLngTuple[] = [
-  [-85, -180],
-  [-85, 180],
-  [85, 180],
-  [85, -180],
+// Regional outer ring used for Leaflet inverse-masking so surrounding municipalities are cleanly veiled
+// Kept bounded around Northern Luzon to avoid SVG Web Mercator projection clipping artifacts
+export const SALCEDO_MASK_OUTER_RING: LatLngTuple[] = [
+  [15.0, 118.0],
+  [19.0, 118.0],
+  [19.0, 123.0],
+  [15.0, 123.0],
 ];
+
+export const WORLD_OUTER_RING: LatLngTuple[] = SALCEDO_MASK_OUTER_RING;
 
 // Salcedo municipal perimeter ([lat, lng])
 export const SALCEDO_MUNICIPAL_POLYGON: LatLngTuple[] = [

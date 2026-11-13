@@ -8,6 +8,13 @@
       "when": 1794541196531,
       "tag": "0000_init_salcedo_tourism",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1794550836578,
+      "tag": "0001_add_place_ratings",
+      "breakpoints": true
     }
   ]
 }

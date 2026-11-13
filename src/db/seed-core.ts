@@ -2599,19 +2599,26 @@ export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
   }
 
   // 3. Sample 14-Day Anonymous Analytics Sessions, Views & Searches
+  const weightedVisitTargets: Array<{ slug: string; targetViews: number }> = [
+    { slug: "baluarte-falls-agila-falls", targetViews: 32 },
+    { slug: "bago-resort-spring-water", targetViews: 28 },
+    { slug: "bakaan-farm-and-resort", targetViews: 24 },
+    { slug: "salcedo-adventure-leisure-park", targetViews: 21 },
+    { slug: "salcedo-town-plaza-del-pilar-shrine", targetViews: 19 },
+    { slug: "tsokolate-de-ylocos-wynns-food-products", targetViews: 17 },
+    { slug: "salcedo-heritage-tablea-coffee-corner", targetViews: 15 },
+    { slug: "kinbandiw-falls", targetViews: 13 },
+    { slug: "kusina-ti-ili-ilocano-grill", targetViews: 11 },
+    { slug: "mount-madarang-trail-viewpoint", targetViews: 10 },
+    { slug: "palays-bbq-poblacion-norte", targetViews: 9 },
+    { slug: "saint-joseph-parish-church", targetViews: 8 },
+    { slug: "salcedo-upland-resort", targetViews: 7 },
+    { slug: "buaya-river-valley-homestay", targetViews: 6 },
+    { slug: "sorioan-cacao-nursery-farm", targetViews: 5 },
+    { slug: "salcedo-district-hospital-and-rhu", targetViews: 3 },
+  ];
+
   if (existingSession.length === 0) {
-    const popularSlugs = [
-      "baluarte-falls-agila-falls",
-      "bago-resort-spring-water",
-      "bakaan-farm-and-resort",
-      "salcedo-adventure-leisure-park",
-      "salcedo-town-plaza-del-pilar-shrine",
-      "tsokolate-de-ylocos-wynns-food-products",
-      "salcedo-heritage-tablea-coffee-corner",
-      "kinbandiw-falls",
-      "kusina-ti-ili-ilocano-grill",
-      "mount-madarang-trail-viewpoint",
-    ];
     const searchTerms = [
       "baluarte falls",
       "bago resort",
@@ -2640,6 +2647,8 @@ export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
       13, 13,
     ];
 
+    const seededSessions: Array<{ id: string; startedAt: Date }> = [];
+
     for (let i = 0; i < sessionDayOffsets.length; i++) {
       const daysAgo = sessionDayOffsets[i];
       const startedAt = new Date(dayOffsetDate(-daysAgo).getTime() - (i % 6) * 3600_000);
@@ -2661,6 +2670,7 @@ export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
         .returning();
 
       if (!sess) continue;
+      seededSessions.push({ id: sess.id, startedAt });
 
       await db
         .insert(schema.pageViewEvents)
@@ -2681,30 +2691,6 @@ export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
           },
         ])
         .onConflictDoNothing();
-
-      const p1 = pickPlace(popularSlugs[i % popularSlugs.length]);
-      const p2 = pickPlace(popularSlugs[(i + 3) % popularSlugs.length]);
-      await db
-        .insert(schema.placeViewEvents)
-        .values({
-          sessionId: sess.id,
-          placeId: p1.id,
-          idempotencyKey: `sample-place-a-${i}`,
-          viewedAt: new Date(startedAt.getTime() + 120_000),
-        })
-        .onConflictDoNothing();
-
-      if (p2.id !== p1.id && i % 2 === 0) {
-        await db
-          .insert(schema.placeViewEvents)
-          .values({
-            sessionId: sess.id,
-            placeId: p2.id,
-            idempotencyKey: `sample-place-b-${i}`,
-            viewedAt: new Date(startedAt.getTime() + 240_000),
-          })
-          .onConflictDoNothing();
-      }
 
       if (i < 24) {
         const term = searchTerms[i % searchTerms.length];
@@ -2742,6 +2728,25 @@ export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
       }
     }
 
+    // Seed weighted distinct place views across all 16 spots for realistic Most Visited rankings
+    for (let pIdx = 0; pIdx < weightedVisitTargets.length; pIdx++) {
+      const target = weightedVisitTargets[pIdx];
+      const pl = pickPlace(target.slug);
+      const count = Math.min(target.targetViews, seededSessions.length);
+      for (let sIdx = 0; sIdx < count; sIdx++) {
+        const sess = seededSessions[(sIdx + pIdx * 3) % seededSessions.length];
+        await db
+          .insert(schema.placeViewEvents)
+          .values({
+            sessionId: sess.id,
+            placeId: pl.id,
+            idempotencyKey: `sample-weighted-pv-${target.slug}-${sIdx}`,
+            viewedAt: new Date(sess.startedAt.getTime() + (pIdx + 1) * 45_000),
+          })
+          .onConflictDoNothing();
+      }
+    }
+
     const existingAudit = await db.select({ id: schema.auditLogs.id }).from(schema.auditLogs).limit(1);
     if (existingAudit.length === 0) {
       await db.insert(schema.auditLogs).values([
@@ -2753,6 +2758,466 @@ export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
           metadataJson: { barangays: 21, sampleItineraries: 6, sampleCheckins: 5 },
         },
       ]);
+    }
+  } else {
+    // Ensure any already-seeded database has weighted view counts across all 16 places
+    const existingViewCount = await db
+      .select({ id: schema.placeViewEvents.id })
+      .from(schema.placeViewEvents);
+    if (existingViewCount.length < 150) {
+      const sessions = await db
+        .select({ id: schema.anonymousSessions.id, startedAt: schema.anonymousSessions.startedAt })
+        .from(schema.anonymousSessions)
+        .limit(35);
+      if (sessions.length > 0) {
+        for (let pIdx = 0; pIdx < weightedVisitTargets.length; pIdx++) {
+          const target = weightedVisitTargets[pIdx];
+          const pl = pickPlace(target.slug);
+          const count = Math.min(target.targetViews, sessions.length);
+          for (let sIdx = 0; sIdx < count; sIdx++) {
+            const sess = sessions[(sIdx + pIdx * 3) % sessions.length];
+            await db
+              .insert(schema.placeViewEvents)
+              .values({
+                sessionId: sess.id,
+                placeId: pl.id,
+                idempotencyKey: `sample-backfill-pv-${target.slug}-${sIdx}`,
+                viewedAt: new Date(sess.startedAt.getTime() + (pIdx + 1) * 45_000),
+              })
+              .onConflictDoNothing();
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Sample Tourist Ratings & Reviews (Account-Free Community Feedback)
+  const existingRatings = await db
+    .select({ id: schema.placeRatings.id })
+    .from(schema.placeRatings)
+    .limit(1);
+
+  if (existingRatings.length === 0) {
+    const sampleReviewsBySlug: Record<
+      string,
+      Array<{
+        name: string;
+        origin: string;
+        rating: number;
+        travelerType: string;
+        comment: string;
+        daysAgo: number;
+      }>
+    > = {
+      "baluarte-falls-agila-falls": [
+        {
+          name: "Marisol D.",
+          origin: "Candon City, Ilocos Sur",
+          rating: 5,
+          travelerType: "Barkada",
+          comment: "Ice-cold clear pool and peaceful forest trail. Register at Brgy. Baluarte hall first—local guides are super helpful.",
+          daysAgo: 1,
+        },
+        {
+          name: "Kenji R.",
+          origin: "Baguio City",
+          rating: 5,
+          travelerType: "Solo",
+          comment: "One of the cleanest hidden waterfalls in Ilocos Sur. Go before 9 AM for great morning light.",
+          daysAgo: 3,
+        },
+        {
+          name: "Liza & Paolo",
+          origin: "San Fernando, La Union",
+          rating: 5,
+          travelerType: "Couple",
+          comment: "Worth the short foothill walk. Bring water shoes because rocks near the basin can get slippery.",
+          daysAgo: 6,
+        },
+        {
+          name: "Mark T.",
+          origin: "Vigan City",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Refreshing mountain air and zero commercial crowd.",
+          daysAgo: 9,
+        },
+        {
+          name: "Jessa V.",
+          origin: "Quezon City",
+          rating: 4,
+          travelerType: "Barkada",
+          comment: "Beautiful cascade and very chill swimming spot. Trail is steep in parts after rain.",
+          daysAgo: 11,
+        },
+      ],
+      "bago-resort-spring-water": [
+        {
+          name: "Tita Grace",
+          origin: "Candon City, Ilocos Sur",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Fresh mountain spring water with zero harsh chlorine smell! Clean cottages for our whole family.",
+          daysAgo: 1,
+        },
+        {
+          name: "Danilo G.",
+          origin: "Santa Lucia, Ilocos Sur",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Very affordable entrance fees and safe kiddie pools. Perfect weekend cooldown.",
+          daysAgo: 4,
+        },
+        {
+          name: "Aira M.",
+          origin: "Narvacan",
+          rating: 5,
+          travelerType: "Barkada",
+          comment: "Shaded picnic cottages right beside the mountain backdrop. Easy parking too.",
+          daysAgo: 7,
+        },
+        {
+          name: "Bryan K.",
+          origin: "Vigan City",
+          rating: 4,
+          travelerType: "Couple",
+          comment: "Great cold spring water, bring cash for cottage rental and snacks.",
+          daysAgo: 10,
+        },
+      ],
+      "salcedo-heritage-tablea-coffee-corner": [
+        {
+          name: "Camille S.",
+          origin: "Vigan City, Ilocos Sur",
+          rating: 5,
+          travelerType: "Couple",
+          comment: "The iced sikwate tablea latte using local Sorioan cacao is unforgettable. Cozy spot beside the plaza.",
+          daysAgo: 1,
+        },
+        {
+          name: "Niko P.",
+          origin: "Candon City",
+          rating: 5,
+          travelerType: "Solo",
+          comment: "Strong Benguet arabica and friendly baristas. Reliable Wi-Fi while checking our map route.",
+          daysAgo: 2,
+        },
+        {
+          name: "Hanna L.",
+          origin: "Baguio City",
+          rating: 5,
+          travelerType: "Barkada",
+          comment: "Loved the rambutan cheesecake slice and warm cacao tsokolate!",
+          daysAgo: 5,
+        },
+        {
+          name: "Rico F.",
+          origin: "Manila",
+          rating: 5,
+          travelerType: "Leisure",
+          comment: "Best morning coffee stop before heading to Salcedo's upland waterfalls.",
+          daysAgo: 8,
+        },
+      ],
+      "bakaan-farm-and-resort": [
+        {
+          name: "Prof. Ramon V.",
+          origin: "Quezon City",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Our whole group enjoyed the rambutan orchard tour and breezy poolside pavilions.",
+          daysAgo: 2,
+        },
+        {
+          name: "Celine A.",
+          origin: "San Fernando, La Union",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Spacious greenery, clean water, and super welcoming hosts.",
+          daysAgo: 5,
+        },
+        {
+          name: "Jomar C.",
+          origin: "Candon City",
+          rating: 4,
+          travelerType: "Barkada",
+          comment: "Huge shaded grounds for picnics. Harvest season in August–October is peak!",
+          daysAgo: 9,
+        },
+        {
+          name: "Lea P.",
+          origin: "Tagudin",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Kids loved seeing real rambutan and cacao trees up close.",
+          daysAgo: 12,
+        },
+      ],
+      "salcedo-adventure-leisure-park": [
+        {
+          name: "Clarisse M.",
+          origin: "San Fernando, La Union",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Fantastic panoramic hillside view of the Buaya River valley. Great open lawns for kids.",
+          daysAgo: 2,
+        },
+        {
+          name: "Gelo R.",
+          origin: "Candon City",
+          rating: 4,
+          travelerType: "Barkada",
+          comment: "Awesome picnic cottages and sunrise views over the foothills.",
+          daysAgo: 6,
+        },
+        {
+          name: "Mina O.",
+          origin: "Santa Cruz",
+          rating: 5,
+          travelerType: "Couple",
+          comment: "Calm, breezy, and photogenic—especially around golden hour.",
+          daysAgo: 10,
+        },
+      ],
+      "tsokolate-de-ylocos-wynns-food-products": [
+        {
+          name: "Marco B.",
+          origin: "Vigan City",
+          rating: 5,
+          travelerType: "Leisure",
+          comment: "Picked up pure cacao tablea rolls and rich dark chocolate bars for pasalubong. Locally grown and roasted!",
+          daysAgo: 2,
+        },
+        {
+          name: "Teresita N.",
+          origin: "Candon City",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Authentic traditional Ilocano cacao aroma. Zero artificial fillers.",
+          daysAgo: 5,
+        },
+        {
+          name: "Daryl E.",
+          origin: "Quezon City",
+          rating: 4,
+          travelerType: "Couple",
+          comment: "Great local enterprise showcase—call ahead for big pasalubong boxes.",
+          daysAgo: 8,
+        },
+      ],
+      "kusina-ti-ili-ilocano-grill": [
+        {
+          name: "Anton P.",
+          origin: "Vigan City",
+          rating: 5,
+          travelerType: "Barkada",
+          comment: "Crispy bagnet pinakbet and smoky pork sinigang hit the spot after our hike!",
+          daysAgo: 1,
+        },
+        {
+          name: "Shiela B.",
+          origin: "Candon City",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Generous servings, clean dining area, and fresh highland vegetables.",
+          daysAgo: 4,
+        },
+        {
+          name: "Vince M.",
+          origin: "La Union",
+          rating: 4,
+          travelerType: "Couple",
+          comment: "Quick lunch stop near Poblacion, tasty inihaw and friendly staff.",
+          daysAgo: 8,
+        },
+      ],
+      "salcedo-town-plaza-del-pilar-shrine": [
+        {
+          name: "Elena C.",
+          origin: "Candon City",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Historic and clean town center honoring Gen. Gregorio del Pilar's legacy in Baugen.",
+          daysAgo: 3,
+        },
+        {
+          name: "Patricio G.",
+          origin: "Vigan City",
+          rating: 4,
+          travelerType: "Solo",
+          comment: "Great starting anchor point for walking Poblacion and grabbing coffee nearby.",
+          daysAgo: 7,
+        },
+        {
+          name: "Nadine Y.",
+          origin: "Manila",
+          rating: 5,
+          travelerType: "Leisure",
+          comment: "Peaceful shaded plaza especially during early morning walks.",
+          daysAgo: 11,
+        },
+      ],
+      "kinbandiw-falls": [
+        {
+          name: "Jericho T.",
+          origin: "Baguio City",
+          rating: 5,
+          travelerType: "Solo",
+          comment: "True hidden gem off the beaten path! Untouched forest cascade in upland Salcedo.",
+          daysAgo: 3,
+        },
+        {
+          name: "Bea C.",
+          origin: "Candon City",
+          rating: 4,
+          travelerType: "Barkada",
+          comment: "Raw and scenic, definitely bring a local guide and wear sturdy trail sandals.",
+          daysAgo: 8,
+        },
+      ],
+      "buaya-river-valley-homestay": [
+        {
+          name: "Prof. Ramon V.",
+          origin: "Quezon City",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Spotless rooms, cool valley breeze at night, and home-cooked Ilocano breakfast.",
+          daysAgo: 2,
+        },
+        {
+          name: "Hannah K.",
+          origin: "San Fernando, La Union",
+          rating: 5,
+          travelerType: "Couple",
+          comment: "Quiet restful stay just minutes away from Poblacion.",
+          daysAgo: 6,
+        },
+      ],
+      "mount-madarang-trail-viewpoint": [
+        {
+          name: "Karl W.",
+          origin: "Baguio City",
+          rating: 5,
+          travelerType: "Barkada",
+          comment: "Sea of clouds above the Buaya valley at dawn! Steep trek but totally worth it.",
+          daysAgo: 4,
+        },
+        {
+          name: "Sammy R.",
+          origin: "Vigan City",
+          rating: 4,
+          travelerType: "Solo",
+          comment: "Rewarding eastern ridge views overlooking Salcedo and neighboring peaks.",
+          daysAgo: 9,
+        },
+      ],
+      "palays-bbq-poblacion-norte": [
+        {
+          name: "Gabe D.",
+          origin: "Candon City",
+          rating: 5,
+          travelerType: "Barkada",
+          comment: "Best smoky pork BBQ skewers in town! Super budget-friendly evening meal.",
+          daysAgo: 2,
+        },
+        {
+          name: "Ria S.",
+          origin: "Galimuyod",
+          rating: 4,
+          travelerType: "Family",
+          comment: "Quick grilled favorites right in Poblacion Norte.",
+          daysAgo: 7,
+        },
+      ],
+      "saint-joseph-parish-church": [
+        {
+          name: "Maria F.",
+          origin: "Santa Lucia",
+          rating: 5,
+          travelerType: "Family",
+          comment: "Serene heritage parish grounds in the heart of Poblacion.",
+          daysAgo: 4,
+        },
+        {
+          name: "Joel A.",
+          origin: "Candon City",
+          rating: 4,
+          travelerType: "Solo",
+          comment: "Peaceful architectural landmark across from the town plaza.",
+          daysAgo: 10,
+        },
+      ],
+      "salcedo-upland-resort": [
+        {
+          name: "Nora L.",
+          origin: "Santa Cruz",
+          rating: 4,
+          travelerType: "Family",
+          comment: "Cool upland breeze and quiet pool cottages away from town traffic.",
+          daysAgo: 5,
+        },
+        {
+          name: "Dennis P.",
+          origin: "Candon City",
+          rating: 4,
+          travelerType: "Barkada",
+          comment: "Relaxing shaded resort setting for small family gatherings.",
+          daysAgo: 9,
+        },
+      ],
+      "sorioan-cacao-nursery-farm": [
+        {
+          name: "Marco B.",
+          origin: "Vigan City",
+          rating: 5,
+          travelerType: "Leisure",
+          comment: "Fascinating cacao nursery learning tour with farmers in Brgy. Sorioan.",
+          daysAgo: 4,
+        },
+        {
+          name: "Trish M.",
+          origin: "Manila",
+          rating: 4,
+          travelerType: "Couple",
+          comment: "Educational farm stop showing how Salcedo tablea starts from seedlings.",
+          daysAgo: 11,
+        },
+      ],
+      "salcedo-district-hospital-and-rhu": [
+        {
+          name: "Erwin B.",
+          origin: "Candon City",
+          rating: 4,
+          travelerType: "Leisure",
+          comment: "Clean, attentive emergency assistance and clear roadside signage.",
+          daysAgo: 6,
+        },
+      ],
+    };
+
+    const ratingInserts: Array<typeof schema.placeRatings.$inferInsert> = [];
+    for (const [slug, reviews] of Object.entries(sampleReviewsBySlug)) {
+      const place = bySlug.get(slug);
+      if (!place) continue;
+      reviews.forEach((rev, idx) => {
+        const ts = dayOffsetDate(-rev.daysAgo);
+        ratingInserts.push({
+          placeId: place.id,
+          reviewerToken: `sample-reviewer-${slug}-${idx + 1}`,
+          reviewerName: rev.name,
+          originLabel: rev.origin,
+          rating: rev.rating,
+          comment: rev.comment,
+          travelerType: rev.travelerType,
+          status: "published",
+          createdAt: ts,
+          updatedAt: ts,
+        });
+      });
+    }
+
+    if (ratingInserts.length > 0) {
+      await db.insert(schema.placeRatings).values(ratingInserts).onConflictDoNothing();
     }
   }
 }

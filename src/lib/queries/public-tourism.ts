@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 
 export interface PlaceFilterOptions {
@@ -8,8 +8,183 @@ export interface PlaceFilterOptions {
   search?: string | null;
   featuredOnly?: boolean;
   hiddenGemOnly?: boolean;
-  sort?: "name" | "newest";
+  sort?: "featured" | "most_visited" | "top_rated" | "name" | "newest";
   limit?: number;
+}
+
+export interface PlaceRankingsAndStats {
+  averageRating: number;
+  ratingCount: number;
+  viewCount: number;
+  arrivalsCount: number;
+  itineraryCount: number;
+  visitCount: number;
+  mostVisitedRank: number;
+  topRatedRank: number;
+  categoryRank: number;
+}
+
+export interface PlaceReviewItem {
+  id: string;
+  reviewerName: string;
+  originLabel: string | null;
+  rating: number;
+  comment: string | null;
+  travelerType: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaceRatingsSummary {
+  averageRating: number;
+  ratingCount: number;
+  distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  reviews: PlaceReviewItem[];
+}
+
+async function computePublishedRankingsMap() {
+  const db = await getDb();
+
+  const [allPublished, viewRows, arrivalRows, stopRows, ratingRows] =
+    await Promise.all([
+      db
+        .select({
+          id: schema.places.id,
+          name: schema.places.name,
+          placeType: schema.places.placeType,
+          primaryCategoryId: schema.places.primaryCategoryId,
+          isFeatured: schema.places.isFeatured,
+        })
+        .from(schema.places)
+        .where(
+          and(
+            eq(schema.places.status, "published"),
+            eq(schema.places.isPlaceholder, false)
+          )
+        ),
+      db
+        .select({
+          placeId: schema.placeViewEvents.placeId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(schema.placeViewEvents)
+        .groupBy(schema.placeViewEvents.placeId),
+      db
+        .select({
+          placeId: schema.visitorArrivalRecords.placeId,
+          total: sql<number>`coalesce(sum(${schema.visitorArrivalRecords.arrivalCount}), 0)::int`,
+        })
+        .from(schema.visitorArrivalRecords)
+        .groupBy(schema.visitorArrivalRecords.placeId),
+      db
+        .select({
+          placeId: schema.itineraryStops.placeId,
+          cnt: sql<number>`count(*)::int`,
+        })
+        .from(schema.itineraryStops)
+        .groupBy(schema.itineraryStops.placeId),
+      db
+        .select({
+          placeId: schema.placeRatings.placeId,
+          cnt: sql<number>`count(*)::int`,
+          avg: sql<number>`coalesce(avg(${schema.placeRatings.rating}), 0)::float`,
+        })
+        .from(schema.placeRatings)
+        .where(eq(schema.placeRatings.status, "published"))
+        .groupBy(schema.placeRatings.placeId),
+    ]);
+
+  const viewMap = new Map(viewRows.map((r) => [r.placeId, Number(r.cnt) || 0]));
+  const arrivalMap = new Map(arrivalRows.map((r) => [r.placeId, Number(r.total) || 0]));
+  const stopMap = new Map(stopRows.map((r) => [r.placeId, Number(r.cnt) || 0]));
+  const ratingMap = new Map(
+    ratingRows.map((r) => [
+      r.placeId,
+      {
+        count: Number(r.cnt) || 0,
+        avg: Number(Number(r.avg || 0).toFixed(1)),
+      },
+    ])
+  );
+
+  const metrics = allPublished.map((p) => {
+    const viewCount = viewMap.get(p.id) ?? 0;
+    const arrivalsCount = arrivalMap.get(p.id) ?? 0;
+    const itineraryCount = stopMap.get(p.id) ?? 0;
+    const r = ratingMap.get(p.id) ?? { count: 0, avg: 0 };
+    const visitCount = viewCount + arrivalsCount;
+    // Weighted score ensures spots with more verified tourist reviews outrank 1-review anomalies
+    const bayesianRating =
+      r.count > 0 ? (r.count * r.avg + 2 * 4.2) / (r.count + 2) : 0;
+
+    return {
+      id: p.id,
+      name: p.name,
+      categoryKey: p.primaryCategoryId || p.placeType,
+      isFeatured: p.isFeatured,
+      averageRating: r.avg,
+      ratingCount: r.count,
+      viewCount,
+      arrivalsCount,
+      itineraryCount,
+      visitCount,
+      bayesianRating,
+    };
+  });
+
+  const visitedSorted = [...metrics].sort(
+    (a, b) =>
+      b.visitCount - a.visitCount ||
+      b.itineraryCount - a.itineraryCount ||
+      b.averageRating - a.averageRating ||
+      a.name.localeCompare(b.name)
+  );
+  const mostVisitedRankMap = new Map(visitedSorted.map((m, i) => [m.id, i + 1]));
+
+  const ratedSorted = [...metrics].sort(
+    (a, b) =>
+      b.bayesianRating - a.bayesianRating ||
+      b.averageRating - a.averageRating ||
+      b.ratingCount - a.ratingCount ||
+      b.visitCount - a.visitCount ||
+      a.name.localeCompare(b.name)
+  );
+  const topRatedRankMap = new Map(ratedSorted.map((m, i) => [m.id, i + 1]));
+
+  // Category-level ranking balanced across tourist ratings and visit counts
+  const categoryRankMap = new Map<string, number>();
+  const byCat = new Map<string, typeof metrics>();
+  for (const m of metrics) {
+    const list = byCat.get(m.categoryKey) ?? [];
+    list.push(m);
+    byCat.set(m.categoryKey, list);
+  }
+  for (const list of byCat.values()) {
+    list.sort(
+      (a, b) =>
+        b.bayesianRating * 5 +
+        b.visitCount -
+        (a.bayesianRating * 5 + a.visitCount) ||
+        a.name.localeCompare(b.name)
+    );
+    list.forEach((m, idx) => categoryRankMap.set(m.id, idx + 1));
+  }
+
+  const out = new Map<string, PlaceRankingsAndStats>();
+  for (const m of metrics) {
+    out.set(m.id, {
+      averageRating: m.averageRating,
+      ratingCount: m.ratingCount,
+      viewCount: m.viewCount,
+      arrivalsCount: m.arrivalsCount,
+      itineraryCount: m.itineraryCount,
+      visitCount: m.visitCount,
+      mostVisitedRank: mostVisitedRankMap.get(m.id) ?? 1,
+      topRatedRank: topRatedRankMap.get(m.id) ?? 1,
+      categoryRank: categoryRankMap.get(m.id) ?? 1,
+    });
+  }
+  return out;
 }
 
 export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
@@ -85,46 +260,69 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
   const orderByClause =
     filters.sort === "name"
       ? [asc(schema.places.name)]
+      : filters.sort === "newest"
+      ? [desc(schema.places.publishedAt), asc(schema.places.name)]
       : [desc(schema.places.isFeatured), desc(schema.places.publishedAt), asc(schema.places.name)];
 
-  const rows = await db
-    .select()
-    .from(schema.places)
-    .where(and(...conditions))
-    .orderBy(...orderByClause)
-    .limit(filters.limit ?? 100);
+  const [rows, rankingsMap] = await Promise.all([
+    db
+      .select()
+      .from(schema.places)
+      .where(and(...conditions))
+      .orderBy(...orderByClause)
+      .limit(filters.limit ?? 100),
+    computePublishedRankingsMap(),
+  ]);
 
   if (rows.length === 0) return [];
 
-  const brgyIds = Array.from(new Set(rows.map((r) => r.barangayId).filter((v): v is string => Boolean(v))));
+  const brgyIds = Array.from(
+    new Set(rows.map((r) => r.barangayId).filter((v): v is string => Boolean(v)))
+  );
   const catIds = Array.from(
     new Set(rows.map((r) => r.primaryCategoryId).filter((v): v is string => Boolean(v)))
   );
   const placeIds = rows.map((r) => r.id);
 
-  const [brgyRows, catRows, cafeRows, resortRows, restaurantRows, attractionRows, accommRows] =
-    await Promise.all([
-      brgyIds.length
-        ? db.select().from(schema.barangays).where(inArray(schema.barangays.id, brgyIds))
-        : [],
-      catIds.length
-        ? db.select().from(schema.placeCategories).where(inArray(schema.placeCategories.id, catIds))
-        : [],
-      db.select().from(schema.cafeDetails).where(inArray(schema.cafeDetails.placeId, placeIds)),
-      db.select().from(schema.resortDetails).where(inArray(schema.resortDetails.placeId, placeIds)),
-      db
-        .select()
-        .from(schema.restaurantDetails)
-        .where(inArray(schema.restaurantDetails.placeId, placeIds)),
-      db
-        .select()
-        .from(schema.attractionDetails)
-        .where(inArray(schema.attractionDetails.placeId, placeIds)),
-      db
-        .select()
-        .from(schema.accommodationDetails)
-        .where(inArray(schema.accommodationDetails.placeId, placeIds)),
-    ]);
+  const [
+    brgyRows,
+    catRows,
+    cafeRows,
+    resortRows,
+    restaurantRows,
+    attractionRows,
+    accommRows,
+  ] = await Promise.all([
+    brgyIds.length
+      ? db.select().from(schema.barangays).where(inArray(schema.barangays.id, brgyIds))
+      : [],
+    catIds.length
+      ? db
+          .select()
+          .from(schema.placeCategories)
+          .where(inArray(schema.placeCategories.id, catIds))
+      : [],
+    db
+      .select()
+      .from(schema.cafeDetails)
+      .where(inArray(schema.cafeDetails.placeId, placeIds)),
+    db
+      .select()
+      .from(schema.resortDetails)
+      .where(inArray(schema.resortDetails.placeId, placeIds)),
+    db
+      .select()
+      .from(schema.restaurantDetails)
+      .where(inArray(schema.restaurantDetails.placeId, placeIds)),
+    db
+      .select()
+      .from(schema.attractionDetails)
+      .where(inArray(schema.attractionDetails.placeId, placeIds)),
+    db
+      .select()
+      .from(schema.accommodationDetails)
+      .where(inArray(schema.accommodationDetails.placeId, placeIds)),
+  ]);
 
   const brgyMap = new Map(brgyRows.map((b) => [b.id, b]));
   const catMap = new Map(catRows.map((c) => [c.id, c]));
@@ -134,19 +332,96 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
   const attractionMap = new Map(attractionRows.map((c) => [c.placeId, c]));
   const accommMap = new Map(accommRows.map((c) => [c.placeId, c]));
 
-  return rows.map((place) => ({
-    ...place,
-    barangay: place.barangayId ? brgyMap.get(place.barangayId) ?? null : null,
-    primaryCategory: place.primaryCategoryId ? catMap.get(place.primaryCategoryId) ?? null : null,
-    cafeDetails: cafeMap.get(place.id) ?? null,
-    resortDetails: resortMap.get(place.id) ?? null,
-    restaurantDetails: restaurantMap.get(place.id) ?? null,
-    attractionDetails: attractionMap.get(place.id) ?? null,
-    accommodationDetails: accommMap.get(place.id) ?? null,
-  }));
+  const enriched = rows.map((place) => {
+    const stats = rankingsMap.get(place.id) ?? {
+      averageRating: 0,
+      ratingCount: 0,
+      viewCount: 0,
+      arrivalsCount: 0,
+      itineraryCount: 0,
+      visitCount: 0,
+      mostVisitedRank: 1,
+      topRatedRank: 1,
+      categoryRank: 1,
+    };
+
+    return {
+      ...place,
+      ...stats,
+      barangay: place.barangayId ? brgyMap.get(place.barangayId) ?? null : null,
+      primaryCategory: place.primaryCategoryId
+        ? catMap.get(place.primaryCategoryId) ?? null
+        : null,
+      cafeDetails: cafeMap.get(place.id) ?? null,
+      resortDetails: resortMap.get(place.id) ?? null,
+      restaurantDetails: restaurantMap.get(place.id) ?? null,
+      attractionDetails: attractionMap.get(place.id) ?? null,
+      accommodationDetails: accommMap.get(place.id) ?? null,
+    };
+  });
+
+  if (filters.sort === "most_visited") {
+    enriched.sort((a, b) => a.mostVisitedRank - b.mostVisitedRank);
+  } else if (filters.sort === "top_rated") {
+    enriched.sort((a, b) => a.topRatedRank - b.topRatedRank);
+  }
+
+  return enriched;
 }
 
-export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
+export async function getPlaceRatingsSummary(
+  placeId: string
+): Promise<PlaceRatingsSummary> {
+  const db = await getDb();
+  const rows = await db
+    .select()
+    .from(schema.placeRatings)
+    .where(
+      and(
+        eq(schema.placeRatings.placeId, placeId),
+        eq(schema.placeRatings.status, "published")
+      )
+    )
+    .orderBy(desc(schema.placeRatings.updatedAt), desc(schema.placeRatings.createdAt))
+    .limit(50);
+
+  const distribution: Record<1 | 2 | 3 | 4 | 5, number> = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  };
+
+  let sum = 0;
+  for (const r of rows) {
+    const star = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
+    distribution[star] = (distribution[star] ?? 0) + 1;
+    sum += r.rating;
+  }
+
+  const ratingCount = rows.length;
+  const averageRating =
+    ratingCount > 0 ? Number((sum / ratingCount).toFixed(1)) : 0;
+
+  return {
+    averageRating,
+    ratingCount,
+    distribution,
+    reviews: rows.map((r) => ({
+      id: r.id,
+      reviewerName: r.reviewerName,
+      originLabel: r.originLabel,
+      rating: r.rating,
+      comment: r.comment,
+      travelerType: r.travelerType,
+      createdAt: r.createdAt.toISOString(),
+      updatedAt: r.updatedAt.toISOString(),
+    })),
+  };
+}
+
+export async function resolvePublishedPlace(idOrSlug: string) {
   const db = await getDb();
   const isUuid =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrSlug);
@@ -163,6 +438,12 @@ export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
     )
     .limit(1);
 
+  return place ?? null;
+}
+
+export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
+  const db = await getDb();
+  const place = await resolvePublishedPlace(idOrSlug);
   if (!place) return null;
 
   const [
@@ -176,6 +457,8 @@ export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
     restaurant,
     attraction,
     accommodation,
+    ratingsSummary,
+    rankingsMap,
   ] = await Promise.all([
     place.barangayId
       ? db
@@ -198,7 +481,10 @@ export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
       .from(schema.placeImages)
       .where(eq(schema.placeImages.placeId, place.id))
       .orderBy(asc(schema.placeImages.displayOrder)),
-    db.select().from(schema.placeAmenities).where(eq(schema.placeAmenities.placeId, place.id)),
+    db
+      .select()
+      .from(schema.placeAmenities)
+      .where(eq(schema.placeAmenities.placeId, place.id)),
     db
       .select()
       .from(schema.placeOperatingHours)
@@ -234,9 +520,23 @@ export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
       .where(eq(schema.accommodationDetails.placeId, place.id))
       .limit(1)
       .then((r) => r[0] ?? null),
+    getPlaceRatingsSummary(place.id),
+    computePublishedRankingsMap(),
   ]);
 
-  const relatedRaw = await getPublishedPlaces({ limit: 12 });
+  const stats = rankingsMap.get(place.id) ?? {
+    averageRating: ratingsSummary.averageRating,
+    ratingCount: ratingsSummary.ratingCount,
+    viewCount: 0,
+    arrivalsCount: 0,
+    itineraryCount: 0,
+    visitCount: 0,
+    mostVisitedRank: 1,
+    topRatedRank: 1,
+    categoryRank: 1,
+  };
+
+  const relatedRaw = await getPublishedPlaces({ limit: 16 });
   const relatedPlaces = relatedRaw
     .filter((p) => p.id !== place.id)
     .sort((a, b) => {
@@ -246,12 +546,14 @@ export async function getPublishedPlaceByIdOrSlug(idOrSlug: string) {
       const bScore =
         (b.barangayId === place.barangayId ? 2 : 0) +
         (b.placeType === place.placeType ? 1 : 0);
-      return bScore - aScore;
+      return bScore - aScore || a.mostVisitedRank - b.mostVisitedRank;
     })
     .slice(0, 4);
 
   return {
     ...place,
+    ...stats,
+    ratingsSummary,
     barangay,
     primaryCategory,
     images,

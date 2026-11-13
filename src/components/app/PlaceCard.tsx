@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Bookmark, Check, MapPin, Plus } from "lucide-react";
+import { Bookmark, Check, Eye, MapPin, Plus, Star } from "lucide-react";
 import { useMobileApp } from "./MobileAppContext";
 
 export interface PlaceCardData {
@@ -17,8 +17,17 @@ export interface PlaceCardData {
   featuredImageUrl?: string | null;
   isFeatured?: boolean;
   isHiddenGem?: boolean;
+  averageRating?: number;
+  ratingCount?: number;
+  viewCount?: number;
+  arrivalsCount?: number;
+  itineraryCount?: number;
+  visitCount?: number;
+  mostVisitedRank?: number;
+  topRatedRank?: number;
+  categoryRank?: number;
   barangay?: { name: string; slug: string } | null;
-  primaryCategory?: { name: string; slug: string } | null;
+  primaryCategory?: { id?: string; name: string; slug: string } | null;
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -33,12 +42,21 @@ const TYPE_LABELS: Record<string, string> = {
   service: "Service",
 };
 
+function getRankStyle(rank: number) {
+  if (rank === 1) return "bg-[#B88A44] text-white border-[#B88A44]";
+  if (rank === 2) return "bg-[#164237] text-white border-[#164237]";
+  if (rank === 3) return "bg-[#1D7874] text-white border-[#1D7874]";
+  return "bg-white/95 text-[#1A2421] border-[#EAE7E0]";
+}
+
 export function PlaceCard({
   place,
   variant = "card",
+  rankBadge,
 }: {
   place: PlaceCardData;
   variant?: "card" | "rail" | "row" | "spotlight";
+  rankBadge?: { rank: number; label?: string } | null;
 }) {
   const { draftStopIds, savedPlaceIds, addPlaceToActiveDraft, toggleBookmark } =
     useMobileApp();
@@ -46,6 +64,9 @@ export function PlaceCard({
   const saved = savedPlaceIds.includes(place.id);
   const inDraft = draftStopIds.includes(place.id);
   const imageSrc = place.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png";
+
+  const hasRating = (place.ratingCount ?? 0) > 0 && (place.averageRating ?? 0) > 0;
+  const visitCount = place.visitCount ?? 0;
 
   const handleToggleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,7 +89,7 @@ export function PlaceCard({
     });
   };
 
-  // Spotlight Native Carousel Card (App Store / Airbnb editorial look)
+  // Spotlight Native Carousel Card
   if (variant === "spotlight") {
     return (
       <article className="relative w-[84%] max-w-[330px] shrink-0 snap-start rounded-[24px] overflow-hidden border border-[#EAE7E0] bg-[#164237] shadow-xs active:scale-[0.985] transition-transform">
@@ -78,7 +99,24 @@ export function PlaceCard({
             alt={place.name}
             className="w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/25 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/25 to-transparent" />
+
+          {rankBadge ? (
+            <span
+              className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold shadow-xs tabular-nums ${getRankStyle(
+                rankBadge.rank
+              )}`}
+            >
+              #{rankBadge.rank}
+              {rankBadge.label ? ` ${rankBadge.label}` : ""}
+            </span>
+          ) : hasRating ? (
+            <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-md text-white px-2.5 py-0.5 text-[11px] font-semibold tabular-nums">
+              <Star className="w-3 h-3 text-[#F5C451]" fill="currentColor" />
+              {place.averageRating?.toFixed(1)}
+              <span className="text-white/70 font-normal">({place.ratingCount})</span>
+            </span>
+          ) : null}
 
           <button
             type="button"
@@ -93,9 +131,12 @@ export function PlaceCard({
 
           <div className="absolute bottom-3 left-3.5 right-3.5 flex items-end justify-between gap-2 text-white">
             <div className="min-w-0 space-y-0.5">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80">
-                {TYPE_LABELS[place.placeType] || "Salcedo"}
-                {place.barangay ? ` • Brgy. ${place.barangay.name}` : ""}
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
+                <span>{TYPE_LABELS[place.placeType] || "Salcedo"}</span>
+                {place.barangay && <span>• Brgy. {place.barangay.name}</span>}
+                {visitCount > 0 && (
+                  <span className="tabular-nums">• {visitCount} visits</span>
+                )}
               </p>
               <h3 className="font-display text-base font-bold leading-snug line-clamp-1">
                 {place.name}
@@ -133,6 +174,15 @@ export function PlaceCard({
             className="w-full h-full object-cover"
             loading="lazy"
           />
+          {rankBadge && (
+            <span
+              className={`absolute top-2 left-2 inline-flex items-center justify-center rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-xs tabular-nums ${getRankStyle(
+                rankBadge.rank
+              )}`}
+            >
+              #{rankBadge.rank}
+            </span>
+          )}
         </Link>
 
         <div className="flex-1 min-w-0 p-3 flex flex-col justify-between gap-2">
@@ -154,28 +204,38 @@ export function PlaceCard({
                 <Bookmark className="w-4 h-4" fill={saved ? "currentColor" : "none"} />
               </button>
             </div>
-            <p className="inline-flex items-center gap-1 text-[11px] text-[#616E69]">
-              <MapPin className="w-3 h-3 text-[#1D7874] shrink-0" />
-              <span className="truncate">
-                {place.barangay ? `Brgy. ${place.barangay.name}` : place.address}
+
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-[#616E69]">
+              <span className="inline-flex items-center gap-1 truncate max-w-[140px]">
+                <MapPin className="w-3 h-3 text-[#1D7874] shrink-0" />
+                <span className="truncate">
+                  {place.barangay ? `Brgy. ${place.barangay.name}` : place.address}
+                </span>
               </span>
-              <span className="opacity-40">•</span>
-              <span className="shrink-0">
-                {TYPE_LABELS[place.placeType] || "Salcedo"}
-              </span>
-            </p>
+              {hasRating && (
+                <span className="inline-flex items-center gap-0.5 font-semibold text-[#1A2421] tabular-nums">
+                  <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
+                  {place.averageRating?.toFixed(1)}
+                  <span className="font-normal text-[#616E69]">({place.ratingCount})</span>
+                </span>
+              )}
+              {visitCount > 0 && (
+                <span className="inline-flex items-center gap-0.5 tabular-nums">
+                  <Eye className="w-3 h-3 text-[#616E69]" />
+                  {visitCount}
+                </span>
+              )}
+            </div>
+
             <p className="text-xs text-[#616E69] line-clamp-2 leading-snug">
               {place.shortDescription}
             </p>
           </div>
 
           <div className="flex items-center justify-between gap-2 pt-0.5">
-            <Link
-              href={`/app/places/${place.slug}`}
-              className="text-[11px] font-semibold text-[#164237]"
-            >
-              Details →
-            </Link>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+              {TYPE_LABELS[place.placeType] || "Salcedo"}
+            </span>
             <button
               type="button"
               onClick={handleQuickAdd}
@@ -219,6 +279,23 @@ export function PlaceCard({
             loading="lazy"
           />
         </div>
+
+        {rankBadge ? (
+          <span
+            className={`absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold shadow-xs tabular-nums ${getRankStyle(
+              rankBadge.rank
+            )}`}
+          >
+            #{rankBadge.rank}
+            {rankBadge.label ? ` ${rankBadge.label}` : ""}
+          </span>
+        ) : hasRating ? (
+          <span className="absolute top-2.5 left-2.5 inline-flex items-center gap-1 rounded-full bg-white/92 backdrop-blur-sm text-[#1A2421] px-2 py-0.5 text-[10px] font-bold shadow-2xs tabular-nums">
+            <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
+            {place.averageRating?.toFixed(1)}
+          </span>
+        ) : null}
+
         <button
           type="button"
           onClick={handleToggleSave}
@@ -235,10 +312,15 @@ export function PlaceCard({
 
       <div className="p-3.5 flex-1 flex flex-col justify-between gap-2.5">
         <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
-            {TYPE_LABELS[place.placeType] || "Salcedo"}
-            {place.barangay ? ` • Brgy. ${place.barangay.name}` : ""}
-          </p>
+          <div className="flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+            <span className="truncate">
+              {TYPE_LABELS[place.placeType] || "Salcedo"}
+              {place.barangay ? ` • Brgy. ${place.barangay.name}` : ""}
+            </span>
+            {visitCount > 0 && (
+              <span className="tabular-nums shrink-0">{visitCount} visits</span>
+            )}
+          </div>
           <Link href={`/app/places/${place.slug}`}>
             <h3 className="font-display font-bold text-[15px] text-[#1A2421] line-clamp-1">
               {place.name}
@@ -249,12 +331,12 @@ export function PlaceCard({
           </p>
         </div>
 
-        <div className="pt-2 border-t border-[#EAE7E0] flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EAE7E0]">
           <Link
             href={`/app/places/${place.slug}`}
-            className="text-xs font-semibold text-[#164237]"
+            className="text-xs font-semibold text-[#164237] hover:underline"
           >
-            Guide →
+            Explore →
           </Link>
           <button
             type="button"

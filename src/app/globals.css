@@ -88,6 +88,27 @@ a,
   border: none;
 }
 
+.salcedo-brgy-label {
+  background: transparent;
+  border: none;
+  pointer-events: none;
+}
+
+.salcedo-brgy-label-pill {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(22, 66, 55, 0.16);
+  color: #164237;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transform: translate(-50%, -50%);
+}
+
 /* Clean print view for standalone itineraries */
 @media print {
   .no-print {
