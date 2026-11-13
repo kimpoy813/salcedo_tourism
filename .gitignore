@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.*
+
+# Next.js & Build
+.next/
+out/
+build/
+dist/
+coverage/
+next-env.d.ts
+
+# Local env & databases
+.env
+.env*.local
+.local-pgdata/
+public/uploads/
+
+# Logs & caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.tsbuildinfo
+.eslintcache
+
+# OS & editor
+.DS_Store
+Thumbs.db
