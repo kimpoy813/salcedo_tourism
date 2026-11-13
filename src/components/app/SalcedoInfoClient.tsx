@@ -141,7 +141,7 @@ function SalcedoInfoInner({
   return (
     <div className="space-y-4">
       {/* Minimal Sticky Pills */}
-      <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0]">
+      <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0]">
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
           {tabs.map((t) => (
             <button

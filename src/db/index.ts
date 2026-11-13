@@ -18,9 +18,33 @@ type GlobalDbState = {
   __cedoPgliteClient?: unknown;
   __cedoInitPromise?: Promise<AppDatabase>;
   __cedoSeeded?: boolean;
+  __cedoSeedPromise?: Promise<void>;
 };
 
 const g = globalThis as unknown as GlobalDbState;
+
+async function ensureDatabaseSeeded(db: AppDatabase): Promise<void> {
+  if (g.__cedoSeeded || process.env.SKIP_AUTO_SEED === "true") {
+    return;
+  }
+  if (!g.__cedoSeedPromise) {
+    g.__cedoSeedPromise = (async () => {
+      const [existingBrgy, existingSession] = await Promise.all([
+        db.select({ id: schema.barangays.id }).from(schema.barangays).limit(1),
+        db.select({ id: schema.anonymousSessions.id }).from(schema.anonymousSessions).limit(1),
+      ]);
+      const { seedDatabase, seedSampleActivityData } = await import("./seed-core");
+      if (existingBrgy.length === 0) {
+        await seedDatabase(db);
+      }
+      if (existingSession.length === 0 && !process.env.VITEST) {
+        await seedSampleActivityData(db);
+      }
+      g.__cedoSeeded = true;
+    })();
+  }
+  await g.__cedoSeedPromise;
+}
 
 function getNeonConnectionString(): string | undefined {
   const url = process.env.DATABASE_URL?.trim();
@@ -58,18 +82,8 @@ async function createPgliteDb(): Promise<AppDatabase> {
   g.__cedoPgliteClient = client;
   g.__cedoDb = pgliteDb as unknown as AppDatabase;
 
-  // Idempotent seed on first local PGlite boot if database has no barangays yet
-  if (!g.__cedoSeeded && process.env.SKIP_AUTO_SEED !== "true") {
-    const existing = await g.__cedoDb
-      .select({ id: schema.barangays.id })
-      .from(schema.barangays)
-      .limit(1);
-    if (existing.length === 0) {
-      const { seedDatabase } = await import("./seed-core");
-      await seedDatabase(g.__cedoDb);
-    }
-    g.__cedoSeeded = true;
-  }
+  // Idempotent seed on first local PGlite boot if database has no barangays or sample activity yet
+  await ensureDatabaseSeeded(g.__cedoDb);
 
   return g.__cedoDb;
 }
@@ -82,6 +96,7 @@ export async function getDb(): Promise<AppDatabase> {
       g.__cedoPool = pool;
       g.__cedoDb = drizzleNeon(pool, { schema });
     }
+    await ensureDatabaseSeeded(g.__cedoDb);
     return g.__cedoDb;
   }
 

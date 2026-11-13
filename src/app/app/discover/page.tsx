@@ -16,12 +16,12 @@ export default async function DiscoverPage() {
   ]);
 
   return (
-    <div className="px-4 py-4 space-y-4">
+    <div className="px-4 pt-[max(18px,env(safe-area-inset-top))] pb-6 space-y-4">
       <div className="space-y-0.5">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
           Directory
         </p>
-        <h1 className="font-display text-xl font-bold text-[#1A2421]">
+        <h1 className="font-display text-2xl font-bold text-[#1A2421]">
           Discover Salcedo
         </h1>
       </div>

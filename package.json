@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --hostname 0.0.0.0 --port 3000",
     "build": "tsx src/db/migrate.ts --if-db && next build",
-    "vercel-build": "tsx src/db/migrate.ts --if-db && next build",
+    "vercel-build": "tsx src/db/migrate.ts --if-db && tsx src/db/seed.ts --if-db && next build",
     "start": "next start --hostname 0.0.0.0 --port 3000",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
