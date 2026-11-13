@@ -10,7 +10,10 @@ import {
   ShieldAlert,
 } from "lucide-react";
 import { getPublishedPlaceByIdOrSlug } from "@/lib/queries/public-tourism";
-import { PlaceDetailActions } from "@/components/app/PlaceDetailClient";
+import {
+  PlaceDetailActions,
+  PlaceHeroOverlayControls,
+} from "@/components/app/PlaceDetailClient";
 import { PlaceCard } from "@/components/app/PlaceCard";
 
 export const dynamic = "force-dynamic";
@@ -38,20 +41,34 @@ export default async function PlaceDetailPage({
 
   const imageSrc = place.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png";
   const todayIndex = new Date().getDay();
+  const actionPayload = {
+    id: place.id,
+    name: place.name,
+    slug: place.slug,
+    placeType: place.placeType,
+    barangayName: place.barangay?.name ?? null,
+    featuredImageUrl: place.featuredImageUrl ?? null,
+    latitude: place.latitude ?? null,
+    longitude: place.longitude ?? null,
+  };
 
   return (
-    <div className="pb-20">
-      {/* Clean Edge-to-Edge Hero Photo */}
-      <section className="relative aspect-[4/3] bg-[#F3F2EE] overflow-hidden">
+    <div className="min-h-full bg-[#FAF9F6]">
+      {/* Full-Bleed Native Hero Photo + Floating Frosted Back/Share/Bookmark Controls */}
+      <section className="relative h-[290px] bg-[#164237] overflow-hidden">
         <img
           src={imageSrc}
           alt={place.name}
           className="w-full h-full object-cover"
         />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/25 pointer-events-none" />
+        <PlaceHeroOverlayControls place={actionPayload} />
       </section>
 
-      {/* Editorial Body */}
-      <div className="px-4 py-5 space-y-6">
+      {/* Overlapping Native Sheet Container */}
+      <div className="relative z-10 -mt-6 rounded-t-[28px] bg-[#FAF9F6] px-4 pt-3 pb-2 space-y-6">
+        <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto" />
+
         {/* Title & Overview */}
         <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
           <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#616E69]">
@@ -78,19 +95,6 @@ export default async function PlaceDetailPage({
           </p>
 
           <p className="text-sm text-[#1A2421]/90 leading-relaxed">{place.description}</p>
-
-          <PlaceDetailActions
-            place={{
-              id: place.id,
-              name: place.name,
-              slug: place.slug,
-              placeType: place.placeType,
-              barangayName: place.barangay?.name ?? null,
-              featuredImageUrl: place.featuredImageUrl ?? null,
-              latitude: place.latitude ?? null,
-              longitude: place.longitude ?? null,
-            }}
-          />
         </section>
 
         {/* Specialized Café Details */}
@@ -152,6 +156,35 @@ export default async function PlaceDetailPage({
                   ))}
                 </div>
               </div>
+            )}
+          </section>
+        )}
+
+        {/* Specialized Accommodation Details */}
+        {place.accommodationDetails && (
+          <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+            <h2 className="font-display text-base font-bold text-[#1A2421]">
+              Stay Details
+            </h2>
+            {place.accommodationDetails.accommodationType && (
+              <p className="text-xs font-semibold text-[#164237]">
+                {place.accommodationDetails.accommodationType}
+              </p>
+            )}
+            {place.accommodationDetails.roomTypesSummary && (
+              <p className="text-xs text-[#1A2421] leading-relaxed">
+                {place.accommodationDetails.roomTypesSummary}
+              </p>
+            )}
+            {place.accommodationDetails.rateNote && (
+              <div className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#1A2421]">
+                <strong>Rates:</strong> {place.accommodationDetails.rateNote}
+              </div>
+            )}
+            {place.accommodationDetails.checkInOutPolicy && (
+              <p className="text-xs text-[#616E69]">
+                {place.accommodationDetails.checkInOutPolicy}
+              </p>
             )}
           </section>
         )}
@@ -256,6 +289,9 @@ export default async function PlaceDetailPage({
                   ))}
                 </div>
               )}
+            {place.restaurantDetails.priceRangeNote && (
+              <p className="text-xs text-[#616E69]">{place.restaurantDetails.priceRangeNote}</p>
+            )}
           </section>
         )}
 
@@ -410,11 +446,11 @@ export default async function PlaceDetailPage({
           </div>
         </section>
 
-        {/* Barangay Link */}
+        {/* Barangay Context */}
         {place.barangay && (
           <Link
             href={`/app/discover?barangay=${encodeURIComponent(place.barangay.slug)}`}
-            className="block rounded-2xl bg-white border border-[#EAE7E0] p-4 space-y-1 hover:border-[#D4CFC3] transition"
+            className="block rounded-2xl bg-white border border-[#EAE7E0] p-4 space-y-1 active:bg-[#F3F2EE] transition"
           >
             <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
               Barangay Context
@@ -442,6 +478,9 @@ export default async function PlaceDetailPage({
             </div>
           </section>
         )}
+
+        {/* Native Sticky Action Dock */}
+        <PlaceDetailActions place={actionPayload} />
       </div>
     </div>
   );

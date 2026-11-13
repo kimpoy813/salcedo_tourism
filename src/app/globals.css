@@ -30,8 +30,14 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
   overflow-x: clip;
+}
+
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
 }
 
 .font-display {
@@ -42,7 +48,7 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
-/* Hide scrollbars cleanly in horizontal discovery rails */
+/* Hide scrollbars cleanly in horizontal discovery rails & carousels */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -51,10 +57,35 @@ body {
   scrollbar-width: none;
 }
 
-/* Leaflet map container overrides */
+/* Leaflet map container overrides for native Salcedo focus */
 .leaflet-container {
   font-family: var(--font-sans);
+  background: #ECE9E0;
   z-index: 1;
+}
+
+.leaflet-tile-pane {
+  filter: saturate(0.86) contrast(0.97) brightness(1.01);
+}
+
+.leaflet-tooltip.salcedo-map-tooltip {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid #EAE7E0;
+  border-radius: 9999px;
+  color: #1A2421;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  box-shadow: 0 4px 12px rgba(22, 66, 55, 0.12);
+}
+
+.leaflet-tooltip.salcedo-map-tooltip::before {
+  display: none;
+}
+
+.salcedo-div-pin {
+  background: transparent;
+  border: none;
 }
 
 /* Clean print view for standalone itineraries */
@@ -65,5 +96,19 @@ body {
   body {
     background: #ffffff !important;
     color: #000000 !important;
+  }
+  .app-shell-backdrop,
+  .app-shell-frame,
+  .app-shell-scroll {
+    height: auto !important;
+    max-height: none !important;
+    max-width: none !important;
+    overflow: visible !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
   }
 }

@@ -1,7 +1,12 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { AppDatabase } from "./index";
 import * as schema from "./schema";
-import { hashPassword } from "../lib/crypto";
+import {
+  generateRetrievalCode,
+  hashPassword,
+  hashRetrievalCode,
+  sha256Hex,
+} from "../lib/crypto";
 
 const VERIFIED_DATE = "2026-11-13";
 const OFFICIAL_CENSUS_SOURCE =
@@ -1071,6 +1076,134 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       sourceReference: "LookPH District Hospital Listing & HealthcarePhilippines Salcedo RHU Directory",
       verificationDate: VERIFIED_DATE,
     },
+    {
+      name: "Mount Madarang Trail & Viewpoint",
+      slug: "mount-madarang-trail-viewpoint",
+      shortDescription:
+        "High-elevation upland ridge trail in Barangay Madarang (631m ASL) overlooking the Buaya River valley and Cordillera foothills.",
+      description:
+        "Reaching Salcedo's highest barangay at 631 meters above sea level, the Mount Madarang Trail & Viewpoint treats hikers to cool pine-kissed mountain air, sweeping sunrise panoramas over the Buaya River valley, and watershed springs that feed Bago Resort below.",
+      placeType: "nature",
+      categorySlug: "nature-waterfalls",
+      barangaySlug: "madarang",
+      address: "Barangay Madarang, Salcedo, Ilocos Sur 2711",
+      latitude: 17.1587,
+      longitude: 120.578,
+      featuredImageUrl: "/images/salcedo/hero-salcedo-valley.png",
+      featuredImageCaption:
+        "Editorial visual illustration of Salcedo's upland valleys and Cordillera ridges near Madarang.",
+      isFeatured: false,
+      isHiddenGem: true,
+      isPlaceholder: false,
+      status: "published",
+      sourceReference: "PhilAtlas Elevation Profile & Municipal Upland Trail Reference",
+      verificationDate: VERIFIED_DATE,
+      attraction: {
+        activities: ["Sunrise ridge viewing", "Upland ridge hiking", "Watershed sightseeing", "Birdwatching"],
+        visitorGuidelines: [
+          "Coordinate with Barangay Madarang officials before attempting upper ridge hikes.",
+          "Carry sufficient drinking water and start early to avoid midday heat.",
+        ],
+        entranceInfo: "Open upland barangay trail; coordinate locally for guided walks.",
+        historicalDetails: "Natural spring watershed supplying eastern Salcedo foothills.",
+        difficultyLevel: "Moderate to Challenging",
+        estimatedDurationMinutes: 150,
+      },
+    },
+    {
+      name: "Salcedo Heritage Tablea & Coffee Corner",
+      slug: "salcedo-heritage-tablea-coffee-corner",
+      shortDescription:
+        "Cozy poblacion café showcase serving traditional Salcedo cacao tablea hot chocolate, Cordillera drip coffee, and rice cakes.",
+      description:
+        "Steps from Salcedo Town Plaza in Poblacion Norte, this sample café showcase highlights Salcedo's homegrown cacao heritage—pairing rich sikwate (pure roasted tablea) and upland coffee brews with fresh Ilocano kakanin pastries for morning travelers.",
+      placeType: "cafe",
+      categorySlug: "cafes-coffee",
+      barangaySlug: "poblacion-norte",
+      address: "Town Plaza Perimeter, Poblacion Norte, Salcedo, Ilocos Sur 2711",
+      latitude: 17.1512,
+      longitude: 120.5358,
+      featuredImageUrl: "/images/salcedo/local-eatery-table.png",
+      featuredImageCaption:
+        "Editorial visual illustration of Salcedo heritage coffee & tablea hospitality.",
+      isFeatured: true,
+      isHiddenGem: false,
+      isPlaceholder: false,
+      status: "published",
+      sourceReference: "Municipal Sample Directory Entry (Cacao & Poblacion Showcase)",
+      verificationDate: VERIFIED_DATE,
+      cafe: {
+        featuredDrinks: ["Traditional Salcedo Tablea Sikwate", "Iced Cacao Mocha", "Cordillera Pour-Over Coffee"],
+        foodOfferings: ["Bibingka & Kakanin", "Toasted Pandesal with Cacao Jam", "Banana Turon"],
+        priceRangeNote: "₱65 – ₱160 per drink & snack",
+        hasWifi: true,
+        hasParking: true,
+        seatingOptions: ["Shaded Veranda", "Indoor Heritage Nook"],
+        brewStyleNote: "Single-origin Salcedo cacao tablea whisked in cast-iron batirol alongside northern Luzon arabica.",
+      },
+    },
+    {
+      name: "Buaya River Valley Homestay & Farm Inn",
+      slug: "buaya-river-valley-homestay",
+      shortDescription:
+        "Peaceful countryside farm guesthouse in Barangay Balidbid offering clean family rooms near Salcedo Adventure Park.",
+      description:
+        "Positioned along the quiet valley corridor of Barangay Balidbid between Poblacion and Bago Resort, this sample homestay profile offers travelers cool evening mountain breezes, home-cooked Ilocano breakfast, and convenient proximity to Salcedo's major trails.",
+      placeType: "accommodation",
+      categorySlug: "accommodations",
+      barangaySlug: "balidbid",
+      address: "Balidbid Valley Road, Brgy. Balidbid, Salcedo, Ilocos Sur 2711",
+      latitude: 17.1481,
+      longitude: 120.5429,
+      featuredImageUrl: "/images/salcedo/spring-water-resort.png",
+      featuredImageCaption:
+        "Editorial visual illustration of countryside rest cottages and upland tranquility in Salcedo.",
+      isFeatured: false,
+      isHiddenGem: true,
+      isPlaceholder: false,
+      status: "published",
+      sourceReference: "Municipal Sample Directory Entry (Valley Homestay Showcase)",
+      verificationDate: VERIFIED_DATE,
+      accommodation: {
+        accommodationType: "Countryside Farm Homestay",
+        roomTypesSummary: "4 fan & air-conditioned guest rooms (2–5 pax capacity per room) with garden veranda.",
+        rateNote: "Typical overnight family stay ₱1,400 – ₱2,600/night (sample municipal guide rate).",
+        amenitiesSummary: ["Free Parking", "Garden Veranda", "Ilocano Breakfast Option", "Quiet Valley Setting"],
+        checkInOutPolicy: "Check-in 2:00 PM • Check-out 12:00 NN",
+        bookingInquiryUrl: null,
+      },
+    },
+    {
+      name: "Kusina ti Ili Eatery & Ilocano Grill",
+      slug: "kusina-ti-ili-ilocano-grill",
+      shortDescription:
+        "Warm community kitchen in Poblacion Sur serving classic Ilocano pinakbet, crispy bagnet, dinakdakan, and farm vegetables.",
+      description:
+        "Conveniently situated near Saint Joseph Parish Church and the National Road in Poblacion Sur, Kusina ti Ili showcases comforting home-style Ilocano cooking prepared with fresh valley produce, crispy bagnet, and smoky grilled meats.",
+      placeType: "restaurant",
+      categorySlug: "restaurants-eateries",
+      barangaySlug: "poblacion-sur",
+      address: "National Road, Brgy. Poblacion Sur, Salcedo, Ilocos Sur 2711",
+      latitude: 17.1489,
+      longitude: 120.5364,
+      featuredImageUrl: "/images/salcedo/local-eatery-table.png",
+      featuredImageCaption:
+        "Editorial visual illustration of an authentic Ilocano dining table in Salcedo.",
+      isFeatured: false,
+      isHiddenGem: false,
+      isPlaceholder: false,
+      status: "published",
+      sourceReference: "Municipal Sample Directory Entry (Ilocano Culinary Showcase)",
+      verificationDate: VERIFIED_DATE,
+      restaurant: {
+        cuisineType: "Authentic Ilocano Home Cooking & Grill",
+        menuHighlights: ["Pinakbet Ilocano", "Crispy Bagnet", "Grilled Liempo", "Dinakdakan"],
+        featuredDishes: ["Pinakbet with Bagnet", "Pork Dinakdakan", "Fresh Tamarind Sinigang"],
+        diningOptions: ["Open-Air Dine-In", "Family Bilao Takeout"],
+        hasParking: true,
+        priceRangeNote: "₱120 – ₱260 per meal",
+      },
+    },
     // Clearly labeled administrative placeholders (PENDING REVIEW — NOT PUBLICLY SHOWN until verified by Tourism Officer)
     {
       name: "[Admin Placeholder] Poblacion Specialty Coffee & Tablea Café",
@@ -1987,5 +2120,639 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       .insert(schema.checkinVerificationMethods)
       .values(m)
       .onConflictDoNothing({ target: schema.checkinVerificationMethods.code });
+  }
+
+  // 14. Seed Place Amenities & Weekly Operating Hours (idempotent)
+  const existingAmenities = await db.select({ id: schema.placeAmenities.id }).from(schema.placeAmenities).limit(1);
+  if (existingAmenities.length === 0) {
+    const publishedPlacesForMeta = dbPlaces.filter((p) => p.status === "published" && !p.isPlaceholder);
+    const amenityByType: Record<string, Array<{ name: string; category: string }>> = {
+      nature: [
+        { name: "Natural Freshwater Pool", category: "nature" },
+        { name: "Barangay Trail Guidance", category: "safety" },
+        { name: "Scenic Photo Spots", category: "feature" },
+      ],
+      resort: [
+        { name: "Parking Area", category: "facility" },
+        { name: "Picnic Cottages", category: "facility" },
+        { name: "Restrooms & Changing Area", category: "facility" },
+        { name: "Family Friendly", category: "general" },
+      ],
+      attraction: [
+        { name: "Parking Area", category: "facility" },
+        { name: "Picnic Tables", category: "facility" },
+        { name: "Mountain River Views", category: "feature" },
+      ],
+      heritage: [
+        { name: "Public Access", category: "general" },
+        { name: "Walkable Town Center", category: "general" },
+        { name: "Shade & Seating", category: "facility" },
+      ],
+      restaurant: [
+        { name: "Casual Seating", category: "facility" },
+        { name: "Takeout Available", category: "service" },
+        { name: "Cash Payments", category: "service" },
+      ],
+      cafe: [
+        { name: "Wi-Fi Available", category: "facility" },
+        { name: "Parking Space", category: "facility" },
+        { name: "Local Cacao Drinks", category: "feature" },
+      ],
+      accommodation: [
+        { name: "Overnight Parking", category: "facility" },
+        { name: "Private Bath", category: "facility" },
+        { name: "Quiet Rural Setting", category: "feature" },
+      ],
+      business: [
+        { name: "Local Producer Showcase", category: "feature" },
+        { name: "Pasalubong Orders", category: "service" },
+      ],
+      service: [
+        { name: "Emergency Assistance", category: "safety" },
+        { name: "Accessible Road Frontage", category: "facility" },
+      ],
+    };
+
+    const amenityRows: Array<{ placeId: string; name: string; category: string; available: boolean }> = [];
+    for (const pl of publishedPlacesForMeta) {
+      const items = amenityByType[pl.placeType] ?? [{ name: "Visitor Access", category: "general" }];
+      for (const item of items) {
+        amenityRows.push({
+          placeId: pl.id,
+          name: item.name,
+          category: item.category,
+          available: true,
+        });
+      }
+    }
+    if (amenityRows.length > 0) {
+      await db.insert(schema.placeAmenities).values(amenityRows);
+    }
+  }
+
+  const existingHours = await db
+    .select({ id: schema.placeOperatingHours.id })
+    .from(schema.placeOperatingHours)
+    .limit(1);
+  if (existingHours.length === 0) {
+    const publishedPlacesForHours = dbPlaces.filter((p) => p.status === "published" && !p.isPlaceholder);
+    const hoursRows: Array<{
+      placeId: string;
+      dayOfWeek: number;
+      openTime: string;
+      closeTime: string;
+      isClosed: boolean;
+    }> = [];
+
+    for (const pl of publishedPlacesForHours) {
+      const [openTime, closeTime] =
+        pl.placeType === "service" || pl.slug === "salcedo-town-plaza-del-pilar-shrine"
+          ? ["00:00", "23:59"]
+          : pl.placeType === "cafe"
+          ? ["07:00", "19:00"]
+          : pl.placeType === "restaurant"
+          ? ["09:00", "20:00"]
+          : pl.placeType === "accommodation"
+          ? ["06:00", "22:00"]
+          : ["07:00", "17:00"];
+
+      for (let day = 0; day <= 6; day++) {
+        hoursRows.push({
+          placeId: pl.id,
+          dayOfWeek: day,
+          openTime,
+          closeTime,
+          isClosed: false,
+        });
+      }
+    }
+    if (hoursRows.length > 0) {
+      await db.insert(schema.placeOperatingHours).values(hoursRows).onConflictDoNothing();
+    }
+  }
+}
+
+/**
+ * Seeds realistic sample visitor itineraries, verified on-site check-ins, and 14-day
+ * anonymous analytics activity so dashboards and public modules show living sample data.
+ * Kept separate from `seedDatabase` so baseline integrity tests remain deterministic.
+ */
+export async function seedSampleActivityData(db: AppDatabase): Promise<void> {
+  const existingItin = await db.select({ id: schema.itineraries.id }).from(schema.itineraries).limit(1);
+  const existingCheckin = await db
+    .select({ id: schema.destinationCheckins.id })
+    .from(schema.destinationCheckins)
+    .limit(1);
+  const existingSession = await db
+    .select({ id: schema.anonymousSessions.id })
+    .from(schema.anonymousSessions)
+    .limit(1);
+
+  const allPlaces = await db.select().from(schema.places);
+  const published = allPlaces.filter((p) => p.status === "published" && !p.isPlaceholder);
+  if (published.length === 0) return;
+
+  const bySlug = new Map(published.map((p) => [p.slug, p]));
+  const fallbackPlace = published[0];
+  const pickPlace = (slug: string) => bySlug.get(slug) ?? fallbackPlace;
+
+  const now = new Date();
+  const dayOffsetDate = (offsetDays: number) =>
+    new Date(now.getTime() + offsetDays * 86400_000);
+  const isoDate = (d: Date) => d.toISOString().slice(0, 10);
+
+  // 1. Sample Submitted Visitor Itineraries & Demographics (RA 10173 compliant)
+  if (existingItin.length === 0) {
+    const year = now.getUTCFullYear();
+    const counterKey = `CEDO-TRIP-${year}`;
+    const sampleTrips = [
+      {
+        num: 1,
+        title: "Salcedo Waterfalls & Spring Escape",
+        visitOffsetDays: 3,
+        createdOffsetDays: -4,
+        originMunicipality: "Candon City",
+        originProvince: "Ilocos Sur",
+        travelerCount: 4,
+        purposeOfVisit: "Leisure & Nature Sightseeing",
+        transportationType: "Private Vehicle",
+        lengthOfStay: "Day Trip",
+        preferredExperience: "Waterfalls & Resorts",
+        visitorName: "Elena Corpuz",
+        contactNumber: "+63 917 555 0101",
+        emailAddress: null,
+        followUpConsent: true,
+        stops: [
+          { slug: "salcedo-town-plaza-del-pilar-shrine", time: "08:30", mins: 45 },
+          { slug: "baluarte-falls-agila-falls", time: "10:00", mins: 120 },
+          { slug: "bago-resort-spring-water", time: "13:00", mins: 150 },
+        ],
+      },
+      {
+        num: 2,
+        title: "Cacao, Tablea & Heritage Day",
+        visitOffsetDays: 5,
+        createdOffsetDays: -3,
+        originMunicipality: "Vigan City",
+        originProvince: "Ilocos Sur",
+        travelerCount: 2,
+        purposeOfVisit: "Agri-Tourism / Farm Visit",
+        transportationType: "Private Vehicle",
+        lengthOfStay: "Day Trip",
+        preferredExperience: "Local Food & Cacao",
+        visitorName: "Marco Bautista",
+        contactNumber: null,
+        emailAddress: "marco.b.sample@example.ph",
+        followUpConsent: false,
+        stops: [
+          { slug: "saint-joseph-parish-church", time: "09:00", mins: 30 },
+          { slug: "tsokolate-de-ylocos-wynns-food-products", time: "10:00", mins: 60 },
+          { slug: "sorioan-cacao-nursery-farm", time: "11:30", mins: 60 },
+          { slug: "palays-bbq-poblacion-norte", time: "13:00", mins: 60 },
+        ],
+      },
+      {
+        num: 3,
+        title: "Cordillera Foothills Family Outing",
+        visitOffsetDays: 8,
+        createdOffsetDays: -2,
+        originMunicipality: "San Fernando",
+        originProvince: "La Union",
+        travelerCount: 6,
+        purposeOfVisit: "Family Resort Outing",
+        transportationType: "Van / Group Transport",
+        lengthOfStay: "Overnight Stay",
+        preferredExperience: "Resorts & Family Parks",
+        visitorName: "Clarisse Mendoza",
+        contactNumber: "+63 918 555 0144",
+        emailAddress: null,
+        followUpConsent: true,
+        stops: [
+          { slug: "salcedo-adventure-leisure-park", time: "09:00", mins: 150 },
+          { slug: "kusina-ti-ili-ilocano-grill", time: "12:00", mins: 75 },
+          { slug: "bakaan-farm-and-resort", time: "14:00", mins: 180 },
+        ],
+      },
+      {
+        num: 4,
+        title: "Quiet Hidden Gems Trail",
+        visitOffsetDays: 12,
+        createdOffsetDays: -1,
+        originMunicipality: "Baguio City",
+        originProvince: "Benguet",
+        travelerCount: 2,
+        purposeOfVisit: "Leisure & Nature Sightseeing",
+        transportationType: "Motorcycle",
+        lengthOfStay: "Day Trip",
+        preferredExperience: "Hiking & Hidden Waterfalls",
+        visitorName: null,
+        contactNumber: null,
+        emailAddress: null,
+        followUpConsent: false,
+        stops: [
+          { slug: "kinbandiw-falls", time: "08:00", mins: 120 },
+          { slug: "mount-madarang-trail-viewpoint", time: "11:00", mins: 150 },
+        ],
+      },
+      {
+        num: 5,
+        title: "Ilocos Sur Agritourism Lakbay Aral",
+        visitOffsetDays: 14,
+        createdOffsetDays: -1,
+        originMunicipality: "Quezon City",
+        originProvince: "Metro Manila",
+        travelerCount: 12,
+        purposeOfVisit: "Research / Educational Fieldwork",
+        transportationType: "Tourist Bus / Van",
+        lengthOfStay: "Overnight Stay",
+        preferredExperience: "Agritourism & MSMEs",
+        visitorName: "Prof. Ramon Villanueva",
+        contactNumber: "+63 927 555 0198",
+        emailAddress: "lakbay.sample@example.ph",
+        followUpConsent: true,
+        stops: [
+          { slug: "bakaan-farm-and-resort", time: "08:30", mins: 120 },
+          { slug: "sorioan-cacao-nursery-farm", time: "11:00", mins: 90 },
+          { slug: "tsokolate-de-ylocos-wynns-food-products", time: "13:30", mins: 60 },
+          { slug: "buaya-river-valley-homestay", time: "16:00", mins: 90 },
+        ],
+      },
+      {
+        num: 6,
+        title: "Weekend Coffee & Plaza Walk",
+        visitOffsetDays: 0,
+        createdOffsetDays: 0,
+        originMunicipality: "Narvacan",
+        originProvince: "Ilocos Sur",
+        travelerCount: 1,
+        purposeOfVisit: "Leisure & Nature Sightseeing",
+        transportationType: "Public Commute",
+        lengthOfStay: "Half Day",
+        preferredExperience: "Cafés & Heritage",
+        visitorName: null,
+        contactNumber: null,
+        emailAddress: null,
+        followUpConsent: false,
+        stops: [
+          { slug: "salcedo-heritage-tablea-coffee-corner", time: "09:00", mins: 60 },
+          { slug: "salcedo-town-plaza-del-pilar-shrine", time: "10:15", mins: 45 },
+        ],
+      },
+    ];
+
+    for (const t of sampleTrips) {
+      const refNum = `${counterKey}-${String(t.num).padStart(6, "0")}`;
+      const createdAt = dayOffsetDate(t.createdOffsetDays);
+      const visitDate = isoDate(dayOffsetDate(t.visitOffsetDays));
+      const expiresAt = new Date(createdAt.getTime() + 365 * 86400_000);
+      const totalMinutes = t.stops.reduce((acc, s) => acc + s.mins, 0);
+
+      const [itin] = await db
+        .insert(schema.itineraries)
+        .values({
+          referenceNumber: refNum,
+          title: t.title,
+          plannedVisitDate: visitDate,
+          description: "Sample visitor itinerary preloaded for Salcedo tourism planning showcase.",
+          totalStops: t.stops.length,
+          estimatedTotalMinutes: totalMinutes,
+          status: "submitted",
+          expiresAt,
+          createdAt,
+          updatedAt: createdAt,
+        })
+        .onConflictDoNothing({ target: schema.itineraries.referenceNumber })
+        .returning();
+
+      if (!itin) continue;
+
+      await db.insert(schema.itineraryStops).values(
+        t.stops.map((st, idx) => ({
+          itineraryId: itin.id,
+          placeId: pickPlace(st.slug).id,
+          stopOrder: idx + 1,
+          visitTime: st.time,
+          durationMinutes: st.mins,
+          personalNotes: idx === 0 ? "Morning arrival stop" : null,
+        }))
+      );
+
+      const code = generateRetrievalCode();
+      const { codeHash, codeSalt } = hashRetrievalCode(code);
+      await db.insert(schema.itineraryAccessCredentials).values({
+        itineraryId: itin.id,
+        codeHash,
+        codeSalt,
+      });
+
+      const [sub] = await db
+        .insert(schema.visitorSubmissions)
+        .values({
+          itineraryId: itin.id,
+          originMunicipality: t.originMunicipality,
+          originProvince: t.originProvince,
+          originCountry: "Philippines",
+          plannedVisitDate: visitDate,
+          travelerCount: t.travelerCount,
+          purposeOfVisit: t.purposeOfVisit,
+          firstTimeVisitor: t.num % 2 === 0 ? "no" : "yes",
+          transportationType: t.transportationType,
+          lengthOfStay: t.lengthOfStay,
+          discoverySource: "Social Media / Online Search",
+          preferredExperience: t.preferredExperience,
+          privacyNoticeVersion: "2026.1-RA10173",
+          privacyAcknowledgedAt: createdAt,
+          retentionExpiresAt: expiresAt,
+          createdAt,
+        })
+        .returning();
+
+      await db.insert(schema.visitorContactInformation).values({
+        submissionId: sub.id,
+        visitorName: t.visitorName,
+        contactNumber: t.contactNumber,
+        emailAddress: t.emailAddress,
+        followUpConsentGiven: t.followUpConsent,
+        consentRecordedAt: t.followUpConsent ? createdAt : null,
+      });
+
+      await db.insert(schema.visitorPrivacyAcknowledgments).values({
+        submissionId: sub.id,
+        noticeVersion: "2026.1-RA10173",
+        acknowledged: true,
+        followUpConsent: t.followUpConsent,
+        retentionPolicySummary: "365-day standard retention under RA 10173.",
+        acknowledgedAt: createdAt,
+      });
+    }
+
+    await db
+      .insert(schema.referenceCounters)
+      .values({ key: counterKey, lastValue: sampleTrips.length, updatedAt: now })
+      .onConflictDoUpdate({
+        target: schema.referenceCounters.key,
+        set: {
+          lastValue: sql`GREATEST(${schema.referenceCounters.lastValue}, ${sampleTrips.length})`,
+          updatedAt: now,
+        },
+      });
+  }
+
+  // 2. Sample Verified On-Site Physical Arrivals
+  if (existingCheckin.length === 0) {
+    const methods = await db.select().from(schema.checkinVerificationMethods);
+    const methodByCode = new Map(methods.map((m) => [m.code, m]));
+    const fallbackMethod = methods[0];
+
+    const [superAdmin] = await db
+      .select()
+      .from(schema.adminUsers)
+      .where(eq(schema.adminUsers.username, "cedo_superadmin"))
+      .limit(1);
+
+    const sampleCheckins = [
+      {
+        key: "sample-checkin-bago-today",
+        slug: "bago-resort-spring-water",
+        methodCode: "staff_assisted",
+        groupSize: 4,
+        source: "Bago Resort Gate Desk",
+        daysAgo: 0,
+        notes: "Morning spring-pool visitors verified by resort desk.",
+      },
+      {
+        key: "sample-checkin-baluarte-1d",
+        slug: "baluarte-falls-agila-falls",
+        methodCode: "official_logbook",
+        groupSize: 3,
+        source: "Brgy. Baluarte Trail Logbook",
+        daysAgo: 1,
+        notes: "Logged hikers accompanied by barangay trail guide.",
+      },
+      {
+        key: "sample-checkin-park-2d",
+        slug: "salcedo-adventure-leisure-park",
+        methodCode: "attraction_attendance",
+        groupSize: 6,
+        source: "Sitio Arnap Entrance Booth",
+        daysAgo: 2,
+        notes: "Weekend family day-tour tally.",
+      },
+      {
+        key: "sample-checkin-bakaan-4d",
+        slug: "bakaan-farm-and-resort",
+        methodCode: "staff_assisted",
+        groupSize: 8,
+        source: "Bakaan Farm Reception",
+        daysAgo: 4,
+        notes: "Agri-tourism orchard walk group.",
+      },
+      {
+        key: "sample-checkin-plaza-5d",
+        slug: "salcedo-town-plaza-del-pilar-shrine",
+        methodCode: "verified_onsite_qr",
+        groupSize: 2,
+        source: "Municipal Tourism Desk",
+        daysAgo: 5,
+        notes: "Heritage walk check-in verified by tourism staff.",
+      },
+    ];
+
+    for (const sc of sampleCheckins) {
+      const place = pickPlace(sc.slug);
+      const method = methodByCode.get(sc.methodCode) ?? fallbackMethod;
+      if (!method) continue;
+
+      const checkedAt = dayOffsetDate(-sc.daysAgo);
+      const arrivalDate = isoDate(checkedAt);
+      const guardHash = sha256Hex(sc.key);
+
+      const [checkin] = await db
+        .insert(schema.destinationCheckins)
+        .values({
+          placeId: place.id,
+          verificationMethodId: method.id,
+          recordedByAdminId: superAdmin?.id ?? null,
+          groupSize: sc.groupSize,
+          checkInSource: sc.source,
+          duplicateGuardHash: guardHash,
+          notes: sc.notes,
+          checkedInAt: checkedAt,
+          createdAt: checkedAt,
+        })
+        .onConflictDoNothing({ target: schema.destinationCheckins.duplicateGuardHash })
+        .returning();
+
+      if (checkin) {
+        await db.insert(schema.visitorArrivalRecords).values({
+          checkinId: checkin.id,
+          placeId: place.id,
+          arrivalDate,
+          arrivalCount: sc.groupSize,
+          sourceLabel: method.name,
+          reliabilityTier: method.reliabilityLabel,
+          verifiedByAdminId: superAdmin?.id ?? null,
+          createdAt: checkedAt,
+        });
+      }
+    }
+  }
+
+  // 3. Sample 14-Day Anonymous Analytics Sessions, Views & Searches
+  if (existingSession.length === 0) {
+    const popularSlugs = [
+      "baluarte-falls-agila-falls",
+      "bago-resort-spring-water",
+      "bakaan-farm-and-resort",
+      "salcedo-adventure-leisure-park",
+      "salcedo-town-plaza-del-pilar-shrine",
+      "tsokolate-de-ylocos-wynns-food-products",
+      "salcedo-heritage-tablea-coffee-corner",
+      "kinbandiw-falls",
+      "kusina-ti-ili-ilocano-grill",
+      "mount-madarang-trail-viewpoint",
+    ];
+    const searchTerms = [
+      "baluarte falls",
+      "bago resort",
+      "tablea",
+      "rambutan",
+      "poblacion",
+      "spring pool",
+      "coffee",
+      "kinbandiw",
+    ];
+
+    const sessionDayOffsets = [
+      0, 0, 0, 0, 0,
+      1, 1, 1, 1,
+      2, 2, 2,
+      3, 3,
+      4, 4, 4,
+      5, 5,
+      6, 6, 6,
+      7, 7,
+      8, 8,
+      9, 9,
+      10, 10,
+      11, 11,
+      12,
+      13, 13,
+    ];
+
+    for (let i = 0; i < sessionDayOffsets.length; i++) {
+      const daysAgo = sessionDayOffsets[i];
+      const startedAt = new Date(dayOffsetDate(-daysAgo).getTime() - (i % 6) * 3600_000);
+      const token = `sample-anon-session-${String(i + 1).padStart(3, "0")}`;
+
+      const [sess] = await db
+        .insert(schema.anonymousSessions)
+        .values({
+          sessionToken: token,
+          startedAt,
+          lastActivityAt: new Date(startedAt.getTime() + 8 * 60_000),
+          entryPath: i % 3 === 0 ? "/app/map" : "/app",
+          deviceCategory: i % 5 === 0 ? "desktop" : "mobile",
+          isLikelyBot: false,
+          pageViewsCount: 2,
+          createdAt: startedAt,
+        })
+        .onConflictDoNothing({ target: schema.anonymousSessions.sessionToken })
+        .returning();
+
+      if (!sess) continue;
+
+      await db
+        .insert(schema.pageViewEvents)
+        .values([
+          {
+            sessionId: sess.id,
+            idempotencyKey: `sample-pv-home-${i}`,
+            path: "/app",
+            pageType: "home",
+            viewedAt: startedAt,
+          },
+          {
+            sessionId: sess.id,
+            idempotencyKey: `sample-pv-sub-${i}`,
+            path: i % 2 === 0 ? "/app/discover" : "/app/map",
+            pageType: i % 2 === 0 ? "discover" : "map",
+            viewedAt: new Date(startedAt.getTime() + 90_000),
+          },
+        ])
+        .onConflictDoNothing();
+
+      const p1 = pickPlace(popularSlugs[i % popularSlugs.length]);
+      const p2 = pickPlace(popularSlugs[(i + 3) % popularSlugs.length]);
+      await db
+        .insert(schema.placeViewEvents)
+        .values({
+          sessionId: sess.id,
+          placeId: p1.id,
+          idempotencyKey: `sample-place-a-${i}`,
+          viewedAt: new Date(startedAt.getTime() + 120_000),
+        })
+        .onConflictDoNothing();
+
+      if (p2.id !== p1.id && i % 2 === 0) {
+        await db
+          .insert(schema.placeViewEvents)
+          .values({
+            sessionId: sess.id,
+            placeId: p2.id,
+            idempotencyKey: `sample-place-b-${i}`,
+            viewedAt: new Date(startedAt.getTime() + 240_000),
+          })
+          .onConflictDoNothing();
+      }
+
+      if (i < 24) {
+        const term = searchTerms[i % searchTerms.length];
+        await db
+          .insert(schema.searchEvents)
+          .values({
+            sessionId: sess.id,
+            idempotencyKey: `sample-search-${i}`,
+            normalizedQuery: term,
+            resultsCount: 2 + (i % 4),
+            searchedAt: new Date(startedAt.getTime() + 60_000),
+          })
+          .onConflictDoNothing();
+      }
+
+      if (i < 10) {
+        const eventType =
+          i < 4
+            ? "builder_started"
+            : i < 7
+            ? "downloaded"
+            : i < 9
+            ? "submitted"
+            : "retrieved";
+        await db
+          .insert(schema.itineraryEvents)
+          .values({
+            sessionId: sess.id,
+            idempotencyKey: `sample-itin-ev-${i}`,
+            eventType,
+            stopCount: 2 + (i % 3),
+            occurredAt: new Date(startedAt.getTime() + 300_000),
+          })
+          .onConflictDoNothing();
+      }
+    }
+
+    const existingAudit = await db.select({ id: schema.auditLogs.id }).from(schema.auditLogs).limit(1);
+    if (existingAudit.length === 0) {
+      await db.insert(schema.auditLogs).values([
+        {
+          actorUsername: "cedo_superadmin",
+          action: "seed.sample_data",
+          targetType: "system",
+          summary: "Loaded verified Salcedo municipal baseline catalog and initial sample tourism activity.",
+          metadataJson: { barangays: 21, sampleItineraries: 6, sampleCheckins: 5 },
+        },
+      ]);
+    }
   }
 }

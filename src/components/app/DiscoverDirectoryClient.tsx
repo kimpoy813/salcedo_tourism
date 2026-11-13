@@ -13,7 +13,7 @@ const SalcedoMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[58vh] rounded-2xl border border-[#EAE7E0] bg-white flex items-center justify-center text-xs text-[#616E69]">
+      <div className="h-[58vh] rounded-2xl border border-[#EAE7E0] bg-[#EAE6DC] flex items-center justify-center text-xs text-[#616E69]">
         Loading map...
       </div>
     ),
@@ -149,11 +149,11 @@ function DiscoverDirectoryInner({
 
   return (
     <div className="space-y-3.5">
-      {/* Sticky Minimal Search & Controls */}
-      <div className="sticky top-14 z-30 -mx-4 px-4 pt-1 pb-2.5 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0] space-y-2.5">
+      {/* Sticky Native App Search & Segmented Bar */}
+      <div className="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2.5 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0] space-y-2.5">
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 text-[#616E69] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#616E69] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="search"
               value={query}
@@ -167,7 +167,7 @@ function DiscoverDirectoryInner({
             type="button"
             onClick={() => setFilterSheetOpen(true)}
             aria-label="Open directory filters"
-            className={`relative w-9 h-9 rounded-full border flex items-center justify-center shrink-0 cursor-pointer transition ${
+            className={`relative w-9 h-9 rounded-full border flex items-center justify-center shrink-0 active:scale-90 transition cursor-pointer ${
               activeFilterCount > 0
                 ? "bg-[#164237] text-white border-[#164237]"
                 : "bg-white text-[#1A2421] border-[#EAE7E0]"
@@ -185,7 +185,7 @@ function DiscoverDirectoryInner({
             type="button"
             onClick={() => setViewMode((v) => (v === "list" ? "map" : "list"))}
             aria-label={viewMode === "list" ? "Switch to map view" : "Switch to list view"}
-            className="w-9 h-9 rounded-full border border-[#EAE7E0] bg-white flex items-center justify-center text-[#1A2421] shrink-0 cursor-pointer"
+            className="w-9 h-9 rounded-full border border-[#EAE7E0] bg-white flex items-center justify-center text-[#1A2421] shrink-0 active:scale-90 transition cursor-pointer"
           >
             {viewMode === "list" ? (
               <MapIcon className="w-4 h-4" />
@@ -203,7 +203,7 @@ function DiscoverDirectoryInner({
               setSelectedCategory("all");
               setSelectedType("all");
             }}
-            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition active:scale-95 cursor-pointer ${
               selectedCategory === "all" && selectedType === "all"
                 ? "bg-[#164237] text-white"
                 : "bg-white text-[#1A2421] border border-[#EAE7E0]"
@@ -220,7 +220,7 @@ function DiscoverDirectoryInner({
                 setSelectedCategory(cat.slug);
                 setSelectedType("all");
               }}
-              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition active:scale-95 cursor-pointer ${
                 selectedCategory === cat.slug
                   ? "bg-[#164237] text-white"
                   : "bg-white text-[#1A2421] border border-[#EAE7E0]"
@@ -262,7 +262,7 @@ function DiscoverDirectoryInner({
             <button
               type="button"
               onClick={clearFilters}
-              className="text-[11px] font-semibold text-[#164237] hover:underline cursor-pointer"
+              className="text-[11px] font-semibold text-[#164237] cursor-pointer"
             >
               Reset
             </button>
@@ -275,6 +275,7 @@ function DiscoverDirectoryInner({
         <SalcedoMap
           places={filteredPlaces}
           barangays={barangays}
+          mode="embedded"
           heightClass="h-[56vh] min-h-[380px]"
         />
       ) : filteredPlaces.length === 0 ? (
@@ -301,17 +302,19 @@ function DiscoverDirectoryInner({
         </div>
       )}
 
-      {/* Slide-Up Minimal Filter Bottom Sheet */}
+      {/* Slide-Up Native Bottom Sheet Filter Drawer */}
       {filterSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 backdrop-blur-[1px]">
-          <div className="w-full max-w-[430px] bg-white rounded-t-3xl border-t border-[#EAE7E0] p-5 pb-7 space-y-5 shadow-xl animate-in slide-in-from-bottom-6 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[1px]">
+          <div className="w-full max-w-[430px] bg-white rounded-t-[28px] border-t border-[#EAE7E0] p-5 pb-7 space-y-5 shadow-xl animate-in slide-in-from-bottom-6 duration-200">
+            <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto -mt-1" />
+
             <div className="flex items-center justify-between">
               <h2 className="font-display text-lg font-bold text-[#1A2421]">Filters</h2>
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(false)}
                 aria-label="Close filters"
-                className="w-8 h-8 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] cursor-pointer"
+                className="w-8 h-8 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] active:scale-90 transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -408,7 +411,7 @@ function DiscoverDirectoryInner({
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(false)}
-                className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold cursor-pointer"
+                className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
               >
                 Show {filteredPlaces.length} Results
               </button>

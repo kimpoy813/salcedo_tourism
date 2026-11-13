@@ -8,8 +8,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import Link from "next/link";
-import { Check, Info, X } from "lucide-react";
 import {
   listLocalDrafts,
   listSavedPlaceIds,
@@ -18,7 +16,7 @@ import {
   type LocalItineraryDraft,
 } from "@/lib/client/indexeddb";
 
-interface ToastState {
+export interface ToastState {
   id: number;
   message: string;
   actionLabel?: string;
@@ -31,6 +29,8 @@ interface MobileAppContextValue {
   draftStopCount: number;
   savedPlaceIds: string[];
   savedCount: number;
+  toast: ToastState | null;
+  dismissToast: () => void;
   refreshCounts: () => Promise<void>;
   addPlaceToActiveDraft: (place: {
     id: string;
@@ -57,6 +57,11 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
   const [toast, setToast] = useState<ToastState | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const dismissToast = useCallback(() => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+    setToast(null);
+  }, []);
+
   const showToast = useCallback(
     (
       message: string,
@@ -73,7 +78,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       });
       timerRef.current = setTimeout(() => {
         setToast((cur) => (cur?.id === id ? null : cur));
-      }, 3200);
+      }, 3000);
     },
     []
   );
@@ -185,6 +190,8 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
         draftStopCount: draftStopIds.length,
         savedPlaceIds,
         savedCount: savedPlaceIds.length,
+        toast,
+        dismissToast,
         refreshCounts,
         addPlaceToActiveDraft,
         toggleBookmark,
@@ -192,43 +199,6 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       }}
     >
       {children}
-
-      {/* Minimalist Floating Snackbar */}
-      {toast && (
-        <div className="no-print fixed bottom-[76px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[398px] pointer-events-none">
-          <div className="pointer-events-auto flex items-center justify-between gap-2.5 rounded-full bg-[#1A2421] text-white pl-3.5 pr-2 py-2 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
-            <div className="flex items-center gap-2 min-w-0">
-              {toast.tone === "success" ? (
-                <span className="w-5 h-5 rounded-full bg-[#164237] flex items-center justify-center shrink-0">
-                  <Check className="w-3 h-3 text-white" />
-                </span>
-              ) : (
-                <Info className="w-4 h-4 text-white/75 shrink-0" />
-              )}
-              <p className="text-xs font-medium truncate">{toast.message}</p>
-            </div>
-            <div className="flex items-center gap-1 shrink-0">
-              {toast.actionLabel && toast.actionHref && (
-                <Link
-                  href={toast.actionHref}
-                  onClick={() => setToast(null)}
-                  className="rounded-full bg-white text-[#1A2421] px-2.5 py-1 text-[11px] font-bold hover:bg-[#FAF9F6] transition"
-                >
-                  {toast.actionLabel}
-                </Link>
-              )}
-              <button
-                type="button"
-                onClick={() => setToast(null)}
-                aria-label="Dismiss"
-                className="p-1 text-white/60 hover:text-white cursor-pointer"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </MobileAppContext.Provider>
   );
 }
