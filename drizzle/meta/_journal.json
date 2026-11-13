@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1794541196531,
+      "tag": "0000_init_salcedo_tourism",
+      "breakpoints": true
+    }
+  ]
+}
