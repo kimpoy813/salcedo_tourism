@@ -70,7 +70,8 @@ export default async function PlaceDetailPage({
       </section>
 
       {/* Overlapping Native Sheet Container */}
-      <div className="relative z-10 -mt-6 rounded-t-[28px] bg-[#FAF9F6] px-4 pt-3 pb-2 space-y-6">
+      <div className="relative z-10 -mt-6 rounded-t-[28px] bg-[#FAF9F6] pt-3 pb-0 space-y-6">
+        <div className="px-4 space-y-6">
         <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto" />
 
         {/* Title & Overview */}
@@ -498,14 +499,15 @@ export default async function PlaceDetailPage({
             </span>
           </Link>
         )}
+        </div>
 
         {/* Continue Exploring */}
         {place.relatedPlaces.length > 0 && (
           <section className="space-y-3 pt-1">
-            <h2 className="font-display text-base font-bold text-[#1A2421]">
+            <h2 className="px-4 font-display text-base font-bold text-[#1A2421]">
               More in Salcedo
             </h2>
-            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-1">
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar px-4 scroll-px-4 pb-1 after:content-[''] after:w-1 after:shrink-0">
               {place.relatedPlaces.map((rel) => (
                 <PlaceCard key={rel.id} place={rel} variant="rail" />
               ))}

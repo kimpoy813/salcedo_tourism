@@ -36,17 +36,17 @@ export function HomeRankingsCard({
     if (tab === "most_visited") {
       return [...places]
         .sort((a, b) => (a.mostVisitedRank ?? 99) - (b.mostVisitedRank ?? 99))
-        .slice(0, 4);
+        .slice(0, 5);
     }
     if (tab === "top_rated") {
       return [...places]
         .sort((a, b) => (a.topRatedRank ?? 99) - (b.topRatedRank ?? 99))
-        .slice(0, 4);
+        .slice(0, 5);
     }
     return places
       .filter((p) => p.primaryCategory?.slug === selectedCatSlug)
       .sort((a, b) => (a.categoryRank ?? 99) - (b.categoryRank ?? 99))
-      .slice(0, 4);
+      .slice(0, 5);
   }, [places, tab, selectedCatSlug]);
 
   const discoverHref =
@@ -55,22 +55,22 @@ export function HomeRankingsCard({
       : `/app/discover?sort=${tab}`;
 
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h2 className="font-display text-lg font-bold text-[#1A2421] inline-flex items-center gap-1.5">
-          <Trophy className="w-4 h-4 text-[#B88A44]" />
-          Salcedo Rankings
+    <section className="w-full min-w-0 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-display text-lg font-bold text-[#1A2421] inline-flex items-center gap-1.5 min-w-0">
+          <Trophy className="w-4 h-4 text-[#B88A44] shrink-0" />
+          <span className="truncate">Top Ranked Spots</span>
         </h2>
         <Link
           href={discoverHref}
-          className="text-xs font-semibold text-[#164237] inline-flex items-center gap-0.5"
+          className="text-xs font-semibold text-[#164237] inline-flex items-center gap-0.5 shrink-0"
         >
-          Full Board <ChevronRight className="w-3.5 h-3.5" />
+          See all <ChevronRight className="w-3.5 h-3.5" />
         </Link>
       </div>
 
       {/* Mode Switcher */}
-      <div className="grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0]">
+      <div className="w-full grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0]">
         <button
           type="button"
           onClick={() => setTab("most_visited")}
@@ -80,8 +80,8 @@ export function HomeRankingsCard({
               : "text-[#616E69]"
           }`}
         >
-          <Flame className="w-3 h-3" />
-          Most Visited
+          <Flame className="w-3 h-3 shrink-0" />
+          <span>Most Visited</span>
         </button>
         <button
           type="button"
@@ -92,8 +92,8 @@ export function HomeRankingsCard({
               : "text-[#616E69]"
           }`}
         >
-          <Star className="w-3 h-3" />
-          Top Rated
+          <Star className="w-3 h-3 shrink-0" />
+          <span>Top Rated</span>
         </button>
         <button
           type="button"
@@ -104,14 +104,14 @@ export function HomeRankingsCard({
               : "text-[#616E69]"
           }`}
         >
-          <LayoutGrid className="w-3 h-3" />
-          Category
+          <LayoutGrid className="w-3 h-3 shrink-0" />
+          <span>Category</span>
         </button>
       </div>
 
-      {/* Category Chips when By Category is selected */}
+      {/* Category Chips when By Category is active */}
       {tab === "by_category" && (
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4">
+        <div className="w-full flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
           {nonEmptyCategories.map((c) => (
             <button
               key={c.id}
@@ -129,8 +129,8 @@ export function HomeRankingsCard({
         </div>
       )}
 
-      {/* Compact Leaderboard Rows */}
-      <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
+      {/* Clean Leaderboard Card */}
+      <div className="w-full bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
         {topList.map((p, idx) => {
           const rank =
             tab === "most_visited"

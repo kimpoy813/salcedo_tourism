@@ -181,7 +181,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
         {/* Native Scrollable Content Canvas (or Fullscreen Map Canvas) */}
         <main
           ref={scrollRef}
-          className={`app-shell-scroll flex-1 min-h-0 relative ${
+          className={`app-shell-scroll w-full max-w-full min-w-0 flex-1 min-h-0 relative ${
             isFullScreenMap
               ? "overflow-hidden"
               : "overflow-y-auto overflow-x-hidden overscroll-contain"

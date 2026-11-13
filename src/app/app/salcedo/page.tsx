@@ -18,8 +18,8 @@ export default async function SalcedoInfoPage() {
   ]);
 
   return (
-    <div className="px-4 py-4 space-y-4">
-      <div className="space-y-0.5">
+    <div className="py-4 space-y-3">
+      <div className="px-4 space-y-0.5">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
           Municipality Profile
         </p>
@@ -30,8 +30,10 @@ export default async function SalcedoInfoPage() {
 
       <Suspense
         fallback={
-          <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
-            Loading profile...
+          <div className="px-4">
+            <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
+              Loading profile...
+            </div>
           </div>
         }
       >

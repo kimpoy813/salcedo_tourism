@@ -396,7 +396,7 @@ export function PlaceDetailActions({ place }: { place: PlaceActionPayload }) {
 
   return (
     <>
-      <div className="flex flex-wrap items-center gap-2 pt-1">
+      <div className="px-4 flex flex-wrap items-center gap-2 pt-1">
         <Link
           href="/app/map"
           className="inline-flex items-center gap-1.5 rounded-full bg-[#164237]/10 px-3.5 py-1.5 text-xs font-semibold text-[#164237] active:scale-95 transition"
@@ -418,7 +418,7 @@ export function PlaceDetailActions({ place }: { place: PlaceActionPayload }) {
       </div>
 
       {/* Native Sticky Action Dock at Bottom of Place Sheet */}
-      <div className="no-print sticky bottom-0 left-0 right-0 z-30 -mx-4 px-4 py-3 mt-4 bg-white/95 backdrop-blur-md border-t border-[#EAE7E0] flex items-center gap-2.5">
+      <div className="no-print sticky bottom-0 left-0 right-0 z-30 px-4 py-3 mt-4 bg-white/95 backdrop-blur-md border-t border-[#EAE7E0] flex items-center gap-2.5">
         <button
           type="button"
           onClick={() => void toggleBookmark(place.id, place.name)}

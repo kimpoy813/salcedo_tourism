@@ -892,7 +892,7 @@ export function SalcedoMap({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto divide-y divide-[#EAE7E0] -mx-4 px-4">
+              <div className="flex-1 overflow-y-auto divide-y divide-[#EAE7E0]">
                 {visiblePlaces.map((p, idx) => {
                   const rankNum =
                     rankMode === "most_visited"

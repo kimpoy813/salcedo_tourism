@@ -16,8 +16,8 @@ export default async function DiscoverPage() {
   ]);
 
   return (
-    <div className="px-4 pt-[max(18px,env(safe-area-inset-top))] pb-6 space-y-4">
-      <div className="space-y-0.5">
+    <div className="pt-[max(18px,env(safe-area-inset-top))] pb-6 space-y-2">
+      <div className="px-4 space-y-0.5">
         <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
           Directory
         </p>
@@ -28,8 +28,10 @@ export default async function DiscoverPage() {
 
       <Suspense
         fallback={
-          <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
-            Loading directory...
+          <div className="px-4">
+            <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
+              Loading directory...
+            </div>
           </div>
         }
       >
