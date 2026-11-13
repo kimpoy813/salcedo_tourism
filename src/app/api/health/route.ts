@@ -10,7 +10,7 @@ export async function GET() {
     await db.execute(sql`SELECT 1`);
     return NextResponse.json({
       ok: true,
-      app: "Project CEDO: Turi App",
+      app: "Project CEDO: Turi",
       municipality: "Salcedo, Ilocos Sur",
       timestamp: new Date().toISOString(),
     });

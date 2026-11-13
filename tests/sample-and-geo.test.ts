@@ -16,24 +16,16 @@ import {
   verifyAdminToken,
 } from "../src/lib/admin-auth";
 import {
+  computeHaversineKm,
+  findSalcedoBarangayForPoint,
+  isInsideSalcedo,
+  pointInPolygon,
   SALCEDO_BARANGAY_POLYGONS,
   SALCEDO_BOUNDS,
   SALCEDO_MASK_OUTER_RING,
   SALCEDO_MUNICIPAL_POLYGON,
-  type LatLngTuple,
+  SALCEDO_TOWN_PLAZA_COORD,
 } from "../src/lib/geo/salcedo-boundary";
-
-function pointInPolygon(lat: number, lng: number, ring: LatLngTuple[]): boolean {
-  let inside = false;
-  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    const [yi, xi] = ring[i];
-    const [yj, xj] = ring[j];
-    const intersect =
-      yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
-    if (intersect) inside = !inside;
-  }
-  return inside;
-}
 
 async function createMigratedTestDb() {
   const client = new PGlite();
@@ -70,12 +62,13 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
       }
     }
 
-    expect(pointInPolygon(17.1508, 120.536, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
-    expect(pointInPolygon(17.099, 120.5215, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
-    expect(pointInPolygon(17.1415, 120.5675, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
-    expect(pointInPolygon(17.1241, 120.5037, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
-    expect(pointInPolygon(17.1587, 120.578, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
+    expect(pointInPolygon(17.15107, 120.53634, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
+    expect(isInsideSalcedo(SALCEDO_TOWN_PLAZA_COORD[0], SALCEDO_TOWN_PLAZA_COORD[1])).toBe(true);
+    expect(findSalcedoBarangayForPoint(17.15107, 120.53634)?.slug).toBe("poblacion-norte");
+    expect(findSalcedoBarangayForPoint(17.1415, 120.5675)?.slug).toBe("ubbog");
+    expect(pointInPolygon(17.0958, 120.5262, SALCEDO_MUNICIPAL_POLYGON)).toBe(true);
     expect(pointInPolygon(17.194, 120.448, SALCEDO_MUNICIPAL_POLYGON)).toBe(false);
+    expect(computeHaversineKm(17.15107, 120.53634, 17.1415, 120.5675)).toBeGreaterThan(3);
   });
 
   it("seeds sample places, tourist ratings, rankings, itineraries, check-ins, and analytics idempotently", async () => {
@@ -88,9 +81,11 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
     await seedDatabase(db);
     await seedSampleActivityData(db);
 
-    const [places, ratings, itineraries, submissions, checkins, arrivals, sessions, searches] =
+    const [places, barangays, municipalInfo, ratings, itineraries, submissions, checkins, arrivals, sessions, searches] =
       await Promise.all([
         db.select().from(schema.places),
+        db.select().from(schema.barangays),
+        db.select().from(schema.municipalInformation),
         db.select().from(schema.placeRatings),
         db.select().from(schema.itineraries),
         db.select().from(schema.visitorSubmissions),
@@ -99,6 +94,20 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
         db.select().from(schema.anonymousSessions),
         db.select().from(schema.searchEvents),
       ]);
+
+    const brgyById = new Map(barangays.map((b) => [b.id, b]));
+    for (const p of places) {
+      expect(p.latitude).not.toBeNull();
+      expect(p.longitude).not.toBeNull();
+      expect(isInsideSalcedo(p.latitude!, p.longitude!)).toBe(true);
+      if (p.barangayId) {
+        const expectedSlug = brgyById.get(p.barangayId)?.slug;
+        expect(findSalcedoBarangayForPoint(p.latitude!, p.longitude!)?.slug).toBe(
+          expectedSlug
+        );
+      }
+    }
+    expect(municipalInfo.length).toBeGreaterThanOrEqual(5);
 
     const published = places.filter((p) => p.status === "published" && !p.isPlaceholder);
     expect(published.length).toBeGreaterThanOrEqual(16);

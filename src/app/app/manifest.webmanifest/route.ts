@@ -3,10 +3,10 @@ import { NextResponse } from "next/server";
 export async function GET() {
   const manifest = {
     id: "/app/",
-    name: "Project CEDO: Turi App",
-    short_name: "Turi",
+    name: "Project CEDO: Turi",
+    short_name: "Project CEDO: Turi",
     description:
-      "Official Municipal Tourism Discovery, Visitor Information, and Itinerary App for Salcedo, Ilocos Sur, Philippines.",
+      "Project CEDO: Turi — Official Municipal Tourism Discovery, Visitor Information, and Itinerary App for Salcedo, Ilocos Sur, Philippines.",
     start_url: "/app/",
     scope: "/app/",
     display: "standalone",

@@ -667,8 +667,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "nature-waterfalls",
       barangaySlug: "baluarte",
       address: "Barangay Baluarte, Salcedo, Ilocos Sur 2711",
-      latitude: 17.099,
-      longitude: 120.5215,
+      latitude: 17.0958,
+      longitude: 120.5262,
       featuredImageUrl: "/images/salcedo/baluarte-falls.png",
       featuredImageCaption:
         "Editorial visual illustration of Baluarte Falls mountain cascade (Barangay Baluarte, Salcedo).",
@@ -837,8 +837,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "nature-waterfalls",
       barangaySlug: "lucbuban",
       address: "Barangay Lucbuban, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1293,
-      longitude: 120.5432,
+      latitude: 17.1318,
+      longitude: 120.5468,
       featuredImageUrl: "/images/salcedo/baluarte-falls.png",
       featuredImageCaption:
         "Editorial visual illustration of secluded mountain cascade waters in Barangay Lucbuban.",
@@ -871,8 +871,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "culture-heritage",
       barangaySlug: "poblacion-norte",
       address: "Poblacion Norte, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1508,
-      longitude: 120.536,
+      latitude: 17.15107,
+      longitude: 120.53634,
       featuredImageUrl: "/images/salcedo/plaza-heritage.png",
       featuredImageCaption:
         "Editorial visual illustration of Salcedo's tranquil historic town plaza and distant mountain range.",
@@ -903,8 +903,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "culture-heritage",
       barangaySlug: "poblacion-sur",
       address: "Poblacion Sur / Poblacion Norte, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1496,
-      longitude: 120.5363,
+      latitude: 17.1501,
+      longitude: 120.5366,
       featuredImageUrl: "/images/salcedo/plaza-heritage.png",
       featuredImageCaption:
         "Editorial visual illustration representing Salcedo's parish heritage and town center.",
@@ -934,8 +934,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "resorts-staycations",
       barangaySlug: "poblacion-sur",
       address: "Poblacion Sur / Sorioan Road, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1476,
-      longitude: 120.5382,
+      latitude: 17.1456,
+      longitude: 120.5378,
       featuredImageUrl: "/images/salcedo/spring-water-resort.png",
       featuredImageCaption:
         "Editorial visual illustration of Salcedo's upland resort scenery (verify on-site facilities directly).",
@@ -967,8 +967,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "restaurants-eateries",
       barangaySlug: "poblacion-norte",
       address: "Barangay Poblacion Norte, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1518,
-      longitude: 120.5356,
+      latitude: 17.1531,
+      longitude: 120.5362,
       featuredImageUrl: "/images/salcedo/local-eatery-table.png",
       featuredImageCaption:
         "Editorial visual illustration of rural Ilocano barbecue & local dining table.",
@@ -998,8 +998,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "agritourism-local-finds",
       barangaySlug: "poblacion-norte",
       address: "Salcedo, Ilocos Sur 2711",
-      latitude: 17.1504,
-      longitude: 120.5369,
+      latitude: 17.15155,
+      longitude: 120.53675,
       featuredImageUrl: "/images/salcedo/rambutan-cacao-harvest.png",
       featuredImageCaption:
         "Editorial visual illustration of Salcedo cacao pods, roasted beans, and artisanal tablea discs.",
@@ -1033,8 +1033,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "agritourism-local-finds",
       barangaySlug: "sorioan",
       address: "Barangay Sorioan, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1219,
-      longitude: 120.5365,
+      latitude: 17.12121,
+      longitude: 120.53633,
       featuredImageUrl: "/images/salcedo/rambutan-cacao-harvest.png",
       featuredImageCaption:
         "Editorial visual illustration of Salcedo's local cacao farming and nursery initiatives.",
@@ -1064,8 +1064,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "essential-services",
       barangaySlug: "poblacion-sur",
       address: "National Road, Poblacion Sur / Poblacion Norte, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1485,
-      longitude: 120.5362,
+      latitude: 17.1483,
+      longitude: 120.5354,
       phone: "0939 371 4081 (Hospital) / 0917 890 0064 (RHU)",
       featuredImageUrl: "/images/salcedo/plaza-heritage.png",
       featuredImageCaption: "Essential public medical service landmark in Poblacion, Salcedo.",
@@ -1087,8 +1087,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "nature-waterfalls",
       barangaySlug: "madarang",
       address: "Barangay Madarang, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1587,
-      longitude: 120.578,
+      latitude: 17.1625,
+      longitude: 120.5795,
       featuredImageUrl: "/images/salcedo/hero-salcedo-valley.png",
       featuredImageCaption:
         "Editorial visual illustration of Salcedo's upland valleys and Cordillera ridges near Madarang.",
@@ -1121,8 +1121,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "cafes-coffee",
       barangaySlug: "poblacion-norte",
       address: "Town Plaza Perimeter, Poblacion Norte, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1512,
-      longitude: 120.5358,
+      latitude: 17.1522,
+      longitude: 120.5354,
       featuredImageUrl: "/images/salcedo/local-eatery-table.png",
       featuredImageCaption:
         "Editorial visual illustration of Salcedo heritage coffee & tablea hospitality.",
@@ -1184,8 +1184,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "restaurants-eateries",
       barangaySlug: "poblacion-sur",
       address: "National Road, Brgy. Poblacion Sur, Salcedo, Ilocos Sur 2711",
-      latitude: 17.1489,
-      longitude: 120.5364,
+      latitude: 17.1471,
+      longitude: 120.5368,
       featuredImageUrl: "/images/salcedo/local-eatery-table.png",
       featuredImageCaption:
         "Editorial visual illustration of an authentic Ilocano dining table in Salcedo.",
@@ -1216,7 +1216,7 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       categorySlug: "cafes-coffee",
       barangaySlug: "poblacion-norte",
       address: "Pending Verification — Poblacion Norte, Salcedo, Ilocos Sur",
-      latitude: 17.1514,
+      latitude: 17.1518,
       longitude: 120.5359,
       featuredImageUrl: "/images/salcedo/local-eatery-table.png",
       featuredImageCaption: "Placeholder visual awaiting verified establishment photos.",
@@ -1268,6 +1268,22 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
     },
   ];
 
+  const legacyCoordBackfills: Record<string, [number, number]> = {
+    "baluarte-falls-agila-falls": [17.099, 120.5215],
+    "kinbandiw-falls": [17.1293, 120.5432],
+    "salcedo-town-plaza-del-pilar-shrine": [17.1508, 120.536],
+    "saint-joseph-parish-church": [17.1496, 120.5363],
+    "salcedo-upland-resort": [17.1476, 120.5382],
+    "palays-bbq-poblacion-norte": [17.1518, 120.5356],
+    "tsokolate-de-ylocos-wynns-food-products": [17.1504, 120.5369],
+    "sorioan-cacao-nursery-farm": [17.1219, 120.5365],
+    "salcedo-district-hospital-and-rhu": [17.1485, 120.5362],
+    "mount-madarang-trail-viewpoint": [17.1587, 120.578],
+    "salcedo-heritage-tablea-coffee-corner": [17.1512, 120.5358],
+    "kusina-ti-ili-ilocano-grill": [17.1489, 120.5364],
+    "placeholder-poblacion-cafe": [17.1514, 120.5359],
+  };
+
   for (const sp of seedPlaces) {
     const existing = await db
       .select()
@@ -1275,7 +1291,20 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       .where(eq(schema.places.slug, sp.slug))
       .limit(1);
 
-    if (existing.length > 0) continue;
+    if (existing.length > 0) {
+      const legacy = legacyCoordBackfills[sp.slug];
+      if (
+        legacy &&
+        existing[0].latitude === legacy[0] &&
+        existing[0].longitude === legacy[1]
+      ) {
+        await db
+          .update(schema.places)
+          .set({ latitude: sp.latitude, longitude: sp.longitude, updatedAt: new Date() })
+          .where(eq(schema.places.id, existing[0].id));
+      }
+      continue;
+    }
 
     const cat = catBySlug.get(sp.categorySlug);
     const brgy = brgyBySlug.get(sp.barangaySlug);
@@ -1766,6 +1795,42 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
         formerName: "Bauguen (renamed via RA 1627 on June 20, 1957)",
       },
       sourceReference: "PSA 2020/2024 Census, Republic Act No. 1627, PhilAtlas",
+    },
+    {
+      key: "geography_landlocked_valley",
+      title: "Geography & Landlocked Valley Setting",
+      category: "geography",
+      content:
+        "Salcedo is a landlocked valley municipality covering 103.44 sq km along the western Cordillera foothills of Ilocos Sur. Bordered by Candon City, Galimuyod, Gregorio del Pilar, Quirino, Santa Lucia, and Santa Cruz, its terrain rises from lowland rice plains in Poblacion and San Gaspar to 631 meters above sea level in upland Barangay Madarang, fed by the Buaya River and spring watersheds.",
+      metadataJson: {
+        landAreaSqKm: 103.44,
+        maxElevationBarangay: "Madarang (631 m ASL)",
+        riverSystem: "Buaya River",
+      },
+      sourceReference: "PhilAtlas Geography Profile & PSA / NAMRIA Boundary Records",
+    },
+    {
+      key: "economy_agriculture_rambutan",
+      title: "Local Economy, Rambutan & Cacao Tablea",
+      category: "economy",
+      content:
+        "Celebrated as the 'Rambutan Basket of the North,' Salcedo's economy is anchored by rice, corn, seasonal rambutan orchards (July–October harvest), and value-added cacao tablea and 70% dark chocolate crafted by DOST/DTI-assisted local MSMEs alongside community-led eco-agritourism.",
+      metadataJson: {
+        keyProduce: ["Rambutan", "Cacao Tablea", "Palay Rice", "Corn"],
+      },
+      sourceReference: "Municipality of Salcedo — CEDO & DOST/DTI SETUP Records",
+    },
+    {
+      key: "governance_tourism_office",
+      title: "Municipal Tourism & CEDO Governance",
+      category: "governance",
+      content:
+        "Tourism promotion, local enterprise support, and heritage preservation are coordinated through the Municipal Community Economic Development Office (CEDO) and Municipal Tourism Office at Salcedo Municipal Hall, Poblacion Norte (2711).",
+      metadataJson: {
+        office: "CEDO / Municipal Tourism Office",
+        location: "Salcedo Municipal Hall, Poblacion Norte",
+      },
+      sourceReference: "Municipality of Salcedo — CEDO Official Records",
     },
     {
       key: "privacy_policy_ra10173",

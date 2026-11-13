@@ -1172,3 +1172,51 @@ export const SALCEDO_BARANGAY_POLYGONS: BarangayPolygonFeature[] = [
     ]
   }
 ];
+
+// Verified OpenStreetMap node 198511864 (Salcedo Municipal Hall & Town Plaza, Poblacion Norte)
+export const SALCEDO_TOWN_PLAZA_COORD: LatLngTuple = [17.15107, 120.53634];
+
+export function pointInPolygon(lat: number, lng: number, ring: LatLngTuple[]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [yi, xi] = ring[i];
+    const [yj, xj] = ring[j];
+    const intersect =
+      yi > lat !== yj > lat && lng < ((xj - xi) * (lat - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+export function isInsideSalcedo(lat: number, lng: number): boolean {
+  return pointInPolygon(lat, lng, SALCEDO_MUNICIPAL_POLYGON);
+}
+
+export function findSalcedoBarangayForPoint(
+  lat: number,
+  lng: number
+): { slug: string; name: string; psgc: string } | null {
+  for (const brgy of SALCEDO_BARANGAY_POLYGONS) {
+    if (pointInPolygon(lat, lng, brgy.coordinates)) {
+      return { slug: brgy.slug, name: brgy.name, psgc: brgy.psgc };
+    }
+  }
+  return null;
+}
+
+export function computeHaversineKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+

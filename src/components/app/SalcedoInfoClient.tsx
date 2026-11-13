@@ -180,10 +180,8 @@ function SalcedoInfoInner({
               </div>
             </div>
             <p className="text-sm text-[#1A2421]/85 leading-relaxed">
-              Known historically as <strong>Baugen</strong>, Salcedo is a serene valley
-              municipality along the Buaya River near Tirad Pass. Celebrated as the{" "}
-              <strong>&ldquo;Rambutan Basket of the North&rdquo;</strong>, it welcomes travelers
-              with cool inland springs, waterfalls, and heritage cacao tablea.
+              {municipalInfo.find((m) => m.key === "profile_overview")?.content ||
+                "Known historically as Baugen, Salcedo is a serene valley municipality along the Buaya River near Tirad Pass. Celebrated as the \"Rambutan Basket of the North\", it welcomes travelers with cool inland springs, waterfalls, and heritage cacao tablea."}
             </p>
             <img
               src="/images/salcedo/ilocos-sur-locator-map.jpg"

@@ -352,7 +352,7 @@ function TripsPlannerInner({
     refNum?: string
   ) => {
     const lines = [
-      "PROJECT CEDO: TURI APP — MUNICIPALITY OF SALCEDO, ILOCOS SUR",
+      "PROJECT CEDO: TURI — MUNICIPALITY OF SALCEDO, ILOCOS SUR",
       "==============================================================",
       `Itinerary: ${docTitle}`,
       `Planned Travel Date: ${date}`,
@@ -366,7 +366,7 @@ function TripsPlannerInner({
           } mins)${s.personalNotes ? `\n   Notes: ${s.personalNotes}` : ""}`
       ),
       "",
-      "Generated via Project CEDO: Turi App (No account required)",
+      "Generated via Project CEDO: Turi (No account required)",
     ];
     const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
