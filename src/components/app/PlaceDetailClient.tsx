@@ -1,15 +1,10 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Link from "next/link";
-import { Bookmark, Check, ExternalLink, MapPin, Plus } from "lucide-react";
+import { Bookmark, Check, ExternalLink, MapPin, Plus, Share2 } from "lucide-react";
 import { trackPlaceView } from "@/lib/client/analytics-tracker";
-import {
-  listLocalDrafts,
-  listSavedPlaceIds,
-  saveLocalDraft,
-  toggleSavedPlaceId,
-} from "@/lib/client/indexeddb";
+import { useMobileApp } from "./MobileAppContext";
 
 export function PlaceDetailActions({
   place,
@@ -25,104 +20,112 @@ export function PlaceDetailActions({
     longitude?: number | null;
   };
 }) {
-  const [saved, setSaved] = useState(false);
-  const [added, setAdded] = useState(false);
+  const { draftStopIds, savedPlaceIds, addPlaceToActiveDraft, toggleBookmark, showToast } =
+    useMobileApp();
+
+  const saved = savedPlaceIds.includes(place.id);
+  const inDraft = draftStopIds.includes(place.id);
 
   useEffect(() => {
     void trackPlaceView(place.id);
-    listSavedPlaceIds().then((ids) => setSaved(ids.includes(place.id)));
   }, [place.id]);
-
-  const handleToggleSave = async () => {
-    const next = await toggleSavedPlaceId(place.id);
-    setSaved(next);
-  };
-
-  const handleAddToItinerary = async () => {
-    const drafts = await listLocalDrafts();
-    const draft = drafts[0] ?? {
-      id: `draft-${Date.now()}`,
-      title: "My Salcedo Day Trip",
-      plannedVisitDate: new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10),
-      description: "Planned using Project CEDO: Turi App",
-      stops: [],
-      updatedAt: new Date().toISOString(),
-    };
-
-    if (!draft.stops.some((s) => s.placeId === place.id)) {
-      draft.stops.push({
-        placeId: place.id,
-        placeName: place.name,
-        placeSlug: place.slug,
-        placeType: place.placeType,
-        barangayName: place.barangayName ?? null,
-        featuredImageUrl: place.featuredImageUrl ?? null,
-        latitude: place.latitude ?? null,
-        longitude: place.longitude ?? null,
-        visitTime: draft.stops.length === 0 ? "09:00" : "",
-        durationMinutes: 90,
-        personalNotes: "",
-      });
-      draft.updatedAt = new Date().toISOString();
-      await saveLocalDraft(draft);
-    }
-    setAdded(true);
-  };
 
   const mapsUrl =
     place.latitude && place.longitude
       ? `https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=16/${place.latitude}/${place.longitude}`
       : null;
 
+  const handleShare = async () => {
+    const shareUrl = window.location.href;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${place.name} — Salcedo, Ilocos Sur`,
+          text: `Explore ${place.name} on Project CEDO: Turi App`,
+          url: shareUrl,
+        });
+        return;
+      } catch {
+        // Fallback to copy
+      }
+    }
+    if (navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl);
+      showToast("Link copied to clipboard", { tone: "info" });
+    }
+  };
+
   return (
-    <div className="flex flex-wrap items-center gap-2.5">
-      <button
-        type="button"
-        onClick={handleAddToItinerary}
-        className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-bold transition cursor-pointer ${
-          added
-            ? "bg-emerald-700 text-white"
-            : "bg-[#123F35] text-white hover:bg-[#0D3029]"
-        }`}
-      >
-        {added ? <Check className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-        {added ? "Added to Trip Draft" : "Add to My Itinerary"}
-      </button>
-
-      {added && (
-        <Link
-          href="/app/trips"
-          className="inline-flex items-center gap-1.5 rounded-xl bg-[#D6A85B] text-[#0D3029] px-4 py-2.5 text-sm font-bold hover:bg-[#e1b76f] transition"
+    <>
+      {/* Quick inline GPS & Share chips */}
+      <div className="flex flex-wrap items-center gap-2">
+        {mapsUrl && (
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-xs font-bold text-[#168A8A]"
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            Open in Map
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        )}
+        <button
+          type="button"
+          onClick={() => void handleShare()}
+          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-xs font-bold text-[#202B28] cursor-pointer"
         >
-          Open Trip Builder →
-        </Link>
-      )}
+          <Share2 className="w-3.5 h-3.5" />
+          Share
+        </button>
+      </div>
 
-      <button
-        type="button"
-        onClick={handleToggleSave}
-        className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold transition cursor-pointer ${
-          saved
-            ? "bg-[#D6A85B]/20 border-[#D6A85B] text-[#202B28]"
-            : "bg-white border-[#E5E0D5] text-[#202B28] hover:bg-[#F8F7F2]"
-        }`}
-      >
-        <Bookmark className="w-4 h-4" fill={saved ? "currentColor" : "none"} />
-        {saved ? "Saved Offline" : "Save Place"}
-      </button>
-
-      {mapsUrl && (
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-white px-4 py-2.5 text-sm font-semibold text-[#168A8A] hover:bg-[#F8F7F2] transition"
+      {/* Sticky One-Thumb Bottom Action Bar (above 5-tab bar) */}
+      <div className="no-print fixed bottom-[64px] left-1/2 -translate-x-1/2 w-full max-w-[440px] z-30 bg-white/95 backdrop-blur-md border-t border-[#E5E0D5] px-4 py-2.5 flex items-center gap-2 shadow-[0_-4px_16px_rgba(18,63,53,0.06)]">
+        <button
+          type="button"
+          onClick={() => void toggleBookmark(place.id, place.name)}
+          aria-label={saved ? "Remove from saved places" : "Save place offline"}
+          className={`w-11 h-11 rounded-xl border flex items-center justify-center shrink-0 transition cursor-pointer ${
+            saved
+              ? "bg-[#D6A85B]/20 border-[#D6A85B] text-[#8C611B]"
+              : "bg-[#F8F7F2] border-[#E5E0D5] text-[#202B28]"
+          }`}
         >
-          <MapPin className="w-4 h-4" />
-          Coordinates
-          <ExternalLink className="w-3.5 h-3.5" />
-        </a>
-      )}
-    </div>
+          <Bookmark className="w-5 h-5" fill={saved ? "currentColor" : "none"} />
+        </button>
+
+        {inDraft ? (
+          <Link
+            href="/app/trips"
+            className="flex-1 h-11 rounded-xl bg-[#D6A85B] text-[#0D3029] font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs"
+          >
+            <Check className="w-4 h-4" />
+            In My Trip • View Builder →
+          </Link>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              void addPlaceToActiveDraft({
+                id: place.id,
+                name: place.name,
+                slug: place.slug,
+                placeType: place.placeType,
+                barangayName: place.barangayName ?? null,
+                featuredImageUrl: place.featuredImageUrl ?? null,
+                latitude: place.latitude ?? null,
+                longitude: place.longitude ?? null,
+              })
+            }
+            className="flex-1 h-11 rounded-xl bg-[#123F35] text-white font-bold text-xs flex items-center justify-center gap-1.5 hover:bg-[#0D3029] transition cursor-pointer shadow-xs"
+          >
+            <Plus className="w-4 h-4" />
+            Add to My Itinerary
+          </button>
+        )}
+      </div>
+    </>
   );
 }

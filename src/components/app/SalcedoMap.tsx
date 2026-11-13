@@ -4,7 +4,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { Compass, Layers, MapPin, Navigation } from "lucide-react";
+import { Check, Compass, Layers, MapPin, Navigation, Plus, X } from "lucide-react";
+import { useMobileApp } from "./MobileAppContext";
 
 export interface MapPlaceItem {
   id: string;
@@ -46,12 +47,13 @@ const PIN_COLORS: Record<string, string> = {
 export function SalcedoMap({
   places,
   barangays = [],
-  heightClass = "h-[65vh] min-h-[420px]",
+  heightClass = "h-[calc(100dvh-16.5rem)] min-h-[380px]",
 }: {
   places: MapPlaceItem[];
   barangays?: MapBarangayItem[];
   heightClass?: string;
 }) {
+  const { draftStopIds, addPlaceToActiveDraft } = useMobileApp();
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
@@ -82,11 +84,13 @@ export function SalcedoMap({
     const map = L.map(containerRef.current, {
       center: SALCEDO_CENTER,
       zoom: 13,
-      zoomControl: true,
+      zoomControl: false,
     });
 
+    L.control.zoom({ position: "topright" }).addTo(map);
+
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "&copy; OpenStreetMap contributors | Municipality of Salcedo",
+      attribution: "&copy; OpenStreetMap | Salcedo",
       maxZoom: 18,
     }).addTo(map);
 
@@ -111,11 +115,16 @@ export function SalcedoMap({
     for (const p of mappablePlaces) {
       if (typeof p.latitude !== "number" || typeof p.longitude !== "number") continue;
       const color = PIN_COLORS[p.placeType] || "#123F35";
+      const isSelected = selectedPlace?.id === p.id;
       const icon = L.divIcon({
         className: "turi-map-pin",
-        html: `<div style="width:28px;height:28px;border-radius:9999px;background:${color};border:3px solid #ffffff;box-shadow:0 3px 10px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;">●</div>`,
-        iconSize: [28, 28],
-        iconAnchor: [14, 14],
+        html: `<div style="width:${isSelected ? 32 : 26}px;height:${
+          isSelected ? 32 : 26
+        }px;border-radius:9999px;background:${color};border:3px solid ${
+          isSelected ? "#D6A85B" : "#ffffff"
+        };box-shadow:0 3px 10px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;">●</div>`,
+        iconSize: [isSelected ? 32 : 26, isSelected ? 32 : 26],
+        iconAnchor: [isSelected ? 16 : 13, isSelected ? 16 : 13],
       });
 
       const marker = L.marker([p.latitude, p.longitude], { icon });
@@ -132,9 +141,9 @@ export function SalcedoMap({
         if (typeof b.latitude !== "number" || typeof b.longitude !== "number") continue;
         const icon = L.divIcon({
           className: "turi-brgy-pin",
-          html: `<div style="padding:2px 7px;border-radius:9999px;background:rgba(248,247,242,0.92);border:1px solid #123F35;color:#123F35;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.15);">${b.name}</div>`,
-          iconSize: [80, 20],
-          iconAnchor: [40, 10],
+          html: `<div style="padding:2px 6px;border-radius:9999px;background:rgba(248,247,242,0.92);border:1px solid #123F35;color:#123F35;font-size:9px;font-weight:700;white-space:nowrap;box-shadow:0 1px 4px rgba(0,0,0,0.15);">${b.name}</div>`,
+          iconSize: [74, 18],
+          iconAnchor: [37, 9],
         });
         L.marker([b.latitude, b.longitude], { icon })
           .bindPopup(
@@ -145,140 +154,213 @@ export function SalcedoMap({
           .addTo(group);
       }
     }
-  }, [mappablePlaces, barangays, showBarangays]);
+  }, [mappablePlaces, barangays, showBarangays, selectedPlace?.id]);
 
   // Explicit user-initiated optional geolocation ONLY — never automatic/forced
   const handleLocateOptional = () => {
     if (!("geolocation" in navigator)) {
-      setGeoMessage("Location sharing is unavailable on this browser.");
+      setGeoMessage("Location sharing unavailable on this browser.");
       return;
     }
-    setGeoMessage("Requesting location...");
+    setGeoMessage("Finding your location...");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setGeoMessage(null);
         mapRef.current?.setView([pos.coords.latitude, pos.coords.longitude], 14);
       },
       () => {
-        setGeoMessage("Location skipped — centered on Salcedo Town Plaza.");
+        setGeoMessage("Location skipped — centered on Salcedo Plaza.");
         mapRef.current?.setView(SALCEDO_CENTER, 13);
       },
       { timeout: 6000 }
     );
   };
 
+  const focusPlace = (p: MapPlaceItem) => {
+    setSelectedPlace(p);
+    if (typeof p.latitude === "number" && typeof p.longitude === "number") {
+      mapRef.current?.setView([p.latitude, p.longitude], 15, { animate: true });
+    }
+  };
+
+  const selectedInDraft = selectedPlace ? draftStopIds.includes(selectedPlace.id) : false;
+
   return (
-    <div className="space-y-3">
-      {/* Map Filter Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-2xl border border-[#E5E0D5] p-3">
-        <div className="flex flex-wrap items-center gap-1.5">
+    <div className="space-y-2.5">
+      {/* Horizontal Swipeable Map Filter Bar */}
+      <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+        <button
+          type="button"
+          onClick={() => setTypeFilter("all")}
+          className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer ${
+            typeFilter === "all"
+              ? "bg-[#123F35] text-white"
+              : "bg-white border border-[#E5E0D5] text-[#202B28]"
+          }`}
+        >
+          All ({places.filter((p) => p.latitude && p.longitude).length})
+        </button>
+        {availableTypes.map((type) => (
           <button
+            key={type}
             type="button"
-            onClick={() => setTypeFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
-              typeFilter === "all"
+            onClick={() => setTypeFilter(type)}
+            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold capitalize transition cursor-pointer ${
+              typeFilter === type
                 ? "bg-[#123F35] text-white"
-                : "bg-[#F8F7F2] text-[#202B28] hover:bg-[#E5E0D5]/60"
+                : "bg-white border border-[#E5E0D5] text-[#202B28]"
             }`}
           >
-            All Pins ({places.filter((p) => p.latitude && p.longitude).length})
+            {type}
           </button>
-          {availableTypes.map((type) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setTypeFilter(type)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-semibold capitalize transition cursor-pointer ${
-                typeFilter === type
-                  ? "bg-[#123F35] text-white"
-                  : "bg-[#F8F7F2] text-[#202B28] hover:bg-[#E5E0D5]/60"
-              }`}
-            >
-              {type}
-            </button>
-          ))}
-        </div>
+        ))}
+        {barangays.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setShowBarangays((v) => !v)}
+            className={`shrink-0 inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold border transition cursor-pointer ${
+              showBarangays
+                ? "bg-[#168A8A] text-white border-[#168A8A]"
+                : "bg-white text-[#202B28] border-[#E5E0D5]"
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            21 Barangays
+          </button>
+        )}
+      </div>
 
-        <div className="flex items-center gap-2">
-          {barangays.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowBarangays((v) => !v)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${
-                showBarangays
-                  ? "bg-[#168A8A] text-white border-[#168A8A]"
-                  : "bg-white text-[#202B28] border-[#E5E0D5] hover:bg-[#F8F7F2]"
-              }`}
-            >
-              <Layers className="w-3.5 h-3.5" />
-              21 Barangays
-            </button>
-          )}
+      {/* Map Canvas + Floating Controls + Bottom Pin Preview Sheet */}
+      <div className="relative rounded-2xl overflow-hidden border border-[#E5E0D5] shadow-sm bg-[#E5E0D5]/40">
+        <div ref={containerRef} className={`w-full ${heightClass}`} />
+
+        {/* Floating Map Utility Pills (Top Left) */}
+        <div className="absolute top-3 left-3 z-[400] flex items-center gap-1.5">
           <button
             type="button"
             onClick={() => mapRef.current?.setView(SALCEDO_CENTER, 13)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-[#E5E0D5] text-[#202B28] hover:bg-[#F8F7F2] cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-xs border border-[#E5E0D5] px-2.5 py-1.5 text-[11px] font-bold text-[#123F35] shadow-sm cursor-pointer"
           >
-            <Compass className="w-3.5 h-3.5 text-[#123F35]" />
-            Center Salcedo
+            <Compass className="w-3.5 h-3.5" />
+            Salcedo Plaza
           </button>
           <button
             type="button"
             onClick={handleLocateOptional}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white border border-[#E5E0D5] text-[#202B28] hover:bg-[#F8F7F2] cursor-pointer"
+            className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-xs border border-[#E5E0D5] px-2.5 py-1.5 text-[11px] font-bold text-[#168A8A] shadow-sm cursor-pointer"
           >
-            <Navigation className="w-3.5 h-3.5 text-[#168A8A]" />
-            Near Me (Optional)
+            <Navigation className="w-3.5 h-3.5" />
+            Near Me
           </button>
         </div>
-      </div>
 
-      {geoMessage && (
-        <p className="text-xs text-[#5A6B66] px-1">{geoMessage}</p>
-      )}
+        {geoMessage && (
+          <div className="absolute top-12 left-3 z-[400] rounded-xl bg-[#0D3029]/90 text-white px-2.5 py-1 text-[11px]">
+            {geoMessage}
+          </div>
+        )}
 
-      {/* Map Container + Selected Destination Preview Drawer */}
-      <div className="relative rounded-2xl overflow-hidden border border-[#E5E0D5] shadow-sm bg-[#E5E0D5]/40">
-        <div ref={containerRef} className={`w-full ${heightClass}`} />
-
+        {/* Selected Destination Bottom Sheet Card */}
         {selectedPlace && (
-          <div className="absolute bottom-4 left-4 right-4 sm:right-auto sm:w-96 z-[400] bg-white rounded-2xl shadow-xl border border-[#E5E0D5] p-3.5 flex gap-3 items-center">
-            <img
-              src={selectedPlace.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
-              alt={selectedPlace.name}
-              className="w-20 h-20 rounded-xl object-cover shrink-0"
-            />
-            <div className="min-w-0 flex-1 space-y-1">
-              <div className="flex items-start justify-between gap-2">
-                <h4 className="font-display font-bold text-sm text-[#202B28] truncate">
-                  {selectedPlace.name}
-                </h4>
-                <button
-                  type="button"
-                  onClick={() => setSelectedPlace(null)}
-                  className="text-xs text-[#5A6B66] hover:text-[#202B28] px-1 cursor-pointer"
-                  aria-label="Close map card"
-                >
-                  ✕
-                </button>
+          <div className="absolute bottom-3 left-3 right-3 z-[400] bg-white rounded-2xl shadow-xl border border-[#E5E0D5] p-3 space-y-2.5">
+            <div className="flex gap-2.5 items-center">
+              <img
+                src={selectedPlace.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
+                alt={selectedPlace.name}
+                className="w-16 h-16 rounded-xl object-cover shrink-0"
+              />
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <div className="flex items-start justify-between gap-1">
+                  <h4 className="font-display font-bold text-sm text-[#202B28] truncate">
+                    {selectedPlace.name}
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPlace(null)}
+                    className="p-0.5 text-[#5A6B66] hover:text-[#202B28] cursor-pointer shrink-0"
+                    aria-label="Close map card"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-[11px] text-[#168A8A] font-semibold flex items-center gap-1 truncate">
+                  <MapPin className="w-3 h-3 shrink-0" />
+                  {selectedPlace.barangay
+                    ? `Brgy. ${selectedPlace.barangay.name}`
+                    : selectedPlace.address}
+                </p>
+                <p className="text-[11px] text-[#5A6B66] line-clamp-2">
+                  {selectedPlace.shortDescription}
+                </p>
               </div>
-              <p className="text-[11px] text-[#168A8A] font-medium flex items-center gap-1 truncate">
-                <MapPin className="w-3 h-3 shrink-0" />
-                {selectedPlace.barangay ? `Brgy. ${selectedPlace.barangay.name}` : selectedPlace.address}
-              </p>
-              <p className="text-xs text-[#5A6B66] line-clamp-2">
-                {selectedPlace.shortDescription}
-              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
               <Link
                 href={`/app/places/${selectedPlace.slug}`}
-                className="inline-block text-xs font-bold text-[#123F35] hover:underline pt-0.5"
+                className="flex-1 text-center rounded-xl bg-[#123F35] text-white py-2 text-xs font-bold"
               >
-                Open Destination Guide →
+                Open Guide →
               </Link>
+              <button
+                type="button"
+                onClick={() =>
+                  void addPlaceToActiveDraft({
+                    id: selectedPlace.id,
+                    name: selectedPlace.name,
+                    slug: selectedPlace.slug,
+                    placeType: selectedPlace.placeType,
+                    barangayName: selectedPlace.barangay?.name ?? null,
+                    featuredImageUrl: selectedPlace.featuredImageUrl ?? null,
+                    latitude: selectedPlace.latitude ?? null,
+                    longitude: selectedPlace.longitude ?? null,
+                  })
+                }
+                className={`inline-flex items-center gap-1 rounded-xl px-3 py-2 text-xs font-bold cursor-pointer ${
+                  selectedInDraft
+                    ? "bg-emerald-100 text-emerald-900"
+                    : "bg-[#F8F7F2] border border-[#E5E0D5] text-[#123F35]"
+                }`}
+              >
+                {selectedInDraft ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    In Trip
+                  </>
+                ) : (
+                  <>
+                    <Plus className="w-3.5 h-3.5" />
+                    Trip
+                  </>
+                )}
+              </button>
             </div>
           </div>
         )}
       </div>
+
+      {/* Horizontal Quick-Jump Place Chips */}
+      {mappablePlaces.length > 0 && (
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B66] shrink-0">
+            Jump to:
+          </span>
+          {mappablePlaces.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => focusPlace(p)}
+              className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-semibold border transition cursor-pointer ${
+                selectedPlace?.id === p.id
+                  ? "bg-[#D6A85B] text-[#0D3029] border-[#D6A85B] font-bold"
+                  : "bg-white text-[#202B28] border-[#E5E0D5]"
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

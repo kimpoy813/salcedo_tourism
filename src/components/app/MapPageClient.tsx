@@ -8,7 +8,7 @@ const SalcedoMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[68vh] min-h-[440px] rounded-2xl border border-[#E5E0D5] bg-white flex items-center justify-center text-sm text-[#5A6B66]">
+      <div className="h-[calc(100dvh-16.5rem)] min-h-[380px] rounded-2xl border border-[#E5E0D5] bg-white flex items-center justify-center text-xs text-[#5A6B66]">
         Loading Salcedo OpenStreetMap...
       </div>
     ),
@@ -26,7 +26,7 @@ export function MapPageClient({
     <SalcedoMap
       places={places}
       barangays={barangays}
-      heightClass="h-[68vh] min-h-[440px]"
+      heightClass="h-[calc(100dvh-16.5rem)] min-h-[380px]"
     />
   );
 }

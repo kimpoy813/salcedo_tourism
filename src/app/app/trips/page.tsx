@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { getPublishedPlaces } from "@/lib/queries/public-tourism";
@@ -37,21 +38,29 @@ export default async function TripsPage() {
   };
 
   return (
-    <div className="px-4 sm:px-6 py-8 space-y-6">
-      <div className="space-y-1.5">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#168A8A]">
-          Account-Free Trip Planning
+    <div className="px-4 py-4 space-y-4">
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
+          Account-Free Planner
         </p>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#202B28]">
-          My Salcedo Trips &amp; Itinerary Builder
+        <h1 className="font-display text-xl font-bold text-[#202B28]">
+          My Salcedo Trips
         </h1>
-        <p className="text-sm text-[#5A6B66] max-w-2xl">
-          Draft, reorder, download, or print custom itineraries immediately without signing in.
-          Submit only when ready to obtain your CEDO Reference Number &amp; Private Retrieval Code.
+        <p className="text-xs text-[#5A6B66]">
+          Draft &amp; export offline with zero login. Submit only if you want a cross-device CEDO
+          trip code.
         </p>
       </div>
 
-      <TripsPlannerClient availablePlaces={places} privacyNotice={privacyNotice} />
+      <Suspense
+        fallback={
+          <div className="rounded-2xl bg-white border border-[#E5E0D5] p-6 text-xs text-[#5A6B66]">
+            Loading trip planner...
+          </div>
+        }
+      >
+        <TripsPlannerClient availablePlaces={places} privacyNotice={privacyNotice} />
+      </Suspense>
     </div>
   );
 }
