@@ -45,7 +45,6 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
   const hasPerm = (p: string) =>
     principal.roles.includes("super_admin") || principal.permissions.includes(p);
 
-  const canAnalytics = hasPerm("analytics.read");
   const canContentEdit = hasPerm("content.edit");
   const canContentPublish = hasPerm("content.publish");
   const canVisitorRead = hasPerm("visitor.aggregate.read");
@@ -56,6 +55,7 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
     hasPerm("admin.audit.read") ||
     hasPerm("admin.settings.manage");
 
+  const canAnalytics = hasPerm("analytics.read");
   const defaultTab: AdminTab = canAnalytics
     ? "overview"
     : canContentEdit
@@ -154,44 +154,59 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
     router.refresh();
   };
 
-  const navItems: Array<{ id: AdminTab; label: string; icon: React.ComponentType<{ className?: string }>; visible: boolean }> =
-    [
-      { id: "overview", label: "Analytics & Overview", icon: BarChart3, visible: true },
-      { id: "places", label: "Places & Establishments", icon: MapPin, visible: canContentEdit },
-      { id: "content", label: "Municipal CMS", icon: FileText, visible: canContentEdit },
-      { id: "visitors", label: "Visitor Submissions", icon: Users, visible: canVisitorRead },
-      { id: "checkins", label: "Verified Check-Ins", icon: CheckSquare, visible: canCheckins },
-      { id: "media", label: "Media Library", icon: ImageIcon, visible: canMedia },
-      { id: "governance", label: "Users, Logs & Privacy", icon: Settings, visible: canAdminGov },
-    ];
+  const navItems: Array<{
+    id: AdminTab;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    visible: boolean;
+  }> = [
+    { id: "overview", label: "Analytics & Overview", icon: BarChart3, visible: true },
+    { id: "places", label: "Places & Directory", icon: MapPin, visible: canContentEdit },
+    { id: "content", label: "Municipal Content", icon: FileText, visible: canContentEdit },
+    { id: "visitors", label: "Visitor Submissions", icon: Users, visible: canVisitorRead },
+    { id: "checkins", label: "Verified Check-Ins", icon: CheckSquare, visible: canCheckins },
+    { id: "media", label: "Media Library", icon: ImageIcon, visible: canMedia },
+    { id: "governance", label: "Users, Logs & Privacy", icon: Settings, visible: canAdminGov },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#F8F7F2] text-[#202B28] flex">
-      {/* Sidebar */}
+    <div className="min-h-screen bg-[#FAF9F6] text-[#1A2421] flex">
+      {/* Mobile Sidebar Scrim */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/25 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Minimalist White Left Sidebar */}
       <aside
-        className={`fixed lg:static inset-y-0 left-0 z-40 w-68 bg-[#0D3029] text-white flex flex-col justify-between transition-transform lg:translate-x-0 ${
+        className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white border-r border-[#EAE7E0] flex flex-col justify-between transition-transform lg:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-5 space-y-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
+        <div className="p-4 space-y-6">
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-2.5">
               <img
                 src="/images/salcedo/seal-of-salcedo.png"
                 alt="Salcedo Seal"
-                className="w-10 h-10 rounded-full bg-white p-0.5"
+                className="w-9 h-9 rounded-full object-contain border border-[#EAE7E0]"
               />
               <div>
-                <p className="font-display font-bold text-base">CEDO Admin</p>
-                <p className="text-[11px] text-[#D6A85B]">Salcedo, Ilocos Sur</p>
+                <p className="font-display font-bold text-sm text-[#1A2421]">
+                  CEDO Admin
+                </p>
+                <p className="text-[11px] text-[#616E69]">Salcedo, Ilocos Sur</p>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden text-white/80 cursor-pointer"
+              aria-label="Close sidebar"
+              className="lg:hidden p-1 text-[#616E69] cursor-pointer"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -209,10 +224,10 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
                       setActiveTab(item.id);
                       setSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer ${
+                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
                       active
-                        ? "bg-[#123F35] text-[#D6A85B] font-bold"
-                        : "text-white/80 hover:bg-white/10 hover:text-white"
+                        ? "bg-[#164237] text-white font-semibold"
+                        : "text-[#616E69] hover:bg-[#FAF9F6] hover:text-[#1A2421]"
                     }`}
                   >
                     <Icon className="w-4 h-4 shrink-0" />
@@ -223,61 +238,57 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
           </nav>
         </div>
 
-        <div className="p-5 border-t border-white/10 space-y-3 text-xs">
+        <div className="p-4 border-t border-[#EAE7E0] space-y-2.5 text-xs">
           <a
             href="/app"
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center justify-between rounded-xl bg-white/10 px-3.5 py-2 text-white hover:bg-white/15 transition"
+            className="flex items-center justify-between rounded-xl px-3 py-2 text-[#1A2421] hover:bg-[#FAF9F6] transition font-medium"
           >
-            <span>Open Tourist PWA</span>
-            <ExternalLink className="w-3.5 h-3.5" />
+            <span>Open Tourist App</span>
+            <ExternalLink className="w-3.5 h-3.5 text-[#616E69]" />
           </a>
 
-          <div className="space-y-0.5">
-            <p className="font-bold text-white truncate">{principal.fullName}</p>
-            <p className="text-[11px] text-[#D6A85B] uppercase tracking-wider">
-              {principal.roles.join(", ")}
+          <div className="px-3 space-y-0.5">
+            <p className="font-bold text-[#1A2421] truncate">{principal.fullName}</p>
+            <p className="text-[11px] text-[#616E69] capitalize truncate">
+              {principal.roles.map((r) => r.replace(/_/g, " ")).join(", ")}
             </p>
           </div>
 
           <button
             type="button"
             onClick={() => void handleLogout()}
-            className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 py-2 text-xs font-semibold hover:bg-white/10 cursor-pointer"
+            className="w-full inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium text-rose-700 hover:bg-rose-50 transition cursor-pointer"
           >
             <LogOut className="w-3.5 h-3.5" /> Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <header className="sticky top-0 z-30 bg-white border-b border-[#E5E0D5] px-4 sm:px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-[#EAE7E0] px-4 sm:px-6 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-xl border border-[#E5E0D5] cursor-pointer"
+              aria-label="Open menu"
+              className="lg:hidden p-1.5 rounded-lg border border-[#EAE7E0] cursor-pointer"
             >
-              <Menu className="w-5 h-5" />
+              <Menu className="w-4 h-4" />
             </button>
-            <div>
-              <p className="text-[11px] font-bold uppercase tracking-wider text-[#168A8A]">
-                Project CEDO: Turi App / Admin
-              </p>
-              <h1 className="font-display text-lg font-bold text-[#202B28]">
-                {navItems.find((n) => n.id === activeTab)?.label}
-              </h1>
-            </div>
+            <h1 className="font-display text-base font-bold text-[#1A2421] truncate">
+              {navItems.find((n) => n.id === activeTab)?.label}
+            </h1>
           </div>
 
-          <span className="hidden sm:inline-flex items-center rounded-full bg-[#123F35]/10 text-[#123F35] px-3 py-1 text-xs font-bold">
+          <span className="hidden sm:inline-flex items-center rounded-full bg-[#F3F2EE] text-[#1A2421] px-3 py-1 text-[11px] font-medium">
             {principal.username}
           </span>
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 max-w-6xl w-full mx-auto">
           {activeTab === "overview" && dashboard && <AdminAnalyticsPanel data={dashboard} />}
           {activeTab === "places" && placesData && (
             <AdminPlacesPanel

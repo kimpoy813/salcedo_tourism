@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import Link from "next/link";
-import { CheckCircle2, Info, X } from "lucide-react";
+import { Check, Info, X } from "lucide-react";
 import {
   listLocalDrafts,
   listSavedPlaceIds,
@@ -73,7 +73,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       });
       timerRef.current = setTimeout(() => {
         setToast((cur) => (cur?.id === id ? null : cur));
-      }, 3400);
+      }, 3200);
     },
     []
   );
@@ -118,7 +118,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
         id: `draft-${Date.now()}`,
         title: "My Salcedo Day Trip",
         plannedVisitDate: new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10),
-        description: "Planned using Project CEDO: Turi App",
+        description: "",
         stops: [],
         updatedAt: new Date().toISOString(),
       };
@@ -141,8 +141,8 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
         activeDraft.updatedAt = new Date().toISOString();
         await saveLocalDraft(activeDraft);
         await refreshCounts();
-        showToast(`Added ${place.name} to trip`, {
-          actionLabel: "View Trip",
+        showToast(`Added ${place.name}`, {
+          actionLabel: "Trip",
           actionHref: "/app/trips",
           tone: "success",
         });
@@ -150,7 +150,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       }
 
       showToast(`${place.name} is already in your trip`, {
-        actionLabel: "Open Trip",
+        actionLabel: "View",
         actionHref: "/app/trips",
         tone: "info",
       });
@@ -165,8 +165,8 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       await refreshCounts();
       showToast(
         isNowSaved
-          ? `Saved ${placeName || "place"} offline`
-          : `Removed ${placeName || "place"} from saved`,
+          ? `Saved ${placeName || "place"}`
+          : `Removed ${placeName || "place"}`,
         {
           actionLabel: isNowSaved ? "Saved" : undefined,
           actionHref: isNowSaved ? "/app/trips?tab=saved" : undefined,
@@ -193,24 +193,26 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
     >
       {children}
 
-      {/* Mobile Floating Toast Snackbar (sits cleanly above bottom nav bar) */}
+      {/* Minimalist Floating Snackbar */}
       {toast && (
-        <div className="no-print fixed bottom-[76px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-24px)] max-w-[416px] pointer-events-none">
-          <div className="pointer-events-auto flex items-center justify-between gap-2.5 rounded-2xl bg-[#0D3029] text-white px-3.5 py-2.5 shadow-xl border border-[#D6A85B]/35 animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <div className="no-print fixed bottom-[76px] left-1/2 -translate-x-1/2 z-50 w-[calc(100%-32px)] max-w-[398px] pointer-events-none">
+          <div className="pointer-events-auto flex items-center justify-between gap-2.5 rounded-full bg-[#1A2421] text-white pl-3.5 pr-2 py-2 shadow-lg animate-in fade-in slide-in-from-bottom-2 duration-200">
             <div className="flex items-center gap-2 min-w-0">
               {toast.tone === "success" ? (
-                <CheckCircle2 className="w-4 h-4 text-[#D6A85B] shrink-0" />
+                <span className="w-5 h-5 rounded-full bg-[#164237] flex items-center justify-center shrink-0">
+                  <Check className="w-3 h-3 text-white" />
+                </span>
               ) : (
-                <Info className="w-4 h-4 text-[#168A8A] shrink-0" />
+                <Info className="w-4 h-4 text-white/75 shrink-0" />
               )}
               <p className="text-xs font-medium truncate">{toast.message}</p>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1 shrink-0">
               {toast.actionLabel && toast.actionHref && (
                 <Link
                   href={toast.actionHref}
                   onClick={() => setToast(null)}
-                  className="rounded-lg bg-[#D6A85B] text-[#0D3029] px-2.5 py-1 text-[11px] font-bold hover:bg-[#e1b76f] transition"
+                  className="rounded-full bg-white text-[#1A2421] px-2.5 py-1 text-[11px] font-bold hover:bg-[#FAF9F6] transition"
                 >
                   {toast.actionLabel}
                 </Link>
@@ -218,8 +220,8 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={() => setToast(null)}
-                aria-label="Dismiss message"
-                className="p-1 text-white/70 hover:text-white cursor-pointer"
+                aria-label="Dismiss"
+                className="p-1 text-white/60 hover:text-white cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
               </button>

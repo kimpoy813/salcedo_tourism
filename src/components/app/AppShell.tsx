@@ -26,7 +26,7 @@ const NAV_ITEMS = [
   { href: "/app", label: "Home", icon: Home, matchExact: true },
   { href: "/app/discover", label: "Discover", icon: Compass, matchExact: false },
   { href: "/app/map", label: "Map", icon: MapIcon, matchExact: false },
-  { href: "/app/trips", label: "My Trips", icon: Route, matchExact: false },
+  { href: "/app/trips", label: "Trips", icon: Route, matchExact: false },
   { href: "/app/more", label: "More", icon: LayoutGrid, matchExact: false },
 ];
 
@@ -107,11 +107,11 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/app/offline");
 
   const subPageTitle = pathname.startsWith("/app/places/")
-    ? "Destination Guide"
+    ? "Destination"
     : pathname.startsWith("/app/salcedo")
-    ? "All About Salcedo"
+    ? "About Salcedo"
     : pathname.startsWith("/app/offline")
-    ? "Offline Mode"
+    ? "Offline"
     : "Turi";
 
   const handleBack = () => {
@@ -123,54 +123,46 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#E8E3D8] flex justify-center">
-      {/* Mobile-First App Frame (Full width on mobile, centered mobile app frame on wide screens) */}
-      <div className="w-full max-w-[440px] min-h-[100dvh] bg-[#F8F7F2] text-[#202B28] flex flex-col relative sm:shadow-[0_24px_80px_rgba(13,48,41,0.16)] sm:border-x sm:border-[#D9D2C3]">
-        {/* Mobile App Top Header */}
-        <header className="no-print sticky top-0 z-40 h-14 bg-[#123F35] text-white px-3.5 flex items-center justify-between gap-2 shadow-sm">
+    <div className="min-h-[100dvh] bg-[#F2F0EA] flex justify-center">
+      {/* Minimalist Mobile Viewport Shell */}
+      <div className="w-full max-w-[430px] min-h-[100dvh] bg-[#FAF9F6] text-[#1A2421] flex flex-col relative sm:border-x sm:border-[#E5E1D8]">
+        {/* Light Translucent Mobile Header */}
+        <header className="no-print sticky top-0 z-40 h-14 bg-[#FAF9F6]/90 backdrop-blur-md border-b border-[#EAE7E0] px-4 flex items-center justify-between gap-2">
           {isSubPage ? (
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex items-center gap-2.5 min-w-0">
               <button
                 type="button"
                 onClick={handleBack}
                 aria-label="Go back"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition cursor-pointer shrink-0"
+                className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center text-[#1A2421] hover:bg-[#F3F2EE] transition cursor-pointer shrink-0"
               >
                 <ArrowLeft className="w-4 h-4" />
               </button>
-              <div className="min-w-0">
-                <p className="font-display text-sm font-bold truncate">{subPageTitle}</p>
-                <p className="text-[10px] text-[#E5E0D5]/80 truncate">
-                  Salcedo, Ilocos Sur
-                </p>
-              </div>
+              <span className="font-display text-sm font-bold text-[#1A2421] truncate">
+                {subPageTitle}
+              </span>
             </div>
           ) : (
             <Link href="/app" className="flex items-center gap-2.5 min-w-0">
               <img
                 src="/images/salcedo/seal-of-salcedo.png"
-                alt="Official Seal of Salcedo"
-                className="w-9 h-9 rounded-full bg-white p-0.5 object-contain shrink-0 ring-1 ring-[#D6A85B]/70"
+                alt="Salcedo Seal"
+                className="w-7 h-7 rounded-full object-contain shrink-0"
               />
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-display text-base font-bold tracking-tight truncate">
-                    Turi
-                  </span>
-                  <span className="inline-flex items-center rounded-full bg-[#D6A85B]/20 border border-[#D6A85B]/50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-[#F8F7F2]">
-                    CEDO
-                  </span>
-                </div>
-                <p className="text-[10px] text-[#E5E0D5]/85 truncate">
-                  Salcedo, Ilocos Sur • Official Guide
-                </p>
+              <div className="min-w-0 flex items-baseline gap-1.5">
+                <span className="font-display text-base font-bold tracking-tight text-[#164237]">
+                  Turi
+                </span>
+                <span className="text-[11px] text-[#616E69] truncate">
+                  Salcedo
+                </span>
               </div>
             </Link>
           )}
 
           <div className="flex items-center gap-1.5 shrink-0">
             {isOffline && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-300/40 px-2 py-0.5 text-[10px] font-semibold text-amber-100">
+              <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] border border-[#EAE7E0] px-2 py-0.5 text-[10px] font-medium text-[#616E69]">
                 <WifiOff className="w-3 h-3" />
                 Offline
               </span>
@@ -179,7 +171,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
               <button
                 type="button"
                 onClick={handleInstall}
-                className="inline-flex items-center gap-1 rounded-full bg-[#D6A85B] text-[#0D3029] px-2.5 py-1 text-[11px] font-bold shadow-xs hover:bg-[#e1b76f] transition cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-full bg-[#164237] text-white px-2.5 py-1 text-[11px] font-semibold hover:bg-[#10322A] transition cursor-pointer"
               >
                 <Download className="w-3 h-3" />
                 Install
@@ -189,7 +181,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
               <Link
                 href="/app/discover"
                 aria-label="Search destinations"
-                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition"
+                className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center text-[#1A2421] hover:bg-[#F3F2EE] transition"
               >
                 <Search className="w-4 h-4" />
               </Link>
@@ -197,13 +189,13 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        {/* Scrollable Mobile Content Canvas */}
-        <main className="flex-1 w-full pb-[78px]">{children}</main>
+        {/* Main Content Canvas */}
+        <main className="flex-1 w-full pb-[76px]">{children}</main>
 
-        {/* Persistent Mobile Bottom 5-Tab Navigation Bar */}
+        {/* Minimalist Bottom 5-Tab Navigation Bar */}
         <nav
           aria-label="Primary Tourist Navigation"
-          className="no-print fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[440px] z-40 bg-white/95 backdrop-blur-md border-t border-[#E5E0D5] px-1.5 pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_rgba(18,63,53,0.08)]"
+          className="no-print fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] z-40 bg-white/95 backdrop-blur-md border-t border-[#EAE7E0] px-2 pb-[env(safe-area-inset-bottom)]"
         >
           <div className="grid grid-cols-5 h-16 items-center">
             {NAV_ITEMS.map((item) => {
@@ -216,25 +208,24 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex flex-col items-center justify-center gap-0.5 py-1 rounded-xl transition active:scale-95 ${
-                    isActive ? "text-[#123F35]" : "text-[#5A6B66] hover:text-[#202B28]"
+                  className={`relative flex flex-col items-center justify-center gap-1 py-1 transition active:scale-95 ${
+                    isActive ? "text-[#164237]" : "text-[#616E69] hover:text-[#1A2421]"
                   }`}
                 >
-                  <span
-                    className={`relative flex items-center justify-center w-10 h-7 rounded-full transition ${
-                      isActive ? "bg-[#123F35]/12 text-[#123F35]" : ""
-                    }`}
-                  >
-                    <Icon className="w-[19px] h-[19px]" strokeWidth={isActive ? 2.4 : 1.8} />
+                  <span className="relative flex items-center justify-center w-8 h-6">
+                    <Icon
+                      className="w-[19px] h-[19px]"
+                      strokeWidth={isActive ? 2.1 : 1.6}
+                    />
                     {showTripBadge && (
-                      <span className="absolute -top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#D6A85B] text-[#0D3029] text-[9px] font-extrabold flex items-center justify-center tabular-nums shadow-xs">
+                      <span className="absolute -top-0.5 -right-1 min-w-[15px] h-[15px] px-1 rounded-full bg-[#164237] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
                         {draftStopCount}
                       </span>
                     )}
                   </span>
                   <span
                     className={`text-[10px] tracking-tight ${
-                      isActive ? "font-bold" : "font-medium"
+                      isActive ? "font-bold text-[#164237]" : "font-medium"
                     }`}
                   >
                     {item.label}

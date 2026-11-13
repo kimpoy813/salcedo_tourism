@@ -10,19 +10,14 @@ export default async function InteractiveMapPage() {
   ]);
 
   return (
-    <div className="px-4 py-4 space-y-3">
-      <div className="flex items-end justify-between gap-2">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-            OpenStreetMap Explorer
-          </p>
-          <h1 className="font-display text-xl font-bold text-[#202B28]">
-            Map of Salcedo
-          </h1>
-        </div>
-        <span className="text-[10px] font-medium text-[#5A6B66] tabular-nums">
-          17.15°N, 120.54°E
-        </span>
+    <div className="px-4 py-4 space-y-3.5">
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
+          Explorer
+        </p>
+        <h1 className="font-display text-xl font-bold text-[#1A2421]">
+          Salcedo Map
+        </h1>
       </div>
 
       <MapPageClient places={places} barangays={barangays} />

@@ -3,13 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
-import {
-  List,
-  Map as MapIcon,
-  Search,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { List, Map as MapIcon, Search, SlidersHorizontal, X } from "lucide-react";
 import { PlaceCard, type PlaceCardData } from "./PlaceCard";
 import type { MapBarangayItem } from "./SalcedoMap";
 import { trackSearchEvent } from "@/lib/client/analytics-tracker";
@@ -19,8 +13,8 @@ const SalcedoMap = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="h-[58vh] rounded-2xl border border-[#E5E0D5] bg-white flex items-center justify-center text-xs text-[#5A6B66]">
-        Loading interactive Salcedo map...
+      <div className="h-[58vh] rounded-2xl border border-[#EAE7E0] bg-white flex items-center justify-center text-xs text-[#616E69]">
+        Loading map...
       </div>
     ),
   }
@@ -118,7 +112,6 @@ function DiscoverDirectoryInner({
     return [...list].sort((a, b) => Number(Boolean(b.isFeatured)) - Number(Boolean(a.isFeatured)));
   }, [initialPlaces, query, selectedCategory, selectedBarangay, selectedType, sortBy]);
 
-  // Debounced anonymous search logging
   useEffect(() => {
     if (!query.trim()) return;
     const t = setTimeout(() => {
@@ -156,17 +149,17 @@ function DiscoverDirectoryInner({
 
   return (
     <div className="space-y-3.5">
-      {/* Sticky Mobile Search & View Switcher */}
-      <div className="sticky top-14 z-30 -mx-4 px-4 pt-1 pb-2.5 bg-[#F8F7F2]/95 backdrop-blur-md border-b border-[#E5E0D5]/80 space-y-2.5">
+      {/* Sticky Minimal Search & Controls */}
+      <div className="sticky top-14 z-30 -mx-4 px-4 pt-1 pb-2.5 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0] space-y-2.5">
         <div className="flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
-            <Search className="w-4 h-4 text-[#5A6B66] absolute left-3 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-[#616E69] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search spots, barangays, food..."
-              className="w-full rounded-xl border border-[#E5E0D5] bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#123F35]/20"
+              placeholder="Search places, barangays..."
+              className="w-full rounded-full border border-[#EAE7E0] bg-white pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-[#164237]/40"
             />
           </div>
 
@@ -174,16 +167,15 @@ function DiscoverDirectoryInner({
             type="button"
             onClick={() => setFilterSheetOpen(true)}
             aria-label="Open directory filters"
-            className={`relative inline-flex items-center gap-1 rounded-xl border px-3 py-2 text-xs font-bold shrink-0 cursor-pointer transition ${
+            className={`relative w-9 h-9 rounded-full border flex items-center justify-center shrink-0 cursor-pointer transition ${
               activeFilterCount > 0
-                ? "bg-[#123F35] text-white border-[#123F35]"
-                : "bg-white text-[#202B28] border-[#E5E0D5]"
+                ? "bg-[#164237] text-white border-[#164237]"
+                : "bg-white text-[#1A2421] border-[#EAE7E0]"
             }`}
           >
             <SlidersHorizontal className="w-4 h-4" />
-            <span>Filter</span>
             {activeFilterCount > 0 && (
-              <span className="w-4 h-4 rounded-full bg-[#D6A85B] text-[#0D3029] text-[10px] font-extrabold flex items-center justify-center">
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#1A2421] text-white text-[9px] font-bold flex items-center justify-center">
                 {activeFilterCount}
               </span>
             )}
@@ -193,23 +185,17 @@ function DiscoverDirectoryInner({
             type="button"
             onClick={() => setViewMode((v) => (v === "list" ? "map" : "list"))}
             aria-label={viewMode === "list" ? "Switch to map view" : "Switch to list view"}
-            className="inline-flex items-center gap-1 rounded-xl border border-[#E5E0D5] bg-white px-3 py-2 text-xs font-bold text-[#123F35] shrink-0 cursor-pointer"
+            className="w-9 h-9 rounded-full border border-[#EAE7E0] bg-white flex items-center justify-center text-[#1A2421] shrink-0 cursor-pointer"
           >
             {viewMode === "list" ? (
-              <>
-                <MapIcon className="w-4 h-4" />
-                <span>Map</span>
-              </>
+              <MapIcon className="w-4 h-4" />
             ) : (
-              <>
-                <List className="w-4 h-4" />
-                <span>List</span>
-              </>
+              <List className="w-4 h-4" />
             )}
           </button>
         </div>
 
-        {/* Horizontal Scrollable Category Pills */}
+        {/* Clean Category Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4">
           <button
             type="button"
@@ -217,10 +203,10 @@ function DiscoverDirectoryInner({
               setSelectedCategory("all");
               setSelectedType("all");
             }}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
               selectedCategory === "all" && selectedType === "all"
-                ? "bg-[#123F35] text-white"
-                : "bg-white text-[#202B28] border border-[#E5E0D5]"
+                ? "bg-[#164237] text-white"
+                : "bg-white text-[#1A2421] border border-[#EAE7E0]"
             }`}
           >
             All ({initialPlaces.length})
@@ -234,23 +220,23 @@ function DiscoverDirectoryInner({
                 setSelectedCategory(cat.slug);
                 setSelectedType("all");
               }}
-              className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer ${
+              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition cursor-pointer ${
                 selectedCategory === cat.slug
-                  ? "bg-[#123F35] text-white"
-                  : "bg-white text-[#202B28] border border-[#E5E0D5]"
+                  ? "bg-[#164237] text-white"
+                  : "bg-white text-[#1A2421] border border-[#EAE7E0]"
               }`}
             >
-              {cat.name} ({cat.publishedCount})
+              {cat.name}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Active Filter Chips & Result Count */}
+      {/* Results & Active Chips */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
-        <p className="text-xs text-[#5A6B66]">
-          <strong className="text-[#202B28] tabular-nums">{filteredPlaces.length}</strong>{" "}
-          verified {filteredPlaces.length === 1 ? "destination" : "destinations"}
+        <p className="text-xs text-[#616E69]">
+          <strong className="text-[#1A2421] tabular-nums">{filteredPlaces.length}</strong>{" "}
+          {filteredPlaces.length === 1 ? "destination" : "destinations"}
         </p>
 
         {hasFilters && (
@@ -259,7 +245,7 @@ function DiscoverDirectoryInner({
               <button
                 type="button"
                 onClick={() => setSelectedBarangay("all")}
-                className="inline-flex items-center gap-1 rounded-full bg-[#168A8A]/12 text-[#168A8A] px-2.5 py-0.5 text-[11px] font-bold cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] text-[#1A2421] px-2.5 py-0.5 text-[11px] font-medium cursor-pointer"
               >
                 Brgy. {selectedBarangayName} <X className="w-3 h-3" />
               </button>
@@ -268,7 +254,7 @@ function DiscoverDirectoryInner({
               <button
                 type="button"
                 onClick={() => setSelectedType("all")}
-                className="inline-flex items-center gap-1 rounded-full bg-[#123F35]/10 text-[#123F35] px-2.5 py-0.5 text-[11px] font-bold capitalize cursor-pointer"
+                className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] text-[#1A2421] px-2.5 py-0.5 text-[11px] font-medium capitalize cursor-pointer"
               >
                 {selectedType} <X className="w-3 h-3" />
               </button>
@@ -276,15 +262,15 @@ function DiscoverDirectoryInner({
             <button
               type="button"
               onClick={clearFilters}
-              className="text-[11px] font-bold text-rose-700 cursor-pointer"
+              className="text-[11px] font-semibold text-[#164237] hover:underline cursor-pointer"
             >
-              Clear all
+              Reset
             </button>
           </div>
         )}
       </div>
 
-      {/* Directory Content */}
+      {/* Results */}
       {viewMode === "map" ? (
         <SalcedoMap
           places={filteredPlaces}
@@ -292,47 +278,40 @@ function DiscoverDirectoryInner({
           heightClass="h-[56vh] min-h-[380px]"
         />
       ) : filteredPlaces.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-[#E5E0D5] p-8 text-center space-y-3">
-          <p className="font-display text-base font-bold text-[#202B28]">
-            No matching spots found
+        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-8 text-center space-y-3">
+          <p className="font-display text-base font-bold text-[#1A2421]">
+            No destinations match
           </p>
-          <p className="text-xs text-[#5A6B66]">
-            Try resetting filters or searching another Salcedo barangay or destination.
+          <p className="text-xs text-[#616E69]">
+            Clear your filters to browse all verified destinations in Salcedo.
           </p>
           <button
             type="button"
             onClick={clearFilters}
-            className="rounded-xl bg-[#123F35] text-white px-4 py-2 text-xs font-bold cursor-pointer"
+            className="rounded-full bg-[#164237] text-white px-5 py-2 text-xs font-semibold cursor-pointer"
           >
-            Reset Filters
+            Show All
           </button>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {filteredPlaces.map((place) => (
             <PlaceCard key={place.id} place={place} variant="row" />
           ))}
         </div>
       )}
 
-      {/* Slide-Up Mobile Filter Bottom Sheet */}
+      {/* Slide-Up Minimal Filter Bottom Sheet */}
       {filterSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 backdrop-blur-[1px]">
-          <div className="w-full max-w-[440px] bg-white rounded-t-3xl border-t border-[#E5E0D5] p-5 pb-7 space-y-5 shadow-2xl animate-in slide-in-from-bottom-6 duration-200">
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/35 backdrop-blur-[1px]">
+          <div className="w-full max-w-[430px] bg-white rounded-t-3xl border-t border-[#EAE7E0] p-5 pb-7 space-y-5 shadow-xl animate-in slide-in-from-bottom-6 duration-200">
             <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <h2 className="font-display text-lg font-bold text-[#202B28]">
-                  Filter Destinations
-                </h2>
-                <p className="text-xs text-[#5A6B66]">
-                  Narrow down across all 21 Salcedo barangays
-                </p>
-              </div>
+              <h2 className="font-display text-lg font-bold text-[#1A2421]">Filters</h2>
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(false)}
-                aria-label="Close filter drawer"
-                className="w-8 h-8 rounded-full bg-[#F8F7F2] flex items-center justify-center text-[#5A6B66] cursor-pointer"
+                aria-label="Close filters"
+                className="w-8 h-8 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -340,11 +319,11 @@ function DiscoverDirectoryInner({
 
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#202B28]">Barangay</label>
+                <label className="text-xs font-semibold text-[#616E69]">Barangay</label>
                 <select
                   value={selectedBarangay}
                   onChange={(e) => setSelectedBarangay(e.target.value)}
-                  className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3.5 py-2.5 text-sm font-medium text-[#202B28]"
+                  className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm font-medium text-[#1A2421]"
                 >
                   <option value="all">All 21 Barangays</option>
                   {barangays.map((b) => (
@@ -356,28 +335,28 @@ function DiscoverDirectoryInner({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#202B28]">Place Type</label>
+                <label className="text-xs font-semibold text-[#616E69]">Place Type</label>
                 <div className="flex flex-wrap gap-1.5">
                   <button
                     type="button"
                     onClick={() => setSelectedType("all")}
-                    className={`rounded-xl px-3 py-1.5 text-xs font-semibold border cursor-pointer ${
+                    className={`rounded-full px-3 py-1.5 text-xs font-medium border cursor-pointer ${
                       selectedType === "all"
-                        ? "bg-[#123F35] text-white border-[#123F35]"
-                        : "bg-[#F8F7F2] text-[#202B28] border-[#E5E0D5]"
+                        ? "bg-[#164237] text-white border-[#164237]"
+                        : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
                     }`}
                   >
-                    All Types
+                    All
                   </button>
                   {availableTypes.map((type) => (
                     <button
                       key={type}
                       type="button"
                       onClick={() => setSelectedType(type)}
-                      className={`rounded-xl px-3 py-1.5 text-xs font-semibold capitalize border cursor-pointer ${
+                      className={`rounded-full px-3 py-1.5 text-xs font-medium capitalize border cursor-pointer ${
                         selectedType === type
-                          ? "bg-[#123F35] text-white border-[#123F35]"
-                          : "bg-[#F8F7F2] text-[#202B28] border-[#E5E0D5]"
+                          ? "bg-[#164237] text-white border-[#164237]"
+                          : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
                       }`}
                     >
                       {type}
@@ -387,26 +366,26 @@ function DiscoverDirectoryInner({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-[#202B28]">Sort Order</label>
+                <label className="text-xs font-semibold text-[#616E69]">Sort</label>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setSortBy("featured")}
-                    className={`rounded-xl py-2.5 text-xs font-bold border cursor-pointer ${
+                    className={`rounded-xl py-2.5 text-xs font-semibold border cursor-pointer ${
                       sortBy === "featured"
-                        ? "bg-[#123F35] text-white border-[#123F35]"
-                        : "bg-[#F8F7F2] text-[#202B28] border-[#E5E0D5]"
+                        ? "bg-[#164237] text-white border-[#164237]"
+                        : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
                     }`}
                   >
-                    Featured First
+                    Featured
                   </button>
                   <button
                     type="button"
                     onClick={() => setSortBy("name")}
-                    className={`rounded-xl py-2.5 text-xs font-bold border cursor-pointer ${
+                    className={`rounded-xl py-2.5 text-xs font-semibold border cursor-pointer ${
                       sortBy === "name"
-                        ? "bg-[#123F35] text-white border-[#123F35]"
-                        : "bg-[#F8F7F2] text-[#202B28] border-[#E5E0D5]"
+                        ? "bg-[#164237] text-white border-[#164237]"
+                        : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
                     }`}
                   >
                     Name (A–Z)
@@ -422,14 +401,14 @@ function DiscoverDirectoryInner({
                   clearFilters();
                   setFilterSheetOpen(false);
                 }}
-                className="flex-1 rounded-xl border border-[#E5E0D5] py-3 text-xs font-bold text-[#5A6B66] cursor-pointer"
+                className="flex-1 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#616E69] cursor-pointer"
               >
                 Reset
               </button>
               <button
                 type="button"
                 onClick={() => setFilterSheetOpen(false)}
-                className="flex-[2] rounded-xl bg-[#123F35] text-white py-3 text-xs font-bold cursor-pointer"
+                className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold cursor-pointer"
               >
                 Show {filteredPlaces.length} Results
               </button>

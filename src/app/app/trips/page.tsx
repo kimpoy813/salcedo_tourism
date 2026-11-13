@@ -40,21 +40,17 @@ export default async function TripsPage() {
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-          Account-Free Planner
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
+          Planner
         </p>
-        <h1 className="font-display text-xl font-bold text-[#202B28]">
-          My Salcedo Trips
+        <h1 className="font-display text-xl font-bold text-[#1A2421]">
+          My Salcedo Trip
         </h1>
-        <p className="text-xs text-[#5A6B66]">
-          Draft &amp; export offline with zero login. Submit only if you want a cross-device CEDO
-          trip code.
-        </p>
       </div>
 
       <Suspense
         fallback={
-          <div className="rounded-2xl bg-white border border-[#E5E0D5] p-6 text-xs text-[#5A6B66]">
+          <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
             Loading trip planner...
           </div>
         }
