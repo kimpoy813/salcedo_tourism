@@ -11,6 +11,11 @@ import {
   getPublishedPlaces,
 } from "../src/lib/queries/public-tourism";
 import {
+  authenticateAdminCredentials,
+  signAdminToken,
+  verifyAdminToken,
+} from "../src/lib/admin-auth";
+import {
   SALCEDO_BARANGAY_POLYGONS,
   SALCEDO_BOUNDS,
   SALCEDO_MASK_OUTER_RING,
@@ -133,5 +138,27 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
     const afterSummary = await getPlaceRatingsSummary(targetPlace.id);
     expect(afterSummary.ratingCount).toBe(beforeSummary.ratingCount + 1);
     expect(afterSummary.reviews[0].reviewerName).toBe("Test Visitor");
+
+    // Verify admin login works by username AND case-insensitive official email
+    const byUsername = await authenticateAdminCredentials(
+      "cedo_superadmin",
+      "SalcedoAdmin2026!"
+    );
+    expect(byUsername?.username).toBe("cedo_superadmin");
+    expect(byUsername?.roles).toContain("super_admin");
+
+    const byEmail = await authenticateAdminCredentials(
+      "Tourism@Salcedo-IlocosSur.gov.ph",
+      "SalcedoAdmin2026!"
+    );
+    expect(byEmail?.username).toBe("cedo_superadmin");
+
+    const badPass = await authenticateAdminCredentials("cedo_superadmin", "wrong");
+    expect(badPass).toBeNull();
+
+    const jwt = await signAdminToken(byEmail!.id, byEmail!.username);
+    const verified = await verifyAdminToken(jwt);
+    expect(verified?.adminUserId).toBe(byEmail!.id);
+    expect(verified?.username).toBe("cedo_superadmin");
   });
 });
