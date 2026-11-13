@@ -16,23 +16,19 @@ export default async function DiscoverPage() {
   ]);
 
   return (
-    <div className="px-4 sm:px-6 py-8 space-y-6">
-      <div className="space-y-1.5">
-        <p className="text-xs font-bold uppercase tracking-wider text-[#168A8A]">
-          Municipality of Salcedo Directory
+    <div className="px-4 py-4 space-y-4">
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
+          Salcedo Directory
         </p>
-        <h1 className="font-display text-2xl sm:text-3xl font-bold text-[#202B28]">
-          Discover Salcedo
+        <h1 className="font-display text-xl font-bold text-[#202B28]">
+          Discover Destinations
         </h1>
-        <p className="text-sm text-[#5A6B66] max-w-2xl">
-          Verified waterfalls, inland spring resorts, local eateries, heritage landmarks, local
-          producers, and essential visitor stops across all 21 barangays.
-        </p>
       </div>
 
       <Suspense
         fallback={
-          <div className="rounded-3xl bg-white border border-[#E5E0D5] p-8 text-sm text-[#5A6B66]">
+          <div className="rounded-2xl bg-white border border-[#E5E0D5] p-6 text-xs text-[#5A6B66]">
             Loading Salcedo directory...
           </div>
         }
