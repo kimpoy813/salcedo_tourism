@@ -6,18 +6,13 @@ import { useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
-  Bookmark,
   Check,
-  CheckCircle2,
   Copy,
   Download,
-  GripVertical,
   KeyRound,
+  Plus,
   Printer,
   RefreshCw,
-  Route,
-  Save,
-  Search,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -30,6 +25,7 @@ import {
   removeLocalReceipt,
   saveLocalDraft,
   saveLocalReceipt,
+  toggleSavedPlaceId,
   type LocalItineraryDraft,
   type LocalItineraryStop,
   type LocalTripReceipt,
@@ -78,6 +74,17 @@ interface RetrievedItinerary {
   } | null;
 }
 
+const ORIGIN_QUICK_CITIES = [
+  { city: "Candon City", province: "Ilocos Sur" },
+  { city: "Vigan City", province: "Ilocos Sur" },
+  { city: "San Fernando", province: "La Union" },
+  { city: "Metro Manila", province: "NCR" },
+];
+
+const DURATION_PRESETS = [30, 60, 90, 120];
+
+const STEP_LABELS = ["Trip Info", "Choose Stops", "Schedule", "Preview", "Submit"];
+
 function createEmptyDraft(): LocalItineraryDraft {
   return {
     id: `draft-${Date.now()}`,
@@ -87,6 +94,22 @@ function createEmptyDraft(): LocalItineraryDraft {
     stops: [],
     updatedAt: new Date().toISOString(),
   };
+}
+
+function computeSegmentDistanceKm(
+  a?: { latitude?: number | null; longitude?: number | null },
+  b?: { latitude?: number | null; longitude?: number | null }
+): number | null {
+  if (!a?.latitude || !a?.longitude || !b?.latitude || !b?.longitude) return null;
+  const R = 6371;
+  const dLat = ((b.latitude - a.latitude) * Math.PI) / 180;
+  const dLon = ((b.longitude - a.longitude) * Math.PI) / 180;
+  const lat1 = (a.latitude * Math.PI) / 180;
+  const lat2 = (b.latitude * Math.PI) / 180;
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return Number((2 * R * Math.asin(Math.sqrt(h))).toFixed(1));
 }
 
 export function TripsPlannerClient({
@@ -129,30 +152,25 @@ function TripsPlannerInner({
   const [drafts, setDrafts] = useState<LocalItineraryDraft[]>([]);
   const [draft, setDraft] = useState<LocalItineraryDraft>(createEmptyDraft);
   const [placeSearch, setPlaceSearch] = useState("");
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  // Saved places & local receipts
   const [savedPlaceIds, setSavedPlaceIds] = useState<string[]>([]);
   const [localReceipts, setLocalReceipts] = useState<LocalTripReceipt[]>([]);
 
-  // Step 5: Post-Itinerary Visitor Information Form (collected ONLY at final step)
+  // Step 5: Visitor registration (only when submitting)
   const [visitorName, setVisitorName] = useState("");
   const [originMunicipality, setOriginMunicipality] = useState("");
   const [originProvince, setOriginProvince] = useState("");
-  const [originCountry, setOriginCountry] = useState("Philippines");
+  const [originCountry] = useState("Philippines");
   const [contactNumber, setContactNumber] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
   const [travelerCount, setTravelerCount] = useState<number>(2);
   const [purposeOfVisit, setPurposeOfVisit] = useState("Leisure & Nature Sightseeing");
-  const [firstTimeVisitor, setFirstTimeVisitor] = useState<
-    "yes" | "no" | "prefer_not_to_say"
-  >("yes");
-  const [transportationType, setTransportationType] = useState("Private Vehicle");
-  const [lengthOfStay, setLengthOfStay] = useState("Day Trip");
-  const [discoverySource, setDiscoverySource] = useState("Social Media / Online Search");
-  const [preferredExperience, setPreferredExperience] = useState("Waterfalls & Resorts");
+  const [firstTimeVisitor] = useState<"yes" | "no" | "prefer_not_to_say">("yes");
+  const [transportationType] = useState("Private Vehicle");
+  const [lengthOfStay] = useState("Day Trip");
+  const [discoverySource] = useState("Social Media / Online Search");
+  const [preferredExperience] = useState("Waterfalls & Resorts");
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
-  // MUST default to false (unprechecked per RA 10173!)
   const [followUpConsentGiven, setFollowUpConsentGiven] = useState(false);
 
   const [submitLoading, setSubmitLoading] = useState(false);
@@ -167,7 +185,6 @@ function TripsPlannerInner({
   } | null>(null);
   const [copiedCode, setCopiedCode] = useState(false);
 
-  // Retrieve tab state
   const [retRef, setRetRef] = useState("");
   const [retCode, setRetCode] = useState("");
   const [retLoading, setRetLoading] = useState(false);
@@ -214,6 +231,15 @@ function TripsPlannerInner({
     [draft.stops]
   );
 
+  const totalDistanceKm = useMemo(() => {
+    let total = 0;
+    for (let i = 1; i < draft.stops.length; i++) {
+      const d = computeSegmentDistanceKm(draft.stops[i - 1], draft.stops[i]);
+      if (d != null) total += d;
+    }
+    return Number(total.toFixed(1));
+  }, [draft.stops]);
+
   const persistDraft = async (nextDraft: LocalItineraryDraft, showNotice = false) => {
     const updated = { ...nextDraft, updatedAt: new Date().toISOString() };
     setDraft(updated);
@@ -221,7 +247,7 @@ function TripsPlannerInner({
     setDrafts(await listLocalDrafts());
     await refreshCounts();
     if (showNotice) {
-      showToast("Draft saved offline on this device", { tone: "success" });
+      showToast("Draft saved offline", { tone: "success" });
     }
   };
 
@@ -258,11 +284,11 @@ function TripsPlannerInner({
       ...draft,
       title:
         preset === "nature"
-          ? "Salcedo Waterfalls & Spring Getaway"
-          : "Salcedo Heritage & Cacao Trail",
+          ? "Salcedo Falls & Springs Day"
+          : "Salcedo Heritage & Dining Trail",
       stops,
     });
-    showToast(`Added ${stops.length} verified Salcedo stops`, { tone: "success" });
+    showToast(`Added ${stops.length} stops`, { tone: "success" });
     setStep(3);
   };
 
@@ -310,7 +336,7 @@ function TripsPlannerInner({
   };
 
   const downloadItineraryText = (
-    title: string,
+    docTitle: string,
     date: string,
     stops: Array<{
       placeName: string;
@@ -323,9 +349,9 @@ function TripsPlannerInner({
     const lines = [
       "PROJECT CEDO: TURI APP — MUNICIPALITY OF SALCEDO, ILOCOS SUR",
       "==============================================================",
-      `Itinerary: ${title}`,
+      `Itinerary: ${docTitle}`,
       `Planned Travel Date: ${date}`,
-      refNum ? `Official Reference Number: ${refNum}` : "Local Standalone Draft (Not Submitted)",
+      refNum ? `Official Reference Number: ${refNum}` : "Local Standalone Draft",
       "",
       "STOPS:",
       ...stops.map(
@@ -341,13 +367,10 @@ function TripsPlannerInner({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-salcedo-itinerary.txt`;
+    a.download = `${docTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-salcedo-itinerary.txt`;
     a.click();
     URL.revokeObjectURL(url);
-    void trackItineraryEvent({
-      eventType: "downloaded",
-      stopCount: stops.length,
-    });
+    void trackItineraryEvent({ eventType: "downloaded", stopCount: stops.length });
   };
 
   const handleSubmitPlan = async (e: React.FormEvent) => {
@@ -355,11 +378,11 @@ function TripsPlannerInner({
     setSubmitError(null);
 
     if (draft.stops.length === 0) {
-      setSubmitError("Add at least one destination before submitting your travel plan.");
+      setSubmitError("Add at least one destination first.");
       return;
     }
     if (!privacyAcknowledged) {
-      setSubmitError("Please acknowledge the RA 10173 Data Privacy Notice first.");
+      setSubmitError("Accept the RA 10173 Privacy Notice before submitting.");
       return;
     }
 
@@ -405,7 +428,7 @@ function TripsPlannerInner({
 
       const data = await res.json();
       if (!res.ok) {
-        setSubmitError(data.error || "Could not submit travel plan. Please check required fields.");
+        setSubmitError(data.error || "Could not submit travel plan.");
         return;
       }
 
@@ -427,7 +450,7 @@ function TripsPlannerInner({
       });
       setLocalReceipts(await listLocalReceipts());
     } catch {
-      setSubmitError("Network error submitting your travel plan. Your local draft is still safe.");
+      setSubmitError("Network error while submitting plan.");
     } finally {
       setSubmitLoading(false);
     }
@@ -452,7 +475,7 @@ function TripsPlannerInner({
       const data = await res.json();
       if (!res.ok) {
         setRetrieved(null);
-        setRetError(data.error || "Invalid reference number or private retrieval code.");
+        setRetError(data.error || "Invalid reference number or private code.");
         return;
       }
       setRetrieved(data.itinerary);
@@ -513,110 +536,94 @@ function TripsPlannerInner({
 
   return (
     <div className="space-y-4">
-      {/* Mobile Segmented Tab Switcher */}
-      <div className="no-print grid grid-cols-3 gap-1 bg-white rounded-2xl border border-[#E5E0D5] p-1">
+      {/* Minimalist Segmented Control */}
+      <div className="no-print grid grid-cols-3 rounded-full bg-[#F3F2EE] p-1 border border-[#EAE7E0]">
         <button
           type="button"
           onClick={() => setActiveTab("builder")}
-          className={`inline-flex items-center justify-center gap-1 rounded-xl py-2 px-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "builder"
-              ? "bg-[#123F35] text-white shadow-2xs"
-              : "text-[#5A6B66]"
+          className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
+            activeTab === "builder" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
           }`}
         >
-          <Route className="w-3.5 h-3.5" />
-          <span>Plan ({draft.stops.length})</span>
+          Plan ({draft.stops.length})
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("retrieve")}
-          className={`inline-flex items-center justify-center gap-1 rounded-xl py-2 px-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "retrieve"
-              ? "bg-[#123F35] text-white shadow-2xs"
-              : "text-[#5A6B66]"
+          className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
+            activeTab === "retrieve" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
           }`}
         >
-          <KeyRound className="w-3.5 h-3.5" />
-          <span>Retrieve</span>
+          Retrieve
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("saved")}
-          className={`inline-flex items-center justify-center gap-1 rounded-xl py-2 px-2 text-xs font-bold transition cursor-pointer ${
-            activeTab === "saved"
-              ? "bg-[#123F35] text-white shadow-2xs"
-              : "text-[#5A6B66]"
+          className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
+            activeTab === "saved" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
           }`}
         >
-          <Bookmark className="w-3.5 h-3.5" />
-          <span>Saved ({savedPlaces.length + localReceipts.length})</span>
+          Saved ({savedPlaces.length + localReceipts.length})
         </button>
       </div>
 
-      {/* TAB 1: ACCOUNT-FREE ITINERARY BUILDER */}
+      {/* TAB 1: PLANNER */}
       {activeTab === "builder" && (
         <div className="space-y-4">
           {submissionResult ? (
-            <div className="bg-white rounded-2xl border-2 border-[#123F35] p-4 space-y-4 shadow-md">
-              <div className="flex items-start gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">
-                    Submitted to Salcedo CEDO
-                  </p>
-                  <h2 className="font-display text-lg font-bold text-[#202B28] truncate">
-                    {submissionResult.title}
-                  </h2>
-                  <p className="text-xs text-[#5A6B66]">
-                    Visit: <strong>{submissionResult.plannedVisitDate}</strong> •{" "}
-                    {submissionResult.totalStops} stops
-                  </p>
-                </div>
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-4">
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-semibold uppercase tracking-widest text-[#164237]">
+                  Submitted to Salcedo CEDO
+                </p>
+                <h2 className="font-display text-lg font-bold text-[#1A2421]">
+                  {submissionResult.title}
+                </h2>
+                <p className="text-xs text-[#616E69] tabular-nums">
+                  {submissionResult.plannedVisitDate} • {submissionResult.totalStops} stops
+                </p>
               </div>
 
-              <div className="space-y-2.5">
-                <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B66]">
+              <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] divide-y divide-[#EAE7E0]">
+                <div className="p-3">
+                  <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
                     Reference Number
                   </p>
-                  <p className="font-mono text-base font-bold text-[#123F35] select-all">
+                  <p className="font-mono text-base font-bold text-[#164237] select-all">
                     {submissionResult.referenceNumber}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-amber-50 border border-amber-300 p-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-amber-900">
-                    One-Time Private Retrieval Code
-                  </p>
-                  <div className="flex items-center justify-between gap-2 mt-0.5">
-                    <p className="font-mono text-base font-bold text-amber-950 select-all">
+                <div className="p-3 flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
+                      One-Time Private Retrieval Code
+                    </p>
+                    <p className="font-mono text-sm font-bold text-[#1A2421] select-all break-all">
                       {submissionResult.privateCode}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(
-                          `Reference: ${submissionResult.referenceNumber}\nPrivate Code: ${submissionResult.privateCode}`
-                        );
-                        setCopiedCode(true);
-                        setTimeout(() => setCopiedCode(false), 2000);
-                      }}
-                      className="inline-flex items-center gap-1 rounded-lg bg-white border border-amber-300 px-2.5 py-1 text-[11px] font-bold text-amber-950 cursor-pointer shrink-0"
-                    >
-                      {copiedCode ? (
-                        <Check className="w-3 h-3" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                      {copiedCode ? "Copied" : "Copy"}
-                    </button>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(
+                        `Reference: ${submissionResult.referenceNumber}\nPrivate Code: ${submissionResult.privateCode}`
+                      );
+                      setCopiedCode(true);
+                      setTimeout(() => setCopiedCode(false), 2000);
+                    }}
+                    className="rounded-full bg-white border border-[#EAE7E0] p-2 text-[#1A2421] shrink-0 cursor-pointer"
+                  >
+                    {copiedCode ? (
+                      <Check className="w-3.5 h-3.5 text-[#164237]" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
                 </div>
               </div>
 
-              <p className="rounded-xl bg-[#123F35]/6 border border-[#123F35]/20 p-3 text-xs text-[#202B28]">
+              <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#1A2421]">
                 {submissionResult.warning}
               </p>
 
@@ -624,19 +631,19 @@ function TripsPlannerInner({
                 <button
                   type="button"
                   onClick={() => {
-                    const txt = `PROJECT CEDO: TURI APP — TRIP ACCESS RECEIPT\nTitle: ${submissionResult.title}\nDate: ${submissionResult.plannedVisitDate}\nReference Number: ${submissionResult.referenceNumber}\nPrivate Retrieval Code: ${submissionResult.privateCode}\n\nKeep this receipt confidential. Required to retrieve or erase your submission at /app/trips.`;
+                    const txt = `PROJECT CEDO: TURI APP — TRIP RECEIPT\nTitle: ${submissionResult.title}\nDate: ${submissionResult.plannedVisitDate}\nReference Number: ${submissionResult.referenceNumber}\nPrivate Code: ${submissionResult.privateCode}`;
                     const blob = new Blob([txt], { type: "text/plain;charset=utf-8" });
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement("a");
                     a.href = url;
-                    a.download = `${submissionResult.referenceNumber}-access-receipt.txt`;
+                    a.download = `${submissionResult.referenceNumber}-receipt.txt`;
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
-                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#123F35] text-white py-2.5 text-xs font-bold cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold cursor-pointer"
                 >
-                  <Download className="w-4 h-4" />
-                  Download Access Receipt (.txt)
+                  <Download className="w-3.5 h-3.5" />
+                  Download Receipt (.txt)
                 </button>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -646,9 +653,9 @@ function TripsPlannerInner({
                       setRetCode(submissionResult.privateCode);
                       setActiveTab("retrieve");
                     }}
-                    className="rounded-xl border border-[#E5E0D5] bg-white py-2.5 text-xs font-bold text-[#202B28] cursor-pointer"
+                    className="rounded-full border border-[#EAE7E0] bg-white py-2.5 text-xs font-semibold text-[#1A2421] cursor-pointer"
                   >
-                    Test Retrieval
+                    Manage Trip
                   </button>
                   <button
                     type="button"
@@ -657,7 +664,7 @@ function TripsPlannerInner({
                       setDraft(createEmptyDraft());
                       setStep(1);
                     }}
-                    className="rounded-xl border border-[#E5E0D5] bg-white py-2.5 text-xs font-semibold text-[#5A6B66] cursor-pointer"
+                    className="rounded-full border border-[#EAE7E0] bg-white py-2.5 text-xs font-medium text-[#616E69] cursor-pointer"
                   >
                     New Trip
                   </button>
@@ -666,159 +673,73 @@ function TripsPlannerInner({
             </div>
           ) : (
             <>
-              {/* Stepper + Quick Actions */}
-              <div className="no-print bg-white rounded-2xl border border-[#E5E0D5] p-3 space-y-2.5">
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                  {[
-                    { num: 1, label: "1. Info" },
-                    { num: 2, label: `2. Spots (${draft.stops.length})` },
-                    { num: 3, label: "3. Route" },
-                    { num: 4, label: "4. Preview" },
-                    { num: 5, label: "5. Submit" },
-                  ].map((s) => (
-                    <button
-                      key={s.num}
-                      type="button"
-                      onClick={() => setStep(s.num as 1 | 2 | 3 | 4 | 5)}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold transition cursor-pointer ${
-                        step === s.num
-                          ? "bg-[#123F35] text-white"
-                          : "bg-[#F8F7F2] text-[#5A6B66]"
-                      }`}
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#E5E0D5]/70 text-[11px]">
-                  <span className="text-[#5A6B66] tabular-nums">
-                    {draft.stops.length} stops • ~{(totalMinutes / 60).toFixed(1)} hrs
+              {/* Sleek Linear Progress Bar */}
+              <div className="no-print space-y-2 px-0.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-display font-bold text-[#1A2421]">
+                    {STEP_LABELS[step - 1]}
                   </span>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => void persistDraft(draft, true)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 font-bold text-[#123F35] cursor-pointer"
-                    >
-                      <Save className="w-3 h-3" />
-                      Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDraft(createEmptyDraft());
-                        setStep(1);
-                      }}
-                      className="rounded-lg border border-[#E5E0D5] px-2.5 py-1 font-semibold text-[#5A6B66] cursor-pointer"
-                    >
-                      New
-                    </button>
-                  </div>
+                  <span className="text-[11px] font-medium text-[#616E69] tabular-nums">
+                    Step {step} of 5 • ~{(totalMinutes / 60).toFixed(1)}h
+                  </span>
+                </div>
+                <div className="h-1.5 w-full rounded-full bg-[#EAE7E0] overflow-hidden">
+                  <div
+                    className="h-full bg-[#164237] rounded-full transition-all duration-300"
+                    style={{ width: `${(step / 5) * 100}%` }}
+                  />
                 </div>
               </div>
 
-              {/* Quick-Start Templates (shown when draft is empty) */}
-              {draft.stops.length === 0 && step <= 2 && (
-                <div className="no-print rounded-2xl bg-[#123F35]/6 border border-[#123F35]/20 p-3.5 space-y-2">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-[#123F35]">
-                    <Sparkles className="w-3.5 h-3.5 text-[#D6A85B]" />
-                    <span>1-Tap Starter Routes</span>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => void applyQuickPreset("nature")}
-                      className="rounded-xl bg-white border border-[#E5E0D5] p-2.5 text-left hover:border-[#123F35] cursor-pointer"
-                    >
-                      <p className="font-display font-bold text-xs text-[#202B28]">
-                        Falls &amp; Spring Day
-                      </p>
-                      <p className="text-[10px] text-[#5A6B66]">3 nature &amp; resort stops</p>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void applyQuickPreset("heritage")}
-                      className="rounded-xl bg-white border border-[#E5E0D5] p-2.5 text-left hover:border-[#123F35] cursor-pointer"
-                    >
-                      <p className="font-display font-bold text-xs text-[#202B28]">
-                        Heritage &amp; Cacao
-                      </p>
-                      <p className="text-[10px] text-[#5A6B66]">Plaza, dining &amp; local crafts</p>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Local Draft Switcher */}
-              {drafts.length > 1 && (
-                <div className="no-print flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-                  <span className="text-[11px] font-semibold text-[#5A6B66] shrink-0">
-                    Drafts:
-                  </span>
-                  {drafts.map((d) => (
-                    <div
-                      key={d.id}
-                      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] shrink-0 ${
-                        d.id === draft.id
-                          ? "bg-[#123F35]/10 border-[#123F35] font-bold text-[#123F35]"
-                          : "bg-white border-[#E5E0D5] text-[#5A6B66]"
-                      }`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setDraft(d)}
-                        className="cursor-pointer truncate max-w-[140px]"
-                      >
-                        {d.title} ({d.stops.length})
-                      </button>
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          await deleteLocalDraft(d.id);
-                          const next = await listLocalDrafts();
-                          setDrafts(next);
-                          if (draft.id === d.id) {
-                            setDraft(next[0] ?? createEmptyDraft());
-                          }
-                          await refreshCounts();
-                        }}
-                        aria-label="Delete local draft"
-                        className="text-rose-600 cursor-pointer"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* STEP 1: TRIP OVERVIEW */}
+              {/* STEP 1 */}
               {step === 1 && (
-                <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-4">
-                  <div>
-                    <h2 className="font-display text-base font-bold text-[#202B28]">
-                      Step 1: Trip Details
-                    </h2>
-                    <p className="text-xs text-[#5A6B66]">
-                      Stored privately on your phone—no sign-in needed.
-                    </p>
-                  </div>
+                <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-4">
+                  {draft.stops.length === 0 && availablePlaces.length > 0 && (
+                    <div className="space-y-2 pb-3 border-b border-[#EAE7E0]">
+                      <p className="text-[11px] font-semibold text-[#616E69] inline-flex items-center gap-1">
+                        <Sparkles className="w-3.5 h-3.5 text-[#164237]" />
+                        Quick start
+                      </p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void applyQuickPreset("nature")}
+                          className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] p-3 text-left hover:border-[#164237]/40 transition cursor-pointer"
+                        >
+                          <p className="font-display text-xs font-bold text-[#1A2421]">
+                            Falls &amp; Springs
+                          </p>
+                          <p className="text-[11px] text-[#616E69] mt-0.5">3 top stops</p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void applyQuickPreset("heritage")}
+                          className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] p-3 text-left hover:border-[#164237]/40 transition cursor-pointer"
+                        >
+                          <p className="font-display text-xs font-bold text-[#1A2421]">
+                            Heritage &amp; Dining
+                          </p>
+                          <p className="text-[11px] text-[#616E69] mt-0.5">Cultural route</p>
+                        </button>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">Trip Title</label>
+                      <label className="text-xs font-medium text-[#616E69]">Trip Title</label>
                       <input
                         type="text"
                         value={draft.title}
-                        onChange={(e) => void persistDraft({ ...draft, title: e.target.value })}
-                        placeholder="e.g., Baluarte Falls & Bago Weekend"
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2.5 text-sm"
+                        onChange={(e) =>
+                          void persistDraft({ ...draft, title: e.target.value })
+                        }
+                        className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">
-                        Planned Travel Date
+                      <label className="text-xs font-medium text-[#616E69]">
+                        Planned Date
                       </label>
                       <input
                         type="date"
@@ -826,11 +747,11 @@ function TripsPlannerInner({
                         onChange={(e) =>
                           void persistDraft({ ...draft, plannedVisitDate: e.target.value })
                         }
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2.5 text-sm"
+                        className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">
+                      <label className="text-xs font-medium text-[#616E69]">
                         Notes (Optional)
                       </label>
                       <textarea
@@ -839,8 +760,8 @@ function TripsPlannerInner({
                         onChange={(e) =>
                           void persistDraft({ ...draft, description: e.target.value })
                         }
-                        placeholder="Meeting point, swim gear reminders..."
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
+                        placeholder="Family outing or reminders..."
+                        className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
                       />
                     </div>
                   </div>
@@ -848,73 +769,71 @@ function TripsPlannerInner({
                   <button
                     type="button"
                     onClick={() => setStep(2)}
-                    className="w-full rounded-xl bg-[#123F35] text-white py-3 text-xs font-bold cursor-pointer"
+                    className="w-full rounded-full bg-[#164237] text-white py-3 text-xs font-semibold hover:bg-[#10322A] transition cursor-pointer"
                   >
-                    Next: Choose Destinations →
+                    Choose Stops →
                   </button>
-                </section>
+                </div>
               )}
 
-              {/* STEP 2: PICK SALCEDO DESTINATIONS */}
+              {/* STEP 2 */}
               {step === 2 && (
-                <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5">
-                  <div>
-                    <h2 className="font-display text-base font-bold text-[#202B28]">
-                      Step 2: Pick Spots ({draft.stops.length} selected)
-                    </h2>
-                    <p className="text-xs text-[#5A6B66]">
-                      Tap any verified Salcedo destination to add or remove it.
-                    </p>
+                <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs text-[#616E69]">Tap stops to add or remove.</p>
+                    <span className="rounded-full bg-[#F3F2EE] px-2.5 py-1 text-[11px] font-semibold text-[#164237] tabular-nums">
+                      {draft.stops.length} selected
+                    </span>
                   </div>
 
-                  <div className="relative">
-                    <Search className="w-4 h-4 text-[#5A6B66] absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="search"
-                      value={placeSearch}
-                      onChange={(e) => setPlaceSearch(e.target.value)}
-                      placeholder="Filter places or barangays..."
-                      className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] pl-9 pr-3 py-2 text-xs"
-                    />
-                  </div>
+                  <input
+                    type="search"
+                    value={placeSearch}
+                    onChange={(e) => setPlaceSearch(e.target.value)}
+                    placeholder="Filter destinations..."
+                    className="w-full rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-4 py-2 text-xs focus:outline-none"
+                  />
 
-                  <div className="space-y-2 max-h-[380px] overflow-y-auto pr-0.5">
+                  <div className="divide-y divide-[#EAE7E0] max-h-[340px] overflow-y-auto -mx-4 px-4">
                     {filteredPlaces.map((p) => {
                       const selected = draft.stops.some((s) => s.placeId === p.id);
                       return (
-                        <div
+                        <button
                           key={p.id}
-                          className={`rounded-xl border p-2.5 flex gap-2.5 items-center transition ${
-                            selected
-                              ? "border-[#123F35] bg-[#123F35]/6"
-                              : "border-[#E5E0D5] bg-[#F8F7F2]/60"
-                          }`}
+                          type="button"
+                          onClick={() => void toggleStop(p)}
+                          className="w-full flex items-center gap-3 py-3 text-left cursor-pointer"
                         >
                           <img
-                            src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
+                            src={
+                              p.featuredImageUrl ||
+                              "/images/salcedo/hero-salcedo-valley.png"
+                            }
                             alt={p.name}
-                            className="w-12 h-12 rounded-lg object-cover shrink-0"
+                            className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
                           />
-                          <div className="min-w-0 flex-1">
-                            <p className="font-display font-bold text-xs text-[#202B28] truncate">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-display font-bold text-xs text-[#1A2421] truncate">
                               {p.name}
                             </p>
-                            <p className="text-[11px] text-[#168A8A] truncate">
+                            <p className="text-[11px] text-[#616E69] truncate">
                               {p.barangay ? `Brgy. ${p.barangay.name}` : p.placeType}
                             </p>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => void toggleStop(p)}
-                            className={`rounded-lg px-3 py-1.5 text-[11px] font-bold shrink-0 cursor-pointer ${
+                          <span
+                            className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 transition ${
                               selected
-                                ? "bg-[#123F35] text-white"
-                                : "bg-white border border-[#E5E0D5] text-[#123F35]"
+                                ? "bg-[#164237] text-white"
+                                : "bg-[#F3F2EE] text-[#1A2421]"
                             }`}
                           >
-                            {selected ? "Added ✓" : "+ Add"}
-                          </button>
-                        </div>
+                            {selected ? (
+                              <Check className="w-3.5 h-3.5" />
+                            ) : (
+                              <Plus className="w-3.5 h-3.5" />
+                            )}
+                          </span>
+                        </button>
                       );
                     })}
                   </div>
@@ -923,559 +842,360 @@ function TripsPlannerInner({
                     <button
                       type="button"
                       onClick={() => setStep(1)}
-                      className="flex-1 rounded-xl border border-[#E5E0D5] py-2.5 text-xs font-semibold text-[#5A6B66] cursor-pointer"
+                      className="flex-1 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#616E69] cursor-pointer"
                     >
-                      ← Back
+                      Back
                     </button>
                     <button
                       type="button"
+                      disabled={draft.stops.length === 0}
                       onClick={() => setStep(3)}
-                      className="flex-[2] rounded-xl bg-[#123F35] text-white py-2.5 text-xs font-bold cursor-pointer"
+                      className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold disabled:opacity-45 cursor-pointer"
                     >
-                      Order &amp; Schedule →
+                      Schedule ({draft.stops.length}) →
                     </button>
                   </div>
-                </section>
+                </div>
               )}
 
-              {/* STEP 3: ORDER & SCHEDULE */}
+              {/* STEP 3 */}
               {step === 3 && (
-                <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-4">
-                  <div>
-                    <h2 className="font-display text-base font-bold text-[#202B28]">
-                      Step 3: Route Order &amp; Time
-                    </h2>
-                    <p className="text-xs text-[#5A6B66]">
-                      Use arrows or drag cards to reorder your Salcedo stops.
-                    </p>
+                <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-4">
+                  <div className="flex items-center justify-between text-xs text-[#616E69]">
+                    <span>Order stops &amp; timing</span>
+                    <span className="font-semibold text-[#164237] tabular-nums">
+                      {draft.stops.length} stops
+                      {totalDistanceKm > 0 ? ` • ~${totalDistanceKm} km` : ""}
+                    </span>
                   </div>
 
-                  {draft.stops.length === 0 ? (
-                    <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-6 text-center space-y-2.5">
-                      <p className="text-xs text-[#5A6B66]">No stops selected yet.</p>
-                      <button
-                        type="button"
-                        onClick={() => setStep(2)}
-                        className="rounded-xl bg-[#123F35] text-white px-4 py-2 text-xs font-bold cursor-pointer"
+                  <div className="space-y-3">
+                    {draft.stops.map((s, idx) => (
+                      <div
+                        key={s.placeId}
+                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] p-3 space-y-2.5"
                       >
-                        Choose Destinations
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {draft.stops.map((stop, idx) => (
-                        <div
-                          key={stop.placeId}
-                          draggable
-                          onDragStart={() => setDragIndex(idx)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDrop={() => {
-                            if (dragIndex !== null && dragIndex !== idx) {
-                              void moveStop(dragIndex, idx);
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="w-6 h-6 rounded-full bg-[#164237] text-white text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
+                              {idx + 1}
+                            </span>
+                            <p className="font-display font-bold text-xs text-[#1A2421] truncate">
+                              {s.placeName}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => void moveStop(idx, idx - 1)}
+                              disabled={idx === 0}
+                              aria-label="Move up"
+                              className="p-1.5 rounded-full bg-white border border-[#EAE7E0] disabled:opacity-30 cursor-pointer"
+                            >
+                              <ArrowUp className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void moveStop(idx, idx + 1)}
+                              disabled={idx === draft.stops.length - 1}
+                              aria-label="Move down"
+                              className="p-1.5 rounded-full bg-white border border-[#EAE7E0] disabled:opacity-30 cursor-pointer"
+                            >
+                              <ArrowDown className="w-3 h-3" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                void persistDraft({
+                                  ...draft,
+                                  stops: draft.stops.filter((_, i) => i !== idx),
+                                })
+                              }
+                              aria-label="Remove stop"
+                              className="p-1.5 rounded-full bg-white border border-[#EAE7E0] text-rose-600 cursor-pointer"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="time"
+                            value={s.visitTime}
+                            onChange={(e) =>
+                              void updateStopField(idx, "visitTime", e.target.value)
                             }
-                            setDragIndex(null);
-                          }}
-                          className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3 space-y-2.5"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-2 min-w-0">
-                              <GripVertical className="w-4 h-4 text-[#5A6B66] shrink-0" />
-                              <span className="w-6 h-6 rounded-full bg-[#123F35] text-white text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
-                                {idx + 1}
-                              </span>
-                              <div className="min-w-0">
-                                <p className="font-display font-bold text-xs text-[#202B28] truncate">
-                                  {stop.placeName}
-                                </p>
-                                <p className="text-[10px] text-[#168A8A]">
-                                  {stop.barangayName
-                                    ? `Brgy. ${stop.barangayName}`
-                                    : stop.placeType}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1 shrink-0">
-                              <button
-                                type="button"
-                                disabled={idx === 0}
-                                onClick={() => void moveStop(idx, idx - 1)}
-                                aria-label="Move stop up"
-                                className="w-8 h-8 rounded-lg border border-[#E5E0D5] bg-white flex items-center justify-center disabled:opacity-35 cursor-pointer"
-                              >
-                                <ArrowUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                disabled={idx === draft.stops.length - 1}
-                                onClick={() => void moveStop(idx, idx + 1)}
-                                aria-label="Move stop down"
-                                className="w-8 h-8 rounded-lg border border-[#E5E0D5] bg-white flex items-center justify-center disabled:opacity-35 cursor-pointer"
-                              >
-                                <ArrowDown className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  void persistDraft({
-                                    ...draft,
-                                    stops: draft.stops.filter((s) => s.placeId !== stop.placeId),
-                                  })
-                                }
-                                aria-label="Remove stop"
-                                className="w-8 h-8 rounded-lg border border-rose-200 bg-white text-rose-700 flex items-center justify-center cursor-pointer"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-2">
-                            <div>
-                              <label className="text-[10px] font-semibold text-[#5A6B66]">
-                                Time
-                              </label>
-                              <input
-                                type="time"
-                                value={stop.visitTime}
-                                onChange={(e) =>
-                                  void updateStopField(idx, "visitTime", e.target.value)
-                                }
-                                className="w-full rounded-lg border border-[#E5E0D5] bg-white px-2.5 py-1.5 text-xs"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-[10px] font-semibold text-[#5A6B66]">
-                                Duration (mins)
-                              </label>
-                              <input
-                                type="number"
-                                min={15}
-                                max={720}
-                                step={15}
-                                value={stop.durationMinutes}
-                                onChange={(e) =>
-                                  void updateStopField(
-                                    idx,
-                                    "durationMinutes",
-                                    Number(e.target.value) || 60
-                                  )
-                                }
-                                className="w-full rounded-lg border border-[#E5E0D5] bg-white px-2.5 py-1.5 text-xs tabular-nums"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-1.5">
-                            {[30, 60, 90, 120].map((mins) => (
+                            className="rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-1.5 text-xs"
+                          />
+                          <div className="flex items-center gap-1">
+                            {DURATION_PRESETS.map((mins) => (
                               <button
                                 key={mins}
                                 type="button"
                                 onClick={() =>
                                   void updateStopField(idx, "durationMinutes", mins)
                                 }
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-bold border cursor-pointer ${
-                                  stop.durationMinutes === mins
-                                    ? "bg-[#123F35] text-white border-[#123F35]"
-                                    : "bg-white text-[#5A6B66] border-[#E5E0D5]"
+                                className={`flex-1 rounded-lg py-1.5 text-[10px] font-semibold border cursor-pointer ${
+                                  s.durationMinutes === mins
+                                    ? "bg-[#164237] text-white border-[#164237]"
+                                    : "bg-white text-[#616E69] border-[#EAE7E0]"
                                 }`}
                               >
-                                {mins < 60 ? `${mins}m` : `${mins / 60}h`}
+                                {mins === 60
+                                  ? "1h"
+                                  : mins === 90
+                                  ? "1.5h"
+                                  : mins === 120
+                                  ? "2h"
+                                  : "30m"}
                               </button>
                             ))}
                           </div>
-
-                          <input
-                            type="text"
-                            value={stop.personalNotes}
-                            onChange={(e) =>
-                              void updateStopField(idx, "personalNotes", e.target.value)
-                            }
-                            placeholder="Stop note (lunch, photo spot...)"
-                            className="w-full rounded-lg border border-[#E5E0D5] bg-white px-2.5 py-1.5 text-xs"
-                          />
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    ))}
+                  </div>
 
-                  <div className="flex gap-2 pt-1">
+                  <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setStep(2)}
-                      className="flex-1 rounded-xl border border-[#E5E0D5] py-2.5 text-xs font-semibold text-[#5A6B66] cursor-pointer"
+                      className="flex-1 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#616E69] cursor-pointer"
                     >
-                      ← Stops
+                      + Stops
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        void trackItineraryEvent({
-                          eventType: "preview_completed",
-                          stopCount: draft.stops.length,
-                          placeIds: draft.stops.map((s) => s.placeId),
-                        });
-                        setStep(4);
-                      }}
-                      className="flex-[2] rounded-xl bg-[#123F35] text-white py-2.5 text-xs font-bold cursor-pointer"
+                      disabled={draft.stops.length === 0}
+                      onClick={() => setStep(4)}
+                      className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold disabled:opacity-45 cursor-pointer"
                     >
-                      Preview Itinerary →
+                      Preview Route →
                     </button>
                   </div>
-                </section>
+                </div>
               )}
 
-              {/* STEP 4: PREVIEW & STANDALONE LOCAL EXPORT */}
+              {/* STEP 4: STANDALONE EXPORT PREVIEW */}
               {step === 4 && (
-                <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                      Free Standalone Preview
+                <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-4">
+                  <div className="space-y-0.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
+                      Standalone Preview
                     </p>
-                    <h2 className="font-display text-lg font-bold text-[#202B28]">
-                      {draft.title || "My Salcedo Trip"}
+                    <h2 className="font-display text-lg font-bold text-[#1A2421]">
+                      {draft.title}
                     </h2>
-                    <p className="text-xs text-[#5A6B66] tabular-nums">
-                      Date: {draft.plannedVisitDate} • {draft.stops.length} stops • ~
+                    <p className="text-xs text-[#616E69] tabular-nums">
+                      {draft.plannedVisitDate} • {draft.stops.length} stops • ~
                       {(totalMinutes / 60).toFixed(1)} hrs
                     </p>
+                  </div>
+
+                  <div className="divide-y divide-[#EAE7E0] border-t border-b border-[#EAE7E0]">
+                    {draft.stops.map((s, idx) => (
+                      <div key={s.placeId} className="py-2.5 flex justify-between text-xs">
+                        <span className="font-medium text-[#1A2421]">
+                          {idx + 1}. {s.placeName}
+                        </span>
+                        <span className="text-[#616E69] tabular-nums">
+                          {s.visitTime || "Flexible"} ({s.durationMinutes}m)
+                        </span>
+                      </div>
+                    ))}
                   </div>
 
                   <div className="no-print grid grid-cols-2 gap-2">
                     <button
                       type="button"
                       onClick={() =>
-                        downloadItineraryText(draft.title, draft.plannedVisitDate, draft.stops)
+                        downloadItineraryText(
+                          draft.title,
+                          draft.plannedVisitDate,
+                          draft.stops
+                        )
                       }
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] py-2 text-xs font-bold text-[#202B28] cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#1A2421] cursor-pointer"
                     >
                       <Download className="w-3.5 h-3.5" />
-                      Download .txt
+                      Download (.txt)
                     </button>
                     <button
                       type="button"
                       onClick={() => window.print()}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] py-2 text-xs font-bold text-[#202B28] cursor-pointer"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#1A2421] cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5" />
                       Print
                     </button>
                   </div>
 
-                  {draft.description && (
-                    <p className="text-xs text-[#5A6B66] bg-[#F8F7F2] rounded-xl p-3 border border-[#E5E0D5]">
-                      {draft.description}
-                    </p>
-                  )}
-
-                  <ol className="space-y-2.5">
-                    {draft.stops.map((s, idx) => (
-                      <li
-                        key={s.placeId}
-                        className="flex gap-2.5 items-start rounded-xl border border-[#E5E0D5] p-3"
-                      >
-                        <span className="w-6 h-6 rounded-full bg-[#123F35] text-white text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
-                          {idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0 space-y-0.5">
-                          <h3 className="font-display font-bold text-xs text-[#202B28] truncate">
-                            {s.placeName}
-                          </h3>
-                          <p className="text-[11px] font-semibold text-[#168A8A] tabular-nums">
-                            {s.visitTime ? `${s.visitTime} • ` : ""}
-                            {s.durationMinutes} mins
-                          </p>
-                          {s.personalNotes && (
-                            <p className="text-[11px] text-[#5A6B66]">{s.personalNotes}</p>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ol>
-
-                  <div className="no-print rounded-xl bg-[#123F35]/6 border border-[#123F35]/20 p-3 text-xs text-[#202B28]">
-                    Keep this locally with <strong>zero personal data</strong>, or submit at Step
-                    5 to receive an official cross-device CEDO Reference Number.
-                  </div>
-
                   <div className="no-print flex gap-2">
                     <button
                       type="button"
                       onClick={() => setStep(3)}
-                      className="flex-1 rounded-xl border border-[#E5E0D5] py-2.5 text-xs font-semibold text-[#5A6B66] cursor-pointer"
+                      className="flex-1 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#616E69] cursor-pointer"
                     >
-                      ← Edit
+                      Back
                     </button>
                     <button
                       type="button"
-                      disabled={draft.stops.length === 0}
                       onClick={() => setStep(5)}
-                      className="flex-[2] rounded-xl bg-[#D6A85B] text-[#0D3029] py-2.5 text-xs font-bold disabled:opacity-40 cursor-pointer"
+                      className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold cursor-pointer"
                     >
-                      Complete Travel Plan →
+                      Optional: Register Trip →
                     </button>
                   </div>
-                </section>
+                </div>
               )}
 
-              {/* STEP 5: POST-ITINERARY VISITOR INFORMATION FORM (RA 10173 COMPLIANT) */}
+              {/* STEP 5: OPTIONAL VISITOR INFO + RA 10173 */}
               {step === 5 && (
                 <form
                   onSubmit={handleSubmitPlan}
-                  className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-4"
+                  className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3.5"
                 >
-                  <div className="space-y-1">
-                    <div className="inline-flex items-center gap-1 rounded-full bg-[#123F35]/10 text-[#123F35] px-2.5 py-0.5 text-[10px] font-bold">
-                      <ShieldCheck className="w-3 h-3" />
-                      RA 10173 Compliant
-                    </div>
-                    <h2 className="font-display text-lg font-bold text-[#202B28]">
-                      Complete Your Travel Plan
-                    </h2>
-                    <p className="text-xs text-[#5A6B66]">
-                      Receive a Reference Number &amp; Private Retrieval Code. No government ID or
-                      home street address is collected.
-                    </p>
+                  <div className="rounded-xl bg-[#F3F2EE] p-3 flex items-start gap-2 text-[11px] text-[#1A2421]">
+                    <ShieldCheck className="w-4 h-4 text-[#164237] shrink-0 mt-0.5" />
+                    <span>
+                      <strong>{privacyNotice.title}</strong> ({privacyNotice.version})
+                    </span>
                   </div>
 
-                  {submitError && (
-                    <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800 font-medium">
-                      {submitError}
-                    </div>
-                  )}
-
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">
-                        Municipality / City of Origin *
-                      </label>
-                      <input
-                        required
-                        type="text"
-                        value={originMunicipality}
-                        onChange={(e) => setOriginMunicipality(e.target.value)}
-                        placeholder="e.g., Candon City / Quezon City"
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-[#202B28]">Province *</label>
-                        <input
-                          required
-                          type="text"
-                          value={originProvince}
-                          onChange={(e) => setOriginProvince(e.target.value)}
-                          placeholder="e.g., Ilocos Sur"
-                          className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-[#202B28]">Country</label>
-                        <input
-                          type="text"
-                          value={originCountry}
-                          onChange={(e) => setOriginCountry(e.target.value)}
-                          className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-[#202B28]">Travelers *</label>
-                        <input
-                          required
-                          type="number"
-                          min={1}
-                          max={500}
-                          value={travelerCount}
-                          onChange={(e) => setTravelerCount(Number(e.target.value) || 1)}
-                          className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm tabular-nums"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-[#202B28]">Length of Stay</label>
-                        <select
-                          value={lengthOfStay}
-                          onChange={(e) => setLengthOfStay(e.target.value)}
-                          className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-2.5 py-2 text-xs"
-                        >
-                          <option>Day Trip</option>
-                          <option>Overnight (1 Night)</option>
-                          <option>Weekend (2–3 Nights)</option>
-                          <option>Extended Stay (4+ Nights)</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">Purpose of Visit</label>
-                      <select
-                        value={purposeOfVisit}
-                        onChange={(e) => setPurposeOfVisit(e.target.value)}
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
-                      >
-                        <option>Leisure &amp; Nature Sightseeing</option>
-                        <option>Family / Resort Getaway</option>
-                        <option>Festival / Cultural Event</option>
-                        <option>Eco-Adventure / Hiking</option>
-                        <option>Local Products / Agri-Tourism</option>
-                        <option>Official / Business</option>
-                      </select>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-[#202B28]">Transportation</label>
-                        <select
-                          value={transportationType}
-                          onChange={(e) => setTransportationType(e.target.value)}
-                          className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-2.5 py-2 text-xs"
-                        >
-                          <option>Private Vehicle</option>
-                          <option>Motorcycle / Mototourism</option>
-                          <option>Public Bus / Van &amp; Tricycle</option>
-                          <option>Tour Van / Group Charter</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1">
-                        <label className="text-xs font-bold text-[#202B28]">First Visit?</label>
-                        <select
-                          value={firstTimeVisitor}
-                          onChange={(e) =>
-                            setFirstTimeVisitor(
-                              e.target.value as "yes" | "no" | "prefer_not_to_say"
-                            )
-                          }
-                          className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-2.5 py-2 text-xs"
-                        >
-                          <option value="yes">Yes, first time</option>
-                          <option value="no">Returning visitor</option>
-                          <option value="prefer_not_to_say">Prefer not to say</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">
-                        Preferred Experience
-                      </label>
-                      <input
-                        type="text"
-                        value={preferredExperience}
-                        onChange={(e) => setPreferredExperience(e.target.value)}
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-bold text-[#202B28]">
-                        How did you discover Salcedo?
-                      </label>
-                      <select
-                        value={discoverySource}
-                        onChange={(e) => setDiscoverySource(e.target.value)}
-                        className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
-                      >
-                        <option>Social Media / Online Search</option>
-                        <option>Friends or Family Recommendation</option>
-                        <option>Municipality / Ilocos Sur Tourism Office</option>
-                        <option>Road Trip / Passing Through</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* Optional Contact Details */}
-                  <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3.5 space-y-2.5">
-                    <div>
-                      <h3 className="font-display font-bold text-xs text-[#202B28]">
-                        Optional Contact Details (Voluntary)
-                      </h3>
-                      <p className="text-[11px] text-[#5A6B66]">
-                        Leave blank to submit origin &amp; group size only.
-                      </p>
-                    </div>
+                  <div className="space-y-2.5">
                     <input
                       type="text"
                       value={visitorName}
                       onChange={(e) => setVisitorName(e.target.value)}
-                      placeholder="Full Name or Nickname (Optional)"
-                      className="w-full rounded-xl border border-[#E5E0D5] bg-white px-3 py-2 text-xs"
+                      placeholder="Full Name (Optional)"
+                      className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
                     />
-                    <input
-                      type="tel"
-                      value={contactNumber}
-                      onChange={(e) => setContactNumber(e.target.value)}
-                      placeholder="Mobile Number (Optional)"
-                      className="w-full rounded-xl border border-[#E5E0D5] bg-white px-3 py-2 text-xs"
-                    />
-                    <input
-                      type="email"
-                      value={emailAddress}
-                      onChange={(e) => setEmailAddress(e.target.value)}
-                      placeholder="Email Address (Optional)"
-                      className="w-full rounded-xl border border-[#E5E0D5] bg-white px-3 py-2 text-xs"
-                    />
-                  </div>
 
-                  {/* RA 10173 Privacy Notice Box */}
-                  <div className="rounded-xl border border-[#123F35]/25 bg-[#123F35]/5 p-3.5 space-y-2.5">
-                    <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-display font-bold text-xs text-[#123F35]">
-                        {privacyNotice.title}
-                      </h3>
-                      <span className="text-[10px] font-mono bg-white border border-[#E5E0D5] rounded px-1.5 py-0.5 text-[#5A6B66]">
-                        v{privacyNotice.version}
-                      </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {ORIGIN_QUICK_CITIES.map((c) => (
+                        <button
+                          key={c.city}
+                          type="button"
+                          onClick={() => {
+                            setOriginMunicipality(c.city);
+                            setOriginProvince(c.province);
+                          }}
+                          className={`rounded-full px-3 py-1 text-[11px] font-medium border cursor-pointer ${
+                            originMunicipality === c.city
+                              ? "bg-[#164237] text-white border-[#164237]"
+                              : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
+                          }`}
+                        >
+                          {c.city}
+                        </button>
+                      ))}
                     </div>
-                    <p className="text-[11px] text-[#5A6B66] whitespace-pre-line leading-relaxed max-h-32 overflow-y-auto pr-1">
-                      {privacyNotice.bodyMarkdown}
-                    </p>
 
-                    <label className="flex items-start gap-2 pt-1 cursor-pointer">
+                    <div className="grid grid-cols-2 gap-2">
                       <input
-                        type="checkbox"
+                        type="text"
                         required
-                        checked={privacyAcknowledged}
-                        onChange={(e) => setPrivacyAcknowledged(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 accent-[#123F35] shrink-0"
+                        value={originMunicipality}
+                        onChange={(e) => setOriginMunicipality(e.target.value)}
+                        placeholder="City / Municipality *"
+                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
                       />
-                      <span className="text-xs font-semibold text-[#202B28]">
-                        I acknowledge the Salcedo CEDO Data Privacy Notice (RA 10173) for this
-                        travel plan. *
-                      </span>
-                    </label>
-
-                    <label className="flex items-start gap-2 cursor-pointer">
                       <input
-                        type="checkbox"
-                        checked={followUpConsentGiven}
-                        onChange={(e) => setFollowUpConsentGiven(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 accent-[#168A8A] shrink-0"
+                        type="text"
+                        required
+                        value={originProvince}
+                        onChange={(e) => setOriginProvince(e.target.value)}
+                        placeholder="Province *"
+                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
                       />
-                      <span className="text-[11px] text-[#5A6B66]">
-                        (Optional) I separately consent to receive Salcedo tourism advisories via
-                        my optional contact details.
-                      </span>
-                    </label>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="tel"
+                        value={contactNumber}
+                        onChange={(e) => setContactNumber(e.target.value)}
+                        placeholder="Phone (Optional)"
+                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
+                      />
+                      <input
+                        type="email"
+                        value={emailAddress}
+                        onChange={(e) => setEmailAddress(e.target.value)}
+                        placeholder="Email (Optional)"
+                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <input
+                        type="number"
+                        min={1}
+                        max={200}
+                        value={travelerCount}
+                        onChange={(e) => setTravelerCount(Number(e.target.value))}
+                        aria-label="Travelers"
+                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm tabular-nums"
+                      />
+                      <select
+                        value={purposeOfVisit}
+                        onChange={(e) => setPurposeOfVisit(e.target.value)}
+                        className="col-span-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs"
+                      >
+                        <option>Leisure &amp; Nature Sightseeing</option>
+                        <option>Family Resort Outing</option>
+                        <option>Agri-Tourism / Farm Visit</option>
+                        <option>Cultural / Fiesta Participation</option>
+                        <option>Research / Educational Fieldwork</option>
+                      </select>
+                    </div>
                   </div>
+
+                  <label className="flex items-start gap-2.5 rounded-xl border border-[#EAE7E0] p-3 text-xs text-[#1A2421] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={privacyAcknowledged}
+                      onChange={(e) => setPrivacyAcknowledged(e.target.checked)}
+                      className="mt-0.5 accent-[#164237]"
+                    />
+                    <span>
+                      I acknowledge the Salcedo Tourism Data Privacy Notice (RA 10173). *
+                    </span>
+                  </label>
+
+                  <label className="flex items-start gap-2.5 rounded-xl border border-[#EAE7E0] p-3 text-xs text-[#616E69] cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={followUpConsentGiven}
+                      onChange={(e) => setFollowUpConsentGiven(e.target.checked)}
+                      className="mt-0.5 accent-[#164237]"
+                    />
+                    <span>
+                      Optional: Allow Salcedo Tourism Office to contact me regarding this trip.
+                    </span>
+                  </label>
+
+                  {submitError && (
+                    <div className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-800">
+                      {submitError}
+                    </div>
+                  )}
 
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={() => setStep(4)}
-                      className="flex-1 rounded-xl border border-[#E5E0D5] py-2.5 text-xs font-semibold text-[#5A6B66] cursor-pointer"
+                      className="flex-1 rounded-full border border-[#EAE7E0] py-2.5 text-xs font-semibold text-[#616E69] cursor-pointer"
                     >
-                      ← Preview
+                      Back
                     </button>
                     <button
                       type="submit"
                       disabled={submitLoading}
-                      className="flex-[2] rounded-xl bg-[#123F35] text-white py-3 text-xs font-bold hover:bg-[#0D3029] disabled:opacity-50 transition cursor-pointer"
+                      className="flex-[2] rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold disabled:opacity-50 cursor-pointer"
                     >
-                      {submitLoading ? "Submitting..." : "Submit & Get Trip Code"}
+                      {submitLoading ? "Submitting..." : "Get CEDO Reference"}
                     </button>
                   </div>
                 </form>
@@ -1485,207 +1205,164 @@ function TripsPlannerInner({
         </div>
       )}
 
-      {/* TAB 2: RETRIEVE / MANAGE SUBMITTED TRIP */}
+      {/* TAB 2: RETRIEVE */}
       {activeTab === "retrieve" && (
         <div className="space-y-4">
+          {localReceipts.length > 0 && (
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
+              <p className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[#616E69] bg-[#FAF9F6]">
+                Recent Reference Numbers
+              </p>
+              {localReceipts.map((r) => (
+                <button
+                  key={r.referenceNumber}
+                  type="button"
+                  onClick={() => setRetRef(r.referenceNumber)}
+                  className="w-full px-4 py-3 text-left hover:bg-[#FAF9F6] flex items-center justify-between gap-2 cursor-pointer"
+                >
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs font-bold text-[#164237]">
+                      {r.referenceNumber}
+                    </p>
+                    <p className="text-xs text-[#1A2421] truncate">{r.title}</p>
+                  </div>
+                  <span className="text-[11px] font-semibold text-[#164237]">Fill →</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <form
             onSubmit={handleRetrieveTrip}
-            className="no-print bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5"
+            className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3"
           >
-            <div>
-              <h2 className="font-display text-base font-bold text-[#202B28]">
-                Retrieve Submitted Itinerary
+            <div className="flex items-center gap-2">
+              <KeyRound className="w-4 h-4 text-[#164237]" />
+              <h2 className="font-display text-sm font-bold text-[#1A2421]">
+                Retrieve Submitted Trip
               </h2>
-              <p className="text-xs text-[#5A6B66]">
-                Requires <strong>both</strong> your Reference Number and Private Retrieval Code.
-              </p>
             </div>
 
-            {localReceipts.length > 0 && (
-              <div className="space-y-1">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                  Tap Saved Reference to Auto-Fill:
-                </p>
-                <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
-                  {localReceipts.map((r) => (
-                    <button
-                      key={r.referenceNumber}
-                      type="button"
-                      onClick={() => setRetRef(r.referenceNumber)}
-                      className="shrink-0 rounded-full bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-mono font-bold text-[#123F35] cursor-pointer"
-                    >
-                      {r.referenceNumber}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            <input
+              type="text"
+              required
+              value={retRef}
+              onChange={(e) => setRetRef(e.target.value.toUpperCase())}
+              placeholder="Reference Number (SLCD-...)"
+              className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm font-mono uppercase"
+            />
+            <input
+              type="text"
+              required
+              value={retCode}
+              onChange={(e) => setRetCode(e.target.value)}
+              placeholder="Private Retrieval Code"
+              className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm font-mono"
+            />
 
             {retError && (
-              <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
+              <p className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
                 {retError}
-              </div>
+              </p>
             )}
             {deleteSuccess && (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
+              <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">
                 {deleteSuccess}
-              </div>
+              </p>
             )}
-
-            <div className="space-y-2.5">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#202B28]">Reference Number</label>
-                <input
-                  required
-                  type="text"
-                  value={retRef}
-                  onChange={(e) => setRetRef(e.target.value)}
-                  placeholder="CEDO-TRIP-2026-000001"
-                  className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2.5 text-sm font-mono uppercase"
-                />
-              </div>
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-[#202B28]">
-                  Private Retrieval Code
-                </label>
-                <input
-                  required
-                  type="text"
-                  value={retCode}
-                  onChange={(e) => setRetCode(e.target.value)}
-                  placeholder="SALCEDO-XXXX-XXXX-XXXX"
-                  className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2.5 text-sm font-mono uppercase"
-                />
-              </div>
-            </div>
 
             <button
               type="submit"
               disabled={retLoading}
-              className="w-full rounded-xl bg-[#123F35] text-white py-2.5 text-xs font-bold cursor-pointer"
+              className="w-full rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold cursor-pointer"
             >
               {retLoading ? "Verifying..." : "Retrieve Itinerary"}
             </button>
           </form>
 
           {retrieved && (
-            <div className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-4">
-              <div className="space-y-1">
-                <span className="font-mono text-[11px] font-bold text-[#168A8A]">
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-4">
+              <div>
+                <p className="font-mono text-[11px] font-bold text-[#164237]">
                   {retrieved.referenceNumber}
-                </span>
-                <h3 className="font-display text-lg font-bold text-[#202B28]">
+                </p>
+                <h3 className="font-display text-base font-bold text-[#1A2421]">
                   {retrieved.title}
                 </h3>
-                <p className="text-xs text-[#5A6B66]">
-                  Visit: <strong>{retrieved.plannedVisitDate}</strong> • {retrieved.totalStops} stops
-                  {retrieved.tripSummary
-                    ? ` • ${retrieved.tripSummary.travelerCount} from ${retrieved.tripSummary.originMunicipality}`
-                    : ""}
+                <p className="text-xs text-[#616E69] tabular-nums">
+                  {retrieved.plannedVisitDate} • {retrieved.totalStops} stops
                 </p>
               </div>
 
-              <div className="no-print grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() =>
-                    downloadItineraryText(
-                      retrieved.title,
-                      retrieved.plannedVisitDate,
-                      retrieved.stops,
-                      retrieved.referenceNumber
-                    )
-                  }
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] py-2 text-xs font-bold cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  Download
-                </button>
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] py-2 text-xs font-bold cursor-pointer"
-                >
-                  <Printer className="w-3.5 h-3.5" />
-                  Print
-                </button>
-              </div>
-
               {rotatedCode && (
-                <div className="rounded-xl bg-amber-50 border border-amber-300 p-3 text-xs text-amber-950 space-y-1">
-                  <p className="font-bold">New Private Retrieval Code Issued:</p>
-                  <p className="font-mono text-sm font-bold select-all">{rotatedCode}</p>
-                  <p>Save immediately — previous code has been invalidated.</p>
+                <div className="rounded-xl bg-[#F3F2EE] p-3 text-xs">
+                  New Private Code:{" "}
+                  <strong className="font-mono">{rotatedCode}</strong>
                 </div>
               )}
 
-              <ol className="space-y-2.5">
+              <div className="space-y-2 border-t border-[#EAE7E0] pt-3">
                 {retrieved.stops.map((s) => (
-                  <li
+                  <div
                     key={s.id}
-                    className="flex items-start gap-2.5 rounded-xl border border-[#E5E0D5] p-3"
+                    className="flex items-center justify-between gap-2 text-xs"
                   >
-                    <span className="w-6 h-6 rounded-full bg-[#123F35] text-white text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums">
-                      {s.stopOrder}
+                    <span className="font-medium text-[#1A2421]">
+                      {s.stopOrder}. {s.placeName}
                     </span>
-                    <div className="flex-1 min-w-0">
-                      <Link
-                        href={`/app/places/${s.placeSlug}`}
-                        className="font-display font-bold text-xs text-[#202B28] hover:text-[#168A8A]"
-                      >
-                        {s.placeName}
-                      </Link>
-                      <p className="text-[11px] text-[#5A6B66] truncate">{s.placeAddress}</p>
-                      {s.personalNotes && (
-                        <p className="text-[11px] text-[#202B28] mt-0.5">{s.personalNotes}</p>
-                      )}
-                    </div>
-                    <span className="text-[11px] font-semibold text-[#168A8A] tabular-nums shrink-0">
-                      {s.visitTime ? `${s.visitTime} • ` : ""}
-                      {s.durationMinutes}m
+                    <span className="text-[#616E69] tabular-nums">
+                      {s.visitTime || "Flexible"} ({s.durationMinutes}m)
                     </span>
-                  </li>
+                  </div>
                 ))}
-              </ol>
+              </div>
 
-              {/* Privacy Controls: Rotate Code or Inline 2-Step Erasure */}
-              <div className="no-print pt-3 border-t border-[#E5E0D5] space-y-2">
-                <button
-                  type="button"
-                  onClick={() => void handleRotateCode()}
-                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-white py-2.5 text-xs font-bold text-[#202B28] cursor-pointer"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                  Rotate Private Retrieval Code
-                </button>
+              <div className="no-print pt-3 border-t border-[#EAE7E0] space-y-2">
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void handleRotateCode()}
+                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-full border border-[#EAE7E0] py-2 text-xs font-semibold text-[#1A2421] cursor-pointer"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Rotate Code
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-full border border-[#EAE7E0] py-2 text-xs font-semibold text-[#1A2421] cursor-pointer"
+                  >
+                    <Printer className="w-3.5 h-3.5" />
+                    Print
+                  </button>
+                </div>
 
                 {!confirmingDelete ? (
                   <button
                     type="button"
                     onClick={() => setConfirmingDelete(true)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 py-2.5 text-xs font-bold text-rose-800 cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1 rounded-full border border-rose-200 py-2 text-xs font-semibold text-rose-700 cursor-pointer"
                   >
                     <Trash2 className="w-3.5 h-3.5" />
-                    Delete Trip &amp; Personal Data (RA 10173)
+                    Erase Submission (RA 10173)
                   </button>
                 ) : (
-                  <div className="rounded-xl bg-rose-50 border border-rose-300 p-3 space-y-2">
-                    <p className="text-xs font-bold text-rose-900">
-                      Permanently delete {retrieved.referenceNumber} under RA 10173? This cannot be
-                      undone.
+                  <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 space-y-2">
+                    <p className="text-xs font-semibold text-rose-900">
+                      Permanently erase this record?
                     </p>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="flex gap-2">
                       <button
                         type="button"
                         onClick={() => setConfirmingDelete(false)}
-                        className="rounded-xl border border-[#E5E0D5] bg-white py-2 text-xs font-semibold text-[#5A6B66] cursor-pointer"
+                        className="flex-1 rounded-full bg-white border border-rose-200 py-1.5 text-xs font-semibold text-[#1A2421] cursor-pointer"
                       >
                         Cancel
                       </button>
                       <button
                         type="button"
                         onClick={() => void handleDeleteRetrieved()}
-                        className="rounded-xl bg-rose-700 text-white py-2 text-xs font-bold cursor-pointer"
+                        className="flex-1 rounded-full bg-rose-700 text-white py-1.5 text-xs font-semibold cursor-pointer"
                       >
                         Confirm Erase
                       </button>
@@ -1698,44 +1375,37 @@ function TripsPlannerInner({
         </div>
       )}
 
-      {/* TAB 3: SAVED PLACES & LOCAL RECEIPTS */}
+      {/* TAB 3: SAVED */}
       {activeTab === "saved" && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3">
-            <h2 className="font-display text-base font-bold text-[#202B28]">
-              Bookmarked Trip References ({localReceipts.length})
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+            <h2 className="font-display text-sm font-bold text-[#1A2421]">
+              Bookmarked Places ({savedPlaces.length})
             </h2>
-            {localReceipts.length === 0 ? (
-              <p className="text-xs text-[#5A6B66]">
-                Submitted trip references saved on this device will appear here.
+            {savedPlaces.length === 0 ? (
+              <p className="text-xs text-[#616E69]">
+                Tap the bookmark icon on any destination to save it offline here.
               </p>
             ) : (
-              <div className="space-y-2">
-                {localReceipts.map((r) => (
-                  <div
-                    key={r.referenceNumber}
-                    className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3 flex items-center justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-mono text-[11px] font-bold text-[#123F35]">
-                        {r.referenceNumber}
-                      </p>
-                      <p className="font-display font-bold text-xs text-[#202B28] truncate">
-                        {r.title}
-                      </p>
-                      <p className="text-[11px] text-[#5A6B66]">
-                        {r.plannedVisitDate} • {r.totalStops} stops
-                      </p>
-                    </div>
+              <div className="divide-y divide-[#EAE7E0] -mx-4 px-4">
+                {savedPlaces.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between gap-2 py-2.5">
+                    <Link
+                      href={`/app/places/${p.slug}`}
+                      className="text-xs font-semibold text-[#1A2421] hover:text-[#164237] truncate"
+                    >
+                      {p.name}
+                    </Link>
                     <button
                       type="button"
-                      onClick={() => {
-                        setRetRef(r.referenceNumber);
-                        setActiveTab("retrieve");
+                      onClick={async () => {
+                        await toggleSavedPlaceId(p.id);
+                        setSavedPlaceIds(await listSavedPlaceIds());
+                        await refreshCounts();
                       }}
-                      className="rounded-xl bg-[#123F35] text-white px-3 py-1.5 text-xs font-bold shrink-0 cursor-pointer"
+                      className="text-[11px] font-medium text-[#616E69] hover:text-rose-700 cursor-pointer shrink-0"
                     >
-                      Retrieve
+                      Remove
                     </button>
                   </div>
                 ))}
@@ -1743,36 +1413,50 @@ function TripsPlannerInner({
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3">
-            <h2 className="font-display text-base font-bold text-[#202B28]">
-              Saved Salcedo Places ({savedPlaces.length})
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+            <h2 className="font-display text-sm font-bold text-[#1A2421]">
+              Local Drafts ({drafts.length})
             </h2>
-            {savedPlaces.length === 0 ? (
-              <p className="text-xs text-[#5A6B66]">
-                Tap the bookmark icon on any waterfall, resort, or eatery to save it offline.
-              </p>
+            {drafts.length === 0 ? (
+              <p className="text-xs text-[#616E69]">No drafts saved yet.</p>
             ) : (
-              <div className="space-y-2">
-                {savedPlaces.map((p) => (
-                  <Link
-                    key={p.id}
-                    href={`/app/places/${p.slug}`}
-                    className="flex items-center gap-3 rounded-xl border border-[#E5E0D5] p-2.5"
-                  >
-                    <img
-                      src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
-                      alt={p.name}
-                      className="w-12 h-12 rounded-lg object-cover shrink-0"
-                    />
+              <div className="divide-y divide-[#EAE7E0] -mx-4 px-4">
+                {drafts.map((d) => (
+                  <div key={d.id} className="py-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="font-display font-bold text-xs text-[#202B28] truncate">
-                        {p.name}
+                      <p className="font-display font-bold text-xs text-[#1A2421] truncate">
+                        {d.title}
                       </p>
-                      <p className="text-[11px] text-[#168A8A] truncate">
-                        {p.barangay ? `Brgy. ${p.barangay.name}` : p.address}
+                      <p className="text-[11px] text-[#616E69] tabular-nums">
+                        {d.stops.length} stops • {d.plannedVisitDate}
                       </p>
                     </div>
-                  </Link>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraft(d);
+                          setStep(d.stops.length > 0 ? 3 : 1);
+                          setActiveTab("builder");
+                        }}
+                        className="rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Resume
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          await deleteLocalDraft(d.id);
+                          setDrafts(await listLocalDrafts());
+                          await refreshCounts();
+                        }}
+                        aria-label="Delete draft"
+                        className="p-1.5 text-[#616E69] hover:text-rose-700 cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

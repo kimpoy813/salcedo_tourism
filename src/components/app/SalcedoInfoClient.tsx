@@ -2,16 +2,10 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  BookOpen,
-  Calendar,
-  MapPin,
-  PhoneCall,
-  Search,
-  Trees,
-  Compass,
-  Info,
-} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { Phone, ShieldAlert } from "lucide-react";
+
+type TabId = "overview" | "barangays" | "history" | "events" | "products" | "guides" | "emergency";
 
 interface BarangayItem {
   id: string;
@@ -19,13 +13,8 @@ interface BarangayItem {
   slug: string;
   district: string;
   population2020: number | null;
-  population2015: number | null;
   elevationMeters: number | null;
-  latitude: number | null;
-  longitude: number | null;
   summary: string;
-  historyNotes: string | null;
-  highlights: string[] | null;
   publishedPlacesCount: number;
 }
 
@@ -83,7 +72,38 @@ interface ContactItem {
   operatingHours: string | null;
 }
 
-export function SalcedoInfoClient({
+interface SalcedoDataProps {
+  barangays: BarangayItem[];
+  historicalArticles: ArticleItem[];
+  culturalArticles: ArticleItem[];
+  events: EventItem[];
+  products: ProductItem[];
+  guides: GuideItem[];
+  contacts: ContactItem[];
+  municipalInfo: Array<{ key: string; title: string; category: string; content: string }>;
+}
+
+const VALID_TABS: TabId[] = [
+  "overview",
+  "barangays",
+  "history",
+  "events",
+  "products",
+  "guides",
+  "emergency",
+];
+
+export function SalcedoInfoClient(data: SalcedoDataProps) {
+  const searchParams = useSearchParams();
+  const rawTab = searchParams.get("tab");
+  const normalized = rawTab === "history" ? "history" : (rawTab as TabId | null);
+  const initialTab: TabId =
+    normalized && VALID_TABS.includes(normalized) ? normalized : "overview";
+
+  return <SalcedoInfoInner key={initialTab} initialTab={initialTab} {...data} />;
+}
+
+function SalcedoInfoInner({
   initialTab,
   barangays,
   historicalArticles,
@@ -93,26 +113,12 @@ export function SalcedoInfoClient({
   guides,
   contacts,
   municipalInfo,
-}: {
-  initialTab: string;
-  barangays: BarangayItem[];
-  historicalArticles: ArticleItem[];
-  culturalArticles: ArticleItem[];
-  events: EventItem[];
-  products: ProductItem[];
-  guides: GuideItem[];
-  contacts: ContactItem[];
-  municipalInfo: Array<{ key: string; title: string; category: string; content: string }>;
-}) {
-  const [tab, setTab] = useState(
-    ["overview", "barangays", "history", "events", "products", "emergency"].includes(initialTab)
-      ? initialTab
-      : "overview"
-  );
-  const [brgyQuery, setBrgyQuery] = useState("");
+}: SalcedoDataProps & { initialTab: TabId }) {
+  const [tab, setTab] = useState<TabId>(initialTab);
+  const [barangayQuery, setBarangayQuery] = useState("");
 
   const filteredBarangays = useMemo(() => {
-    const q = brgyQuery.trim().toLowerCase();
+    const q = barangayQuery.trim().toLowerCase();
     if (!q) return barangays;
     return barangays.filter(
       (b) =>
@@ -120,272 +126,234 @@ export function SalcedoInfoClient({
         b.summary.toLowerCase().includes(q) ||
         b.district.toLowerCase().includes(q)
     );
-  }, [barangays, brgyQuery]);
+  }, [barangays, barangayQuery]);
 
-  const TABS = [
-    { id: "overview", label: "Profile", icon: Info },
-    { id: "barangays", label: `Barangays (${barangays.length})`, icon: MapPin },
-    { id: "history", label: "History", icon: BookOpen },
-    { id: "events", label: "Events", icon: Calendar },
-    { id: "products", label: "Products", icon: Trees },
-    { id: "emergency", label: "Emergency", icon: PhoneCall },
+  const tabs: Array<{ id: TabId; label: string }> = [
+    { id: "overview", label: "Overview" },
+    { id: "barangays", label: "Barangays" },
+    { id: "history", label: "History" },
+    { id: "events", label: "Events" },
+    { id: "products", label: "Products" },
+    { id: "guides", label: "Guides" },
+    { id: "emergency", label: "Hotlines" },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Sticky Horizontal Mobile Sub-navigation Pills */}
-      <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-[#F8F7F2]/95 backdrop-blur-md border-b border-[#E5E0D5]/80 flex gap-1.5 overflow-x-auto no-scrollbar">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          return (
+      {/* Minimal Sticky Pills */}
+      <div className="sticky top-14 z-30 -mx-4 px-4 py-2 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0]">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
               onClick={() => setTab(t.id)}
-              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold border transition cursor-pointer ${
+              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
                 tab === t.id
-                  ? "bg-[#123F35] text-white border-[#123F35]"
-                  : "bg-white text-[#202B28] border-[#E5E0D5]"
+                  ? "bg-[#164237] text-white"
+                  : "bg-white text-[#1A2421] border border-[#EAE7E0]"
               }`}
             >
-              <Icon className="w-3.5 h-3.5" />
               {t.label}
             </button>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
-      {/* OVERVIEW */}
       {tab === "overview" && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-4">
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
             <div className="flex items-center gap-3">
               <img
                 src="/images/salcedo/seal-of-salcedo.png"
-                alt="Official Municipal Seal of Salcedo, Ilocos Sur"
-                className="w-12 h-12 rounded-full border border-[#E5E0D5] bg-white p-0.5 shrink-0"
+                alt="Official Seal of Salcedo"
+                className="w-11 h-11 rounded-full border border-[#EAE7E0] shrink-0"
               />
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
                   2nd District of Ilocos Sur
-                </span>
-                <h2 className="font-display text-lg font-bold text-[#202B28] leading-snug">
+                </p>
+                <h2 className="font-display text-lg font-bold text-[#1A2421]">
                   Municipality of Salcedo
                 </h2>
-                <p className="text-[11px] text-[#5A6B66]">Formerly Baugen • Region I</p>
               </div>
             </div>
-
-            <p className="text-xs text-[#5A6B66] leading-relaxed">
-              Salcedo is a landlocked 4th-class agricultural and eco-tourism municipality nestled
-              along the Buaya River valley near Tirad Pass. Known as the{" "}
-              <strong>&ldquo;Rambutan Basket of the North&rdquo;</strong>, it welcomes visitors with
-              waterfalls, inland spring resorts, and locally crafted cacao tablea.
+            <p className="text-sm text-[#1A2421]/85 leading-relaxed">
+              Known historically as <strong>Baugen</strong>, Salcedo is a serene valley
+              municipality along the Buaya River near Tirad Pass. Celebrated as the{" "}
+              <strong>&ldquo;Rambutan Basket of the North&rdquo;</strong>, it welcomes travelers
+              with cool inland springs, waterfalls, and heritage cacao tablea.
             </p>
+            <img
+              src="/images/salcedo/ilocos-sur-locator-map.jpg"
+              alt="Locator Map of Salcedo, Ilocos Sur"
+              className="w-full rounded-xl border border-[#EAE7E0]"
+            />
+          </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
-              <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3">
-                <p className="text-[10px] text-[#5A6B66]">2020 Census Pop.</p>
-                <p className="font-display text-base font-bold text-[#123F35] tabular-nums">
-                  11,110
-                </p>
-              </div>
-              <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3">
-                <p className="text-[10px] text-[#5A6B66]">Land Area</p>
-                <p className="font-display text-base font-bold text-[#123F35] tabular-nums">
-                  103.44 km²
-                </p>
-              </div>
-              <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3">
-                <p className="text-[10px] text-[#5A6B66]">Official Barangays</p>
-                <p className="font-display text-base font-bold text-[#123F35] tabular-nums">21</p>
-              </div>
-              <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3">
-                <p className="text-[10px] text-[#5A6B66]">Postal Code</p>
-                <p className="font-display text-base font-bold text-[#123F35] tabular-nums">
-                  2711
-                </p>
-              </div>
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] grid grid-cols-2 divide-x divide-y divide-[#EAE7E0] overflow-hidden">
+            <div className="p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
+                2020 Population
+              </p>
+              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
+                11,110
+              </p>
             </div>
-
-            <div className="pt-1 space-y-1.5">
-              <img
-                src="/images/salcedo/ilocos-sur-locator-map.jpg"
-                alt="Official Locator Map of Salcedo within Ilocos Sur"
-                className="w-full rounded-xl border border-[#E5E0D5]"
-              />
-              <p className="text-[10px] text-[#5A6B66] text-center">
-                Landlocked municipality bordered by Candon, Banayoyo, Galimuyod, Gregorio del
-                Pilar, Quirino &amp; San Emilio.
+            <div className="p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">ZIP Code</p>
+              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
+                2711
+              </p>
+            </div>
+            <div className="p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">Barangays</p>
+              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
+                {barangays.length} Official
+              </p>
+            </div>
+            <div className="p-3.5">
+              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
+                Land Area
+              </p>
+              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
+                103.44 km²
               </p>
             </div>
           </div>
 
-          <div className="space-y-3">
-            {municipalInfo.map((sec) => (
-              <article
-                key={sec.key}
-                className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-1.5"
-              >
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                  {sec.category.replace("_", " ")}
-                </span>
-                <h3 className="font-display text-base font-bold text-[#202B28]">{sec.title}</h3>
-                <p className="text-xs text-[#5A6B66] leading-relaxed">{sec.content}</p>
-              </article>
-            ))}
-          </div>
+          {municipalInfo.map((sec) => (
+            <article
+              key={sec.key}
+              className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+                {sec.category.replace("_", " ")}
+              </p>
+              <h3 className="font-display text-sm font-bold text-[#1A2421]">{sec.title}</h3>
+              <p className="text-xs text-[#616E69] leading-relaxed">{sec.content}</p>
+            </article>
+          ))}
         </div>
       )}
 
-      {/* 21 BARANGAYS EXPLORER */}
       {tab === "barangays" && (
         <div className="space-y-3">
-          <div className="relative">
-            <Search className="w-4 h-4 text-[#5A6B66] absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="search"
-              value={brgyQuery}
-              onChange={(e) => setBrgyQuery(e.target.value)}
-              placeholder="Search any of the 21 barangays..."
-              className="w-full rounded-xl border border-[#E5E0D5] bg-white pl-9 pr-3 py-2.5 text-sm"
-            />
-          </div>
+          <input
+            type="search"
+            value={barangayQuery}
+            onChange={(e) => setBarangayQuery(e.target.value)}
+            placeholder="Filter the 21 barangays..."
+            className="w-full rounded-full border border-[#EAE7E0] bg-white px-4 py-2 text-sm focus:outline-none focus:border-[#164237]/40"
+          />
 
-          <div className="space-y-3">
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
             {filteredBarangays.map((b) => (
-              <article
+              <Link
                 key={b.id}
-                className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-2.5"
+                href={`/app/discover?barangay=${encodeURIComponent(b.slug)}`}
+                className="block p-3.5 hover:bg-[#FAF9F6] transition space-y-1"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-display text-base font-bold text-[#202B28]">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-display font-bold text-sm text-[#1A2421]">
                     Brgy. {b.name}
-                  </h3>
-                  <Link
-                    href={`/app/discover?barangay=${encodeURIComponent(b.slug)}`}
-                    className="rounded-full bg-[#123F35]/10 text-[#123F35] px-2.5 py-0.5 text-[11px] font-bold shrink-0"
-                  >
-                    {b.publishedPlacesCount} spots →
-                  </Link>
+                  </p>
+                  <span className="text-[11px] font-medium text-[#616E69] tabular-nums shrink-0">
+                    {b.publishedPlacesCount}{" "}
+                    {b.publishedPlacesCount === 1 ? "spot" : "spots"}
+                  </span>
                 </div>
-                <p className="text-xs text-[#5A6B66] leading-relaxed">{b.summary}</p>
-                <div className="flex items-center justify-between text-[11px] text-[#5A6B66] tabular-nums pt-1 border-t border-[#E5E0D5]/70">
-                  <span>2020 Pop: {b.population2020?.toLocaleString() ?? "—"}</span>
-                  {b.elevationMeters ? (
-                    <span>Elev: {Math.round(b.elevationMeters)}m ASL</span>
-                  ) : null}
-                </div>
-              </article>
+                <p className="text-xs text-[#616E69] leading-relaxed">{b.summary}</p>
+                <p className="text-[11px] text-[#616E69]/80 tabular-nums">
+                  Pop: {b.population2020?.toLocaleString() ?? "—"}
+                  {b.elevationMeters ? ` • ${Math.round(b.elevationMeters)}m ASL` : ""}
+                </p>
+              </Link>
             ))}
           </div>
         </div>
       )}
 
-      {/* HISTORY & CULTURE */}
       {tab === "history" && (
-        <div className="space-y-4">
-          <div className="space-y-3">
-            <h2 className="font-display text-base font-bold text-[#202B28]">
-              History of Salcedo (Baugen → RA 1627)
-            </h2>
-            {historicalArticles.map((art) => (
-              <article
-                key={art.id}
-                className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-2"
-              >
-                {art.eraOrYear && (
-                  <span className="inline-block rounded-full bg-[#D6A85B]/20 text-[#8C611B] px-2.5 py-0.5 text-[10px] font-bold">
-                    {art.eraOrYear}
-                  </span>
-                )}
-                <h3 className="font-display text-base font-bold text-[#202B28]">{art.title}</h3>
-                <p className="text-xs font-semibold text-[#168A8A]">{art.summary}</p>
-                <p className="text-xs text-[#5A6B66] leading-relaxed">{art.content}</p>
-              </article>
-            ))}
-          </div>
-
-          <div className="space-y-3">
-            <h2 className="font-display text-base font-bold text-[#202B28]">
-              Culture &amp; Living Heritage
-            </h2>
-            {culturalArticles.map((art) => (
-              <article
-                key={art.id}
-                className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-2"
-              >
-                {art.category && (
-                  <span className="inline-block rounded-full bg-[#123F35]/10 text-[#123F35] px-2.5 py-0.5 text-[10px] font-bold capitalize">
-                    {art.category}
-                  </span>
-                )}
-                <h3 className="font-display text-base font-bold text-[#202B28]">{art.title}</h3>
-                <p className="text-xs text-[#5A6B66] leading-relaxed">{art.content}</p>
-              </article>
-            ))}
-          </div>
+        <div className="space-y-3">
+          {historicalArticles.map((art) => (
+            <article
+              key={art.id}
+              className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
+            >
+              {art.eraOrYear && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B88A44]">
+                  {art.eraOrYear}
+                </p>
+              )}
+              <h3 className="font-display text-base font-bold text-[#1A2421]">{art.title}</h3>
+              <p className="text-xs font-medium text-[#164237]">{art.summary}</p>
+              <p className="text-xs text-[#616E69] leading-relaxed">{art.content}</p>
+            </article>
+          ))}
+          {culturalArticles.map((art) => (
+            <article
+              key={art.id}
+              className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
+            >
+              {art.category && (
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+                  {art.category}
+                </p>
+              )}
+              <h3 className="font-display text-base font-bold text-[#1A2421]">{art.title}</h3>
+              <p className="text-xs text-[#616E69] leading-relaxed">{art.content}</p>
+            </article>
+          ))}
         </div>
       )}
 
-      {/* EVENTS */}
       {tab === "events" && (
         <div className="space-y-3">
           {events.map((ev) => (
             <article
               key={ev.id}
-              className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-2"
+              className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
             >
-              <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#168A8A]">
-                <span className="capitalize">{ev.category.replace("_", " ")}</span>
-                <span className="tabular-nums">
-                  {ev.startDate}
-                  {ev.endDate ? ` – ${ev.endDate}` : ""}
-                </span>
-              </div>
-              <h3 className="font-display text-base font-bold text-[#202B28]">{ev.title}</h3>
-              <p className="text-xs font-semibold text-[#123F35]">
-                Venue: {ev.venueName}
-                {ev.barangay ? ` (Brgy. ${ev.barangay.name})` : ""}
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69] tabular-nums">
+                {ev.startDate}
+                {ev.endDate ? ` — ${ev.endDate}` : ""}
               </p>
-              <p className="text-xs text-[#5A6B66] leading-relaxed">{ev.description}</p>
+              <h3 className="font-display text-base font-bold text-[#1A2421]">{ev.title}</h3>
+              <p className="text-xs font-medium text-[#164237]">
+                {ev.venueName}
+                {ev.barangay ? ` • Brgy. ${ev.barangay.name}` : ""}
+              </p>
+              <p className="text-xs text-[#616E69] leading-relaxed">{ev.description}</p>
             </article>
           ))}
         </div>
       )}
 
-      {/* LOCAL PRODUCTS */}
       {tab === "products" && (
         <div className="space-y-3">
           {products.map((pr) => (
             <article
               key={pr.id}
-              className="bg-white rounded-2xl border border-[#E5E0D5] overflow-hidden"
+              className="bg-white rounded-2xl border border-[#EAE7E0] overflow-hidden flex gap-3 p-3"
             >
               <img
                 src={pr.imageUrl || "/images/salcedo/rambutan-cacao-harvest.png"}
                 alt={pr.name}
-                className="w-full h-40 object-cover"
+                className="w-20 h-20 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
               />
-              <div className="p-4 space-y-2">
-                <span className="inline-block rounded-full bg-[#123F35]/10 text-[#123F35] px-2.5 py-0.5 text-[10px] font-bold capitalize">
+              <div className="flex-1 min-w-0 space-y-1">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
                   {pr.category}
-                </span>
-                <h3 className="font-display text-base font-bold text-[#202B28]">{pr.name}</h3>
-                <p className="text-xs text-[#5A6B66] leading-relaxed">{pr.description}</p>
+                </p>
+                <h3 className="font-display text-sm font-bold text-[#1A2421] leading-snug">
+                  {pr.name}
+                </h3>
+                <p className="text-xs text-[#616E69] leading-relaxed">{pr.description}</p>
                 {pr.producers.length > 0 && (
-                  <div className="pt-2 border-t border-[#E5E0D5] space-y-1">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                      Verified Local Producers
-                    </p>
-                    {pr.producers.map((prod) => (
-                      <p key={prod.id} className="text-xs text-[#202B28]">
-                        <strong>{prod.producerName}</strong>
-                        {prod.address ? ` — ${prod.address}` : ""}
-                        {prod.contactInfo ? ` (${prod.contactInfo})` : ""}
-                      </p>
-                    ))}
-                  </div>
+                  <p className="text-[11px] font-medium text-[#164237]">
+                    {pr.producers.map((p) => p.producerName).join(", ")}
+                  </p>
                 )}
               </div>
             </article>
@@ -393,60 +361,60 @@ export function SalcedoInfoClient({
         </div>
       )}
 
-      {/* TRAVEL & EMERGENCY */}
-      {tab === "emergency" && (
-        <div className="space-y-4">
-          <div className="space-y-2.5">
-            <h2 className="font-display text-base font-bold text-[#202B28]">
-              Tap-to-Call Salcedo Emergency Hotlines
-            </h2>
-            {contacts.map((c) => (
-              <div
-                key={c.id}
-                className="bg-white rounded-2xl border border-[#E5E0D5] p-3.5 flex items-center justify-between gap-3"
-              >
-                <div className="min-w-0 space-y-0.5">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700">
-                    {c.category}
-                  </span>
-                  <h3 className="font-display font-bold text-sm text-[#202B28]">
-                    {c.agencyName}
-                  </h3>
-                  <p className="text-[11px] text-[#5A6B66]">
-                    {c.address} {c.operatingHours ? `• ${c.operatingHours}` : ""}
-                  </p>
-                </div>
-                <div className="flex flex-col items-end gap-1.5 shrink-0">
-                  {c.phoneNumbers.map((num) => (
-                    <a
-                      key={num}
-                      href={`tel:${num.replace(/[^+\d]/g, "")}`}
-                      className="inline-flex items-center gap-1 rounded-xl bg-[#123F35] text-white px-3 py-2 text-xs font-bold tabular-nums"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5" />
-                      {num}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+      {tab === "guides" && (
+        <div className="space-y-3">
+          {guides.map((g) => (
+            <article
+              key={g.id}
+              className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+                {g.category.replace("_", " ")}
+              </p>
+              <h3 className="font-display text-base font-bold text-[#1A2421]">{g.title}</h3>
+              <p className="text-xs font-medium text-[#164237]">{g.summary}</p>
+              <p className="text-xs text-[#616E69] leading-relaxed">{g.content}</p>
+            </article>
+          ))}
+        </div>
+      )}
 
-          <div className="space-y-2.5">
-            <h2 className="font-display text-base font-bold text-[#202B28]">Travel Tips</h2>
-            {guides.map((g) => (
-              <article
-                key={g.id}
-                className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-1.5"
-              >
-                <span className="inline-flex items-center gap-1 rounded-full bg-[#168A8A]/12 text-[#168A8A] px-2.5 py-0.5 text-[10px] font-bold capitalize">
-                  <Compass className="w-3 h-3" /> {g.category.replace("_", " ")}
-                </span>
-                <h3 className="font-display text-sm font-bold text-[#202B28]">{g.title}</h3>
-                <p className="text-xs text-[#5A6B66] leading-relaxed">{g.content}</p>
-              </article>
-            ))}
+      {tab === "emergency" && (
+        <div className="space-y-3">
+          <div className="rounded-2xl bg-[#F3F2EE] p-3.5 text-xs text-[#1A2421] flex items-center gap-2">
+            <ShieldAlert className="w-4 h-4 text-[#B88A44] shrink-0" />
+            <span>Tap any number below to dial directly from your phone.</span>
           </div>
+          {contacts.map((c) => (
+            <div
+              key={c.id}
+              className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-2.5"
+            >
+              <div className="space-y-0.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+                  {c.category}
+                </p>
+                <h3 className="font-display text-sm font-bold text-[#1A2421]">
+                  {c.agencyName}
+                </h3>
+                <p className="text-xs text-[#616E69]">
+                  {c.address} {c.operatingHours ? `• ${c.operatingHours}` : ""}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {c.phoneNumbers.map((num) => (
+                  <a
+                    key={num}
+                    href={`tel:${num.replace(/[^+\d]/g, "")}`}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-3.5 py-1.5 text-xs font-semibold tabular-nums"
+                  >
+                    <Phone className="w-3.5 h-3.5" />
+                    {num}
+                  </a>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

@@ -1,14 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import {
-  CheckCircle2,
-  Download,
-  Lock,
-  ShieldAlert,
-  Trash2,
-  UserX,
-} from "lucide-react";
+import { CheckCircle2, Download, Lock, ShieldAlert, Trash2, UserX, X } from "lucide-react";
 
 export interface AdminVisitorRow {
   id: string;
@@ -50,6 +43,11 @@ export function AdminVisitorsPanel({
 }) {
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{
+    id: string;
+    action: "anonymize" | "delete";
+  } | null>(null);
+  const [notice, setNotice] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
 
   const filtered = submissions.filter((s) => {
     if (!search.trim()) return true;
@@ -63,13 +61,9 @@ export function AdminVisitorsPanel({
   });
 
   const handleRetentionAction = async (id: string, action: "anonymize" | "delete") => {
-    const label =
-      action === "delete"
-        ? "permanently delete this visitor submission and itinerary"
-        : "anonymize all personal contact identifiers while retaining de-identified aggregate statistics";
-    if (!window.confirm(`Are you sure you want to ${label} under RA 10173?`)) return;
-
     setBusyId(id);
+    setConfirmAction(null);
+    setNotice(null);
     try {
       const res = await fetch(`/api/admin/visitors/${id}`, {
         method: "PATCH",
@@ -78,8 +72,15 @@ export function AdminVisitorsPanel({
       });
       if (!res.ok) {
         const err = await res.json();
-        alert(err.error || "Retention action failed.");
+        setNotice({ text: err.error || "Retention action failed.", tone: "err" });
       } else {
+        setNotice({
+          text:
+            action === "delete"
+              ? "Record permanently deleted under RA 10173."
+              : "Personal identifiers anonymized.",
+          tone: "ok",
+        });
         await onReload();
       }
     } finally {
@@ -88,167 +89,210 @@ export function AdminVisitorsPanel({
   };
 
   return (
-    <div className="space-y-5">
-      {/* RBAC PII Banner */}
-      <div
-        className={`rounded-2xl border p-4 flex items-start gap-3 text-xs ${
-          canReadPii
-            ? "bg-emerald-50 border-emerald-200 text-emerald-950"
-            : "bg-amber-50 border-amber-200 text-amber-950"
-        }`}
-      >
-        <Lock className="w-4 h-4 shrink-0 mt-0.5" />
+    <div className="space-y-4">
+      <div className="rounded-2xl bg-[#F3F2EE] p-3.5 flex items-start gap-2.5 text-xs text-[#1A2421]">
+        <Lock className="w-4 h-4 text-[#164237] shrink-0 mt-0.5" />
         <div>
-          <p className="font-bold">
+          <p className="font-semibold">
             {canReadPii
               ? "Authorized PII Access Active (Audit Logged)"
               : "Personal Contact Details Restricted by Server RBAC"}
           </p>
-          <p className="opacity-85">
+          <p className="text-[#616E69]">
             {canReadPii
-              ? "Your role holds 'visitor.pii.read'. Access to optional contact details is recorded in the immutable audit log under RA 10173."
-              : "Your role can inspect de-identified travel origin and planned itinerary aggregates only. Optional names, phones, and emails are withheld server-side."}
+              ? "Your role holds 'visitor.pii.read'. Access is recorded in the audit log under RA 10173."
+              : "Your role inspects de-identified origin and itinerary aggregates only."}
           </p>
         </div>
       </div>
 
+      {notice && (
+        <div
+          className={`rounded-xl border px-3.5 py-2 text-xs flex items-center justify-between ${
+            notice.tone === "err"
+              ? "bg-rose-50 border-rose-200 text-rose-800"
+              : "bg-white border-[#EAE7E0] text-[#164237]"
+          }`}
+        >
+          <span>{notice.text}</span>
+          <button
+            type="button"
+            onClick={() => setNotice(null)}
+            className="text-[#616E69] hover:text-[#1A2421] cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {/* Filter & Export Bar */}
-      <div className="bg-white rounded-2xl border border-[#E5E0D5] p-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3 flex flex-wrap items-center justify-between gap-2.5">
         <input
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search reference #, municipality, province..."
-          className="w-full sm:w-72 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3.5 py-2 text-xs sm:text-sm"
+          placeholder="Search reference #, city, province..."
+          className="w-full sm:w-72 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-1.5 text-xs focus:outline-none"
         />
 
         {canExport && (
           <div className="flex flex-wrap gap-2">
             <a
               href="/api/admin/reports/export?format=csv"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3.5 py-2 text-xs font-bold text-[#202B28]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-1.5 text-xs font-medium text-[#1A2421] hover:bg-[#F3F2EE]"
             >
               <Download className="w-3.5 h-3.5" />
-              Export De-Identified CSV
+              De-Identified CSV
             </a>
             {canReadPii && (
               <a
                 href="/api/admin/reports/export?format=csv&includeContact=true"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#123F35] text-white px-3.5 py-2 text-xs font-bold"
+                className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-[#10322A]"
               >
                 <Download className="w-3.5 h-3.5" />
-                Export Authorized Full CSV
+                Full CSV
               </a>
             )}
           </div>
         )}
       </div>
 
-      {/* Submissions List */}
-      <div className="space-y-3">
+      {/* Submissions */}
+      <div className="space-y-2.5">
         {filtered.length === 0 ? (
-          <div className="bg-white rounded-3xl border border-[#E5E0D5] p-8 text-center text-sm text-[#5A6B66]">
-            No visitor itinerary submissions found yet.
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-8 text-center text-xs text-[#616E69]">
+            No visitor itinerary submissions found.
           </div>
         ) : (
-          filtered.map((s) => (
-            <article
-              key={s.id}
-              className="bg-white rounded-2xl border border-[#E5E0D5] p-5 space-y-3"
-            >
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold text-[#123F35]">
-                      {s.referenceNumber}
-                    </span>
-                    {s.anonymizedAt && (
-                      <span className="rounded-full bg-slate-100 text-slate-700 px-2.5 py-0.5 text-[10px] font-bold">
-                        ANONYMIZED (RA 10173)
+          filtered.map((s) => {
+            const isConfirming = confirmAction?.id === s.id;
+            return (
+              <article
+                key={s.id}
+                className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-2.5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold text-[#164237]">
+                        {s.referenceNumber}
                       </span>
-                    )}
+                      {s.anonymizedAt && (
+                        <span className="rounded-full bg-[#F3F2EE] text-[#616E69] px-2.5 py-0.5 text-[10px] font-medium">
+                          Anonymized
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-display font-bold text-sm text-[#1A2421]">
+                      {s.itineraryTitle}
+                    </h3>
+                    <p className="text-xs text-[#616E69]">
+                      {s.originMunicipality}, {s.originProvince} ({s.originCountry}) •{" "}
+                      {s.plannedVisitDate} •{" "}
+                      <strong className="text-[#1A2421] tabular-nums">
+                        {s.travelerCount}
+                      </strong>{" "}
+                      guest(s)
+                    </p>
                   </div>
-                  <h3 className="font-display font-bold text-base text-[#202B28]">
-                    {s.itineraryTitle}
-                  </h3>
-                  <p className="text-xs text-[#5A6B66]">
-                    Origin: <strong>{s.originMunicipality}, {s.originProvince}</strong> (
-                    {s.originCountry}) • Planned Visit: <strong>{s.plannedVisitDate}</strong> •{" "}
-                    <strong className="tabular-nums">{s.travelerCount}</strong> traveler(s)
+
+                  {canDeletePii && (
+                    <div className="flex items-center gap-1.5">
+                      {isConfirming ? (
+                        <>
+                          <button
+                            type="button"
+                            disabled={busyId === s.id}
+                            onClick={() =>
+                              void handleRetentionAction(s.id, confirmAction.action)
+                            }
+                            className="rounded-full bg-rose-700 text-white px-3 py-1 text-[11px] font-semibold cursor-pointer"
+                          >
+                            Confirm{" "}
+                            {confirmAction.action === "delete" ? "Delete" : "Anonymize"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmAction(null)}
+                            className="rounded-full border border-[#EAE7E0] bg-white px-2.5 py-1 text-[11px] text-[#616E69] cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {!s.anonymizedAt && (
+                            <button
+                              type="button"
+                              disabled={busyId === s.id}
+                              onClick={() =>
+                                setConfirmAction({ id: s.id, action: "anonymize" })
+                              }
+                              className="inline-flex items-center gap-1 rounded-full border border-[#EAE7E0] px-2.5 py-1 text-[11px] font-medium text-[#1A2421] hover:bg-[#FAF9F6] cursor-pointer"
+                            >
+                              <UserX className="w-3 h-3" /> Anonymize
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            disabled={busyId === s.id}
+                            onClick={() =>
+                              setConfirmAction({ id: s.id, action: "delete" })
+                            }
+                            className="inline-flex items-center gap-1 rounded-full border border-rose-200 px-2.5 py-1 text-[11px] font-medium text-rose-700 hover:bg-rose-50 cursor-pointer"
+                          >
+                            <Trash2 className="w-3 h-3" /> Delete
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 text-[11px] text-[#616E69]">
+                  {s.purposeOfVisit && (
+                    <span className="rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2.5 py-0.5">
+                      {s.purposeOfVisit}
+                    </span>
+                  )}
+                  {s.transportationType && (
+                    <span className="rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2.5 py-0.5">
+                      {s.transportationType}
+                    </span>
+                  )}
+                  {s.lengthOfStay && (
+                    <span className="rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2.5 py-0.5">
+                      {s.lengthOfStay}
+                    </span>
+                  )}
+                </div>
+
+                {s.stops.length > 0 && (
+                  <p className="text-xs text-[#616E69]">
+                    Route: {s.stops.map((st) => `${st.stopOrder}. ${st.placeName}`).join(" → ")}
                   </p>
-                </div>
+                )}
 
-                {canDeletePii && (
-                  <div className="flex gap-2">
-                    {!s.anonymizedAt && (
-                      <button
-                        type="button"
-                        disabled={busyId === s.id}
-                        onClick={() => void handleRetentionAction(s.id, "anonymize")}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#E5E0D5] px-2.5 py-1.5 text-xs font-semibold text-[#202B28] hover:bg-[#F8F7F2] cursor-pointer"
-                      >
-                        <UserX className="w-3.5 h-3.5" /> Anonymize PII
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      disabled={busyId === s.id}
-                      onClick={() => void handleRetentionAction(s.id, "delete")}
-                      className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-800 hover:bg-rose-100 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Delete
-                    </button>
+                {canReadPii && s.contact && (
+                  <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-2.5 text-xs flex flex-wrap gap-4">
+                    <span>
+                      <strong>Name:</strong> {s.contact.visitorName || "—"}
+                    </span>
+                    <span>
+                      <strong>Phone:</strong> {s.contact.contactNumber || "—"}
+                    </span>
+                    <span>
+                      <strong>Email:</strong> {s.contact.emailAddress || "—"}
+                    </span>
+                    <span>
+                      <strong>Follow-Up:</strong>{" "}
+                      {s.contact.followUpConsentGiven ? "Yes" : "No"}
+                    </span>
                   </div>
                 )}
-              </div>
-
-              <div className="flex flex-wrap gap-1.5 text-[11px]">
-                {s.purposeOfVisit && (
-                  <span className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1">
-                    Purpose: {s.purposeOfVisit}
-                  </span>
-                )}
-                {s.transportationType && (
-                  <span className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1">
-                    Transport: {s.transportationType}
-                  </span>
-                )}
-                {s.lengthOfStay && (
-                  <span className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1">
-                    Stay: {s.lengthOfStay}
-                  </span>
-                )}
-                <span className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1">
-                  Privacy Notice: v{s.privacyNoticeVersion}
-                </span>
-              </div>
-
-              {s.stops.length > 0 && (
-                <p className="text-xs text-[#5A6B66]">
-                  <strong>Planned Route:</strong>{" "}
-                  {s.stops.map((st) => `${st.stopOrder}. ${st.placeName}`).join(" → ")}
-                </p>
-              )}
-
-              {canReadPii && s.contact && (
-                <div className="rounded-xl bg-[#123F35]/5 border border-[#123F35]/20 p-3 text-xs flex flex-wrap gap-4">
-                  <span>
-                    <strong>Name:</strong> {s.contact.visitorName || "Not provided"}
-                  </span>
-                  <span>
-                    <strong>Phone:</strong> {s.contact.contactNumber || "Not provided"}
-                  </span>
-                  <span>
-                    <strong>Email:</strong> {s.contact.emailAddress || "Not provided"}
-                  </span>
-                  <span>
-                    <strong>Follow-Up Consent:</strong>{" "}
-                    {s.contact.followUpConsentGiven ? "Yes (Affirmative)" : "No"}
-                  </span>
-                </div>
-              )}
-            </article>
-          ))
+              </article>
+            );
+          })
         )}
       </div>
     </div>
@@ -318,42 +362,40 @@ export function AdminCheckinsPanel({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 flex items-start gap-3 text-xs text-amber-950">
-        <ShieldAlert className="w-4 h-4 shrink-0 mt-0.5" />
+    <div className="space-y-4">
+      <div className="rounded-2xl bg-[#F3F2EE] p-3.5 flex items-start gap-2.5 text-xs text-[#1A2421]">
+        <ShieldAlert className="w-4 h-4 text-[#B88A44] shrink-0 mt-0.5" />
         <div>
-          <p className="font-bold">Verification-Gated Physical Arrival Policy</p>
-          <p>
-            Static public QR posters alone cannot count toward{" "}
-            <strong>Actual Tourist Visits</strong> because they are vulnerable to remote
-            re-scanning. Verified arrivals require authorized staff check-in, official municipal
-            logbook entry, or rotating token verification.
+          <p className="font-semibold">Verification-Gated Physical Arrival Policy</p>
+          <p className="text-[#616E69]">
+            Verified physical arrivals require staff check-in, official logbook entry, or
+            rotating verification tokens.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <form
           onSubmit={handleSubmit}
-          className="lg:col-span-5 bg-white rounded-3xl border border-[#E5E0D5] p-6 space-y-4"
+          className="lg:col-span-5 bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3 text-xs"
         >
-          <h3 className="font-display text-lg font-bold text-[#202B28]">
-            Record Verified Physical Arrival
+          <h3 className="font-display text-sm font-bold text-[#1A2421]">
+            Record Verified Arrival
           </h3>
 
           {err && (
-            <p className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
+            <p className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-rose-800">
               {err}
             </p>
           )}
 
           <div>
-            <label className="text-xs font-bold text-[#202B28]">Destination *</label>
+            <label className="font-medium text-[#616E69]">Destination *</label>
             <select
               required
               value={placeId}
               onChange={(e) => setPlaceId(e.target.value)}
-              className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
             >
               {places.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -364,11 +406,11 @@ export function AdminCheckinsPanel({
           </div>
 
           <div>
-            <label className="text-xs font-bold text-[#202B28]">Verification Method *</label>
+            <label className="font-medium text-[#616E69]">Method *</label>
             <select
               value={methodCode}
               onChange={(e) => setMethodCode(e.target.value)}
-              className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
             >
               {methods.map((m) => (
                 <option key={m.id} value={m.code}>
@@ -378,103 +420,96 @@ export function AdminCheckinsPanel({
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="text-xs font-bold text-[#202B28]">Group Size *</label>
+              <label className="font-medium text-[#616E69]">Itinerary Ref</label>
+              <input
+                type="text"
+                value={itineraryRef}
+                onChange={(e) => setItineraryRef(e.target.value.toUpperCase())}
+                placeholder="SLCD-..."
+                className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2 font-mono uppercase"
+              />
+            </div>
+            <div>
+              <label className="font-medium text-[#616E69]">Group Size *</label>
               <input
                 required
                 type="number"
                 min={1}
-                max={500}
+                max={200}
                 value={groupSize}
-                onChange={(e) => setGroupSize(Number(e.target.value) || 1)}
-                className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm tabular-nums"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-[#202B28]">
-                Trip Ref # (Optional)
-              </label>
-              <input
-                type="text"
-                value={itineraryRef}
-                onChange={(e) => setItineraryRef(e.target.value)}
-                placeholder="CEDO-TRIP-2026-..."
-                className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm font-mono uppercase"
+                onChange={(e) => setGroupSize(Number(e.target.value))}
+                className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2 tabular-nums"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-xs font-bold text-[#202B28]">Check-In Point / Source *</label>
+            <label className="font-medium text-[#616E69]">Check-In Point *</label>
             <input
               required
               type="text"
               value={checkInSource}
               onChange={(e) => setCheckInSource(e.target.value)}
-              className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
+              className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
             />
           </div>
 
           <div>
-            <label className="text-xs font-bold text-[#202B28]">Verification Notes</label>
+            <label className="font-medium text-[#616E69]">Notes</label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional logbook ref or gate note"
-              className="w-full rounded-xl border border-[#E5E0D5] bg-[#F8F7F2] px-3 py-2 text-sm"
+              placeholder="Optional logbook ref"
+              className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
             />
           </div>
 
           <button
             type="submit"
             disabled={submitting}
-            className="w-full rounded-xl bg-[#123F35] text-white py-2.5 text-sm font-bold cursor-pointer"
+            className="w-full rounded-full bg-[#164237] text-white py-2.5 text-xs font-semibold cursor-pointer"
           >
-            {submitting ? "Recording..." : "Verify & Record Arrival"}
+            {submitting ? "Recording..." : "Verify & Record"}
           </button>
         </form>
 
-        <div className="lg:col-span-7 bg-white rounded-3xl border border-[#E5E0D5] p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-display text-lg font-bold text-[#202B28]">
-              Verified Physical Arrival Log
+        <div className="lg:col-span-7 bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="font-display text-sm font-bold text-[#1A2421]">
+              Verified Arrival Log
             </h3>
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 text-emerald-900 px-3 py-1 text-xs font-bold tabular-nums">
+            <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] text-[#164237] px-3 py-1 text-[11px] font-semibold tabular-nums">
               <CheckCircle2 className="w-3.5 h-3.5" />
-              Total: {totalVerifiedArrivals} verified visitors
+              {totalVerifiedArrivals} verified
             </span>
           </div>
 
           {checkins.length === 0 ? (
-            <p className="text-sm text-[#5A6B66]">
-              No verified on-site check-ins logged yet.
-            </p>
+            <p className="text-xs text-[#616E69]">No verified check-ins logged yet.</p>
           ) : (
-            <div className="space-y-2.5">
+            <ul className="divide-y divide-[#EAE7E0] text-xs">
               {checkins.map((c) => (
-                <div
-                  key={c.id}
-                  className="rounded-2xl bg-[#F8F7F2] border border-[#E5E0D5] p-3.5 flex items-center justify-between gap-3 text-xs"
-                >
+                <li key={c.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div>
-                    <p className="font-bold text-sm text-[#202B28]">{c.placeName}</p>
-                    <p className="text-[#5A6B66]">
-                      {c.methodName} • Source: {c.checkInSource}
+                    <p className="font-semibold text-[#1A2421]">{c.placeName}</p>
+                    <p className="text-[11px] text-[#616E69]">
+                      {c.methodName} • {c.checkInSource}
                     </p>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-bold text-[#123F35] tabular-nums">
-                      +{c.groupSize} visitor(s)
+                    <p className="font-semibold text-[#164237] tabular-nums">
+                      +{c.groupSize}
                     </p>
-                    <p className="text-[11px] text-[#5A6B66]">
+                    <p className="text-[10px] text-[#616E69] tabular-nums">
                       {new Date(c.checkedInAt).toLocaleString()}
                     </p>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
       </div>

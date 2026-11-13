@@ -19,13 +19,13 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Turi",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#123F35",
+  themeColor: "#FAF9F6",
   width: "device-width",
   initialScale: 1,
 };
@@ -33,7 +33,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#F8F7F2] text-[#202B28] antialiased">
+      <body className="min-h-screen bg-[#FAF9F6] text-[#1A2421] antialiased">
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

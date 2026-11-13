@@ -3,19 +3,11 @@ import { notFound } from "next/navigation";
 import {
   CheckCircle2,
   Clock,
-  Compass,
   ExternalLink,
   Globe,
-  Info,
   MapPin,
   Phone,
   ShieldAlert,
-  Trees,
-  Utensils,
-  Waves,
-  Wifi,
-  Car,
-  Coffee,
 } from "lucide-react";
 import { getPublishedPlaceByIdOrSlug } from "@/lib/queries/public-tourism";
 import { PlaceDetailActions } from "@/components/app/PlaceDetailClient";
@@ -48,50 +40,44 @@ export default async function PlaceDetailPage({
   const todayIndex = new Date().getDay();
 
   return (
-    <div className="pb-20 space-y-5">
-      {/* Edge-to-Edge Mobile Hero Photo */}
-      <section className="relative aspect-[4/3] bg-[#0D3029] overflow-hidden">
+    <div className="pb-20">
+      {/* Clean Edge-to-Edge Hero Photo */}
+      <section className="relative aspect-[4/3] bg-[#F3F2EE] overflow-hidden">
         <img
           src={imageSrc}
           alt={place.name}
           className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-        <div className="absolute bottom-3 left-4 right-4 space-y-1.5 text-white">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center rounded-full bg-[#123F35]/95 border border-white/20 px-2.5 py-0.5 text-[10px] font-bold capitalize">
-              {place.primaryCategory?.name || place.placeType}
-            </span>
+      </section>
+
+      {/* Editorial Body */}
+      <div className="px-4 py-5 space-y-6">
+        {/* Title & Overview */}
+        <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#616E69]">
+            <span>{place.primaryCategory?.name || place.placeType}</span>
             {place.isHiddenGem && (
-              <span className="inline-flex items-center rounded-full bg-[#D6A85B] text-[#0D3029] px-2.5 py-0.5 text-[10px] font-bold">
-                Hidden Gem
-              </span>
+              <>
+                <span>•</span>
+                <span className="text-[#B88A44]">Hidden Gem</span>
+              </>
             )}
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/80 border border-emerald-300/30 text-emerald-100 px-2 py-0.5 text-[10px] font-semibold">
+            <span>•</span>
+            <span className="inline-flex items-center gap-1 text-[#164237]">
               <CheckCircle2 className="w-3 h-3" /> Verified
             </span>
           </div>
 
-          <h1 className="font-display text-2xl font-bold leading-tight">
+          <h1 className="font-display text-2xl font-bold text-[#1A2421] leading-snug">
             {place.name}
           </h1>
-          <p className="inline-flex items-center gap-1 text-xs text-white/90">
-            <MapPin className="w-3.5 h-3.5 text-[#D6A85B] shrink-0" />
+
+          <p className="inline-flex items-center gap-1.5 text-xs text-[#616E69]">
+            <MapPin className="w-3.5 h-3.5 text-[#1D7874] shrink-0" />
             <span>{place.address}</span>
           </p>
-        </div>
-      </section>
 
-      <div className="px-4 space-y-5">
-        {/* Description & Quick Actions */}
-        <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5">
-          {place.featuredImageCaption && (
-            <p className="text-[11px] text-[#5A6B66] italic border-b border-[#E5E0D5] pb-2">
-              {place.featuredImageCaption}
-            </p>
-          )}
-
-          <p className="text-sm text-[#202B28] leading-relaxed">{place.description}</p>
+          <p className="text-sm text-[#1A2421]/90 leading-relaxed">{place.description}</p>
 
           <PlaceDetailActions
             place={{
@@ -109,49 +95,39 @@ export default async function PlaceDetailPage({
 
         {/* Specialized Café Details */}
         {place.cafeDetails && (
-          <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-900/10 text-amber-900 flex items-center justify-center shrink-0">
-                <Coffee className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display text-base font-bold text-[#202B28]">
-                  Café Menu &amp; Atmosphere
-                </h2>
-                <p className="text-[11px] text-[#5A6B66]">Coffee &amp; refreshment offerings</p>
-              </div>
-            </div>
+          <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+            <h2 className="font-display text-base font-bold text-[#1A2421]">
+              Café Highlights
+            </h2>
 
             <div className="flex flex-wrap gap-1.5">
               {place.cafeDetails.hasWifi !== null && (
-                <span className="inline-flex items-center gap-1 rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-semibold">
-                  <Wifi className="w-3 h-3 text-[#168A8A]" />
+                <span className="rounded-full bg-[#F3F2EE] px-3 py-1 text-xs font-medium text-[#1A2421]">
                   {place.cafeDetails.hasWifi ? "Wi-Fi Available" : "No Public Wi-Fi"}
                 </span>
               )}
               {place.cafeDetails.hasParking !== null && (
-                <span className="inline-flex items-center gap-1 rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-semibold">
-                  <Car className="w-3 h-3 text-[#168A8A]" />
+                <span className="rounded-full bg-[#F3F2EE] px-3 py-1 text-xs font-medium text-[#1A2421]">
                   {place.cafeDetails.hasParking ? "Parking" : "Limited Parking"}
                 </span>
               )}
               {place.cafeDetails.priceRangeNote && (
-                <span className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-semibold">
+                <span className="rounded-full bg-[#F3F2EE] px-3 py-1 text-xs font-medium text-[#1A2421]">
                   {place.cafeDetails.priceRangeNote}
                 </span>
               )}
             </div>
 
             {place.cafeDetails.featuredDrinks && place.cafeDetails.featuredDrinks.length > 0 && (
-              <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B66] mb-1.5">
-                  Featured Drinks
-                </h3>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#616E69]">
+                  Drinks
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {place.cafeDetails.featuredDrinks.map((d) => (
                     <span
                       key={d}
-                      className="rounded-lg bg-[#123F35]/8 text-[#123F35] px-2.5 py-1 text-xs font-semibold"
+                      className="rounded-full bg-white border border-[#EAE7E0] px-3 py-1 text-xs text-[#1A2421]"
                     >
                       {d}
                     </span>
@@ -161,15 +137,15 @@ export default async function PlaceDetailPage({
             )}
 
             {place.cafeDetails.foodOfferings && place.cafeDetails.foodOfferings.length > 0 && (
-              <div>
-                <h3 className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B66] mb-1.5">
-                  Food &amp; Pastries
-                </h3>
+              <div className="space-y-1.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[#616E69]">
+                  Food
+                </p>
                 <div className="flex flex-wrap gap-1.5">
                   {place.cafeDetails.foodOfferings.map((f) => (
                     <span
                       key={f}
-                      className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-xs"
+                      className="rounded-full bg-white border border-[#EAE7E0] px-3 py-1 text-xs text-[#1A2421]"
                     >
                       {f}
                     </span>
@@ -182,58 +158,33 @@ export default async function PlaceDetailPage({
 
         {/* Specialized Resort Details */}
         {place.resortDetails && (
-          <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#168A8A]/12 text-[#168A8A] flex items-center justify-center shrink-0">
-                <Waves className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display text-base font-bold text-[#202B28]">
-                  Resort Facilities &amp; Rates
-                </h2>
-                <p className="text-[11px] text-[#5A6B66]">
-                  Spring pools, cottages, rooms &amp; policies
-                </p>
-              </div>
-            </div>
+          <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+            <h2 className="font-display text-base font-bold text-[#1A2421]">
+              Resort Facilities &amp; Rates
+            </h2>
 
-            <div className="space-y-2.5">
+            <div className="space-y-2.5 text-xs text-[#1A2421]">
               {place.resortDetails.poolsSummary && (
-                <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3 space-y-0.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                    Pools &amp; Water Features
-                  </p>
-                  <p className="text-xs text-[#202B28] leading-relaxed">
-                    {place.resortDetails.poolsSummary}
-                  </p>
+                <div>
+                  <p className="font-semibold text-[#616E69]">Pools &amp; Water</p>
+                  <p className="leading-relaxed">{place.resortDetails.poolsSummary}</p>
                 </div>
               )}
               {place.resortDetails.cottagesSummary && (
-                <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3 space-y-0.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                    Cottages &amp; Cabanas
-                  </p>
-                  <p className="text-xs text-[#202B28] leading-relaxed">
-                    {place.resortDetails.cottagesSummary}
-                  </p>
+                <div>
+                  <p className="font-semibold text-[#616E69]">Cottages</p>
+                  <p className="leading-relaxed">{place.resortDetails.cottagesSummary}</p>
                 </div>
               )}
               {place.resortDetails.roomsSummary && (
-                <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3 space-y-0.5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                    Rooms &amp; Stays
-                  </p>
-                  <p className="text-xs text-[#202B28] leading-relaxed">
-                    {place.resortDetails.roomsSummary}
-                  </p>
+                <div>
+                  <p className="font-semibold text-[#616E69]">Rooms</p>
+                  <p className="leading-relaxed">{place.resortDetails.roomsSummary}</p>
                 </div>
               )}
               {(place.resortDetails.entranceFeeNote ||
                 place.resortDetails.cottageRoomRatesNote) && (
-                <div className="rounded-xl bg-[#D6A85B]/15 border border-[#D6A85B]/40 p-3 space-y-1 text-xs">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#8C611B]">
-                    Rates &amp; Inquiries
-                  </p>
+                <div className="rounded-xl bg-[#F3F2EE] p-3 space-y-1">
                   {place.resortDetails.entranceFeeNote && (
                     <p>
                       <strong>Entrance:</strong> {place.resortDetails.entranceFeeNote}
@@ -241,8 +192,7 @@ export default async function PlaceDetailPage({
                   )}
                   {place.resortDetails.cottageRoomRatesNote && (
                     <p>
-                      <strong>Cottages/Rooms:</strong>{" "}
-                      {place.resortDetails.cottageRoomRatesNote}
+                      <strong>Rates:</strong> {place.resortDetails.cottageRoomRatesNote}
                     </p>
                   )}
                 </div>
@@ -255,7 +205,7 @@ export default async function PlaceDetailPage({
                   {place.resortDetails.recreationalFacilities.map((fac) => (
                     <span
                       key={fac}
-                      className="rounded-lg bg-[#123F35]/8 text-[#123F35] px-2.5 py-1 text-[11px] font-semibold"
+                      className="rounded-full bg-white border border-[#EAE7E0] px-3 py-1 text-[11px] font-medium text-[#1A2421]"
                     >
                       {fac}
                     </span>
@@ -264,12 +214,9 @@ export default async function PlaceDetailPage({
               )}
 
             {place.resortDetails.policies && place.resortDetails.policies.length > 0 && (
-              <ul className="space-y-1.5 text-xs text-[#5A6B66]">
+              <ul className="space-y-1 text-xs text-[#616E69] list-disc pl-4">
                 {place.resortDetails.policies.map((pol) => (
-                  <li key={pol} className="flex items-start gap-2">
-                    <Info className="w-3.5 h-3.5 text-[#168A8A] shrink-0 mt-0.5" />
-                    <span>{pol}</span>
-                  </li>
+                  <li key={pol}>{pol}</li>
                 ))}
               </ul>
             )}
@@ -279,7 +226,7 @@ export default async function PlaceDetailPage({
                 href={place.resortDetails.externalInquiryUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#168A8A] text-white px-3.5 py-2 text-xs font-bold"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#164237] hover:underline"
               >
                 Official Inquiry Page <ExternalLink className="w-3.5 h-3.5" />
               </a>
@@ -289,44 +236,22 @@ export default async function PlaceDetailPage({
 
         {/* Specialized Restaurant / Eatery Details */}
         {place.restaurantDetails && (
-          <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-amber-600/12 text-amber-800 flex items-center justify-center shrink-0">
-                <Utensils className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display text-base font-bold text-[#202B28]">
-                  Dining &amp; Specialties
-                </h2>
-                <p className="text-[11px] text-[#5A6B66]">
-                  {place.restaurantDetails.cuisineType || "Local Ilocano Dining"}
-                </p>
-              </div>
-            </div>
-
+          <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+            <h2 className="font-display text-base font-bold text-[#1A2421]">
+              Dining &amp; Specialties
+            </h2>
+            {place.restaurantDetails.cuisineType && (
+              <p className="text-xs text-[#616E69]">{place.restaurantDetails.cuisineType}</p>
+            )}
             {place.restaurantDetails.featuredDishes &&
               place.restaurantDetails.featuredDishes.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
                   {place.restaurantDetails.featuredDishes.map((dish) => (
                     <span
                       key={dish}
-                      className="rounded-lg bg-[#D6A85B]/20 text-[#202B28] px-2.5 py-1 text-xs font-bold"
+                      className="rounded-full bg-[#F3F2EE] px-3 py-1 text-xs font-semibold text-[#1A2421]"
                     >
                       {dish}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-            {place.restaurantDetails.menuHighlights &&
-              place.restaurantDetails.menuHighlights.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {place.restaurantDetails.menuHighlights.map((item) => (
-                    <span
-                      key={item}
-                      className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-xs"
-                    >
-                      {item}
                     </span>
                   ))}
                 </div>
@@ -336,35 +261,25 @@ export default async function PlaceDetailPage({
 
         {/* Specialized Attraction / Nature / Heritage Details */}
         {place.attractionDetails && (
-          <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3.5">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-[#123F35]/10 text-[#123F35] flex items-center justify-center shrink-0">
-                <Trees className="w-4 h-4" />
-              </div>
-              <div>
-                <h2 className="font-display text-base font-bold text-[#202B28]">
-                  Visitor Guide &amp; Activities
-                </h2>
-                <p className="text-[11px] text-[#5A6B66]">
-                  Activities, guidelines &amp; heritage notes
-                </p>
-              </div>
-            </div>
+          <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+            <h2 className="font-display text-base font-bold text-[#1A2421]">
+              Visitor Guide
+            </h2>
 
             <div className="flex flex-wrap gap-1.5">
               {place.attractionDetails.difficultyLevel && (
-                <span className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-semibold">
+                <span className="rounded-full bg-[#F3F2EE] px-3 py-1 text-[11px] font-medium text-[#1A2421]">
                   Access: {place.attractionDetails.difficultyLevel}
                 </span>
               )}
               {place.attractionDetails.estimatedDurationMinutes && (
-                <span className="inline-flex items-center gap-1 rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-semibold tabular-nums">
-                  <Clock className="w-3 h-3 text-[#168A8A]" />~
+                <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] px-3 py-1 text-[11px] font-medium text-[#1A2421] tabular-nums">
+                  <Clock className="w-3 h-3 text-[#616E69]" />~
                   {place.attractionDetails.estimatedDurationMinutes} mins
                 </span>
               )}
               {place.attractionDetails.entranceInfo && (
-                <span className="rounded-lg bg-[#D6A85B]/15 border border-[#D6A85B]/40 px-2.5 py-1 text-[11px] font-semibold text-[#202B28]">
+                <span className="rounded-full bg-[#F3F2EE] px-3 py-1 text-[11px] font-medium text-[#1A2421]">
                   {place.attractionDetails.entranceInfo}
                 </span>
               )}
@@ -376,7 +291,7 @@ export default async function PlaceDetailPage({
                   {place.attractionDetails.activities.map((act) => (
                     <span
                       key={act}
-                      className="rounded-lg bg-[#123F35]/8 text-[#123F35] px-2.5 py-1 text-[11px] font-semibold"
+                      className="rounded-full bg-white border border-[#EAE7E0] px-3 py-1 text-[11px] font-medium text-[#1A2421]"
                     >
                       {act}
                     </span>
@@ -385,22 +300,17 @@ export default async function PlaceDetailPage({
               )}
 
             {place.attractionDetails.historicalDetails && (
-              <div className="rounded-xl bg-[#F8F7F2] border border-[#E5E0D5] p-3 space-y-0.5">
-                <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-                  Heritage &amp; Background
-                </p>
-                <p className="text-xs text-[#202B28] leading-relaxed">
-                  {place.attractionDetails.historicalDetails}
-                </p>
-              </div>
+              <p className="text-xs text-[#616E69] leading-relaxed">
+                {place.attractionDetails.historicalDetails}
+              </p>
             )}
 
             {place.attractionDetails.visitorGuidelines &&
               place.attractionDetails.visitorGuidelines.length > 0 && (
-                <ul className="space-y-1.5 text-xs text-[#5A6B66]">
+                <ul className="space-y-1 text-xs text-[#616E69]">
                   {place.attractionDetails.visitorGuidelines.map((g) => (
                     <li key={g} className="flex items-start gap-2">
-                      <ShieldAlert className="w-3.5 h-3.5 text-[#D6A85B] shrink-0 mt-0.5" />
+                      <ShieldAlert className="w-3.5 h-3.5 text-[#B88A44] shrink-0 mt-0.5" />
                       <span>{g}</span>
                     </li>
                   ))}
@@ -411,13 +321,13 @@ export default async function PlaceDetailPage({
 
         {/* Amenities */}
         {place.amenities.length > 0 && (
-          <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-2.5">
-            <h2 className="font-display text-sm font-bold text-[#202B28]">On-Site Amenities</h2>
+          <section className="space-y-2.5 border-b border-[#EAE7E0] pb-5">
+            <h2 className="font-display text-sm font-bold text-[#1A2421]">Amenities</h2>
             <div className="flex flex-wrap gap-1.5">
               {place.amenities.map((a) => (
                 <span
                   key={a.id}
-                  className="rounded-lg bg-[#F8F7F2] border border-[#E5E0D5] px-2.5 py-1 text-[11px] font-semibold text-[#202B28]"
+                  className="rounded-full bg-white border border-[#EAE7E0] px-3 py-1 text-[11px] text-[#1A2421]"
                 >
                   {a.name}
                 </span>
@@ -426,21 +336,20 @@ export default async function PlaceDetailPage({
           </section>
         )}
 
-        {/* Practical Information Card */}
-        <section className="bg-white rounded-2xl border border-[#E5E0D5] p-4 space-y-3">
-          <h2 className="font-display text-sm font-bold text-[#202B28]">
-            Practical Information
+        {/* Practical Information */}
+        <section className="space-y-3 border-b border-[#EAE7E0] pb-5">
+          <h2 className="font-display text-sm font-bold text-[#1A2421]">
+            Practical Info
           </h2>
 
           {place.phone && (
             <div className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-[#5A6B66]">
-                <Phone className="w-3.5 h-3.5 text-[#168A8A]" />
-                <span>Contact</span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 text-[#616E69]">
+                <Phone className="w-3.5 h-3.5" /> Contact
+              </span>
               <a
                 href={`tel:${place.phone.replace(/[^+\d]/g, "")}`}
-                className="font-bold text-[#123F35] hover:underline tabular-nums"
+                className="font-semibold text-[#164237] hover:underline tabular-nums"
               >
                 {place.phone}
               </a>
@@ -449,25 +358,24 @@ export default async function PlaceDetailPage({
 
           {(place.websiteUrl || place.socialMediaUrl) && (
             <div className="flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-[#5A6B66]">
-                <Globe className="w-3.5 h-3.5 text-[#168A8A]" />
-                <span>Official Page</span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 text-[#616E69]">
+                <Globe className="w-3.5 h-3.5" /> Official Link
+              </span>
               <a
                 href={place.websiteUrl || place.socialMediaUrl || "#"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-bold text-[#168A8A]"
+                className="inline-flex items-center gap-1 font-semibold text-[#164237] hover:underline"
               >
-                Open Link <ExternalLink className="w-3 h-3" />
+                Open <ExternalLink className="w-3 h-3" />
               </a>
             </div>
           )}
 
           {place.operatingHours.length > 0 && (
-            <div className="pt-2 border-t border-[#E5E0D5] space-y-1.5">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-[#5A6B66]">
-                Verified Schedule
+            <div className="space-y-1.5 pt-1">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-[#616E69]">
+                Schedule
               </p>
               <div className="space-y-1 text-xs">
                 {place.operatingHours.map((h) => {
@@ -475,8 +383,8 @@ export default async function PlaceDetailPage({
                   return (
                     <div
                       key={h.id}
-                      className={`flex justify-between gap-2 rounded-lg px-2 py-0.5 ${
-                        isToday ? "bg-[#123F35]/8 font-bold text-[#123F35]" : ""
+                      className={`flex justify-between gap-2 py-0.5 ${
+                        isToday ? "font-bold text-[#164237]" : "text-[#616E69]"
                       }`}
                     >
                       <span>
@@ -492,55 +400,42 @@ export default async function PlaceDetailPage({
             </div>
           )}
 
-          <div className="pt-2 border-t border-[#E5E0D5] text-[10px] text-[#5A6B66] space-y-0.5">
-            <p>
-              <strong>Source:</strong> {place.sourceReference}
-            </p>
-            {place.verificationDate && (
-              <p>
-                <strong>Verified:</strong> {place.verificationDate}
-              </p>
-            )}
+          <div className="pt-1 text-[11px] text-[#616E69] space-y-0.5">
+            <p>Source: {place.sourceReference}</p>
             {place.latitude && place.longitude && (
               <p className="tabular-nums">
-                <strong>GPS:</strong> {place.latitude.toFixed(4)}° N,{" "}
-                {place.longitude.toFixed(4)}° E
+                GPS: {place.latitude.toFixed(4)}° N, {place.longitude.toFixed(4)}° E
               </p>
             )}
           </div>
         </section>
 
-        {/* Barangay Context Card */}
+        {/* Barangay Link */}
         {place.barangay && (
-          <section className="bg-[#123F35] text-white rounded-2xl p-4 space-y-2">
-            <div className="flex items-center gap-1.5 text-[#D6A85B]">
-              <Compass className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase tracking-wider">
-                Barangay Context
-              </span>
-            </div>
-            <h3 className="font-display text-base font-bold">
-              Brgy. {place.barangay.name}
-            </h3>
-            <p className="text-xs text-white/85 leading-relaxed">
-              {place.barangay.summary}
+          <Link
+            href={`/app/discover?barangay=${encodeURIComponent(place.barangay.slug)}`}
+            className="block rounded-2xl bg-white border border-[#EAE7E0] p-4 space-y-1 hover:border-[#D4CFC3] transition"
+          >
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+              Barangay Context
             </p>
-            <Link
-              href={`/app/discover?barangay=${encodeURIComponent(place.barangay.slug)}`}
-              className="inline-block text-xs font-bold text-[#D6A85B] hover:underline"
-            >
-              More in Brgy. {place.barangay.name} →
-            </Link>
-          </section>
+            <p className="font-display text-sm font-bold text-[#1A2421]">
+              Brgy. {place.barangay.name}
+            </p>
+            <p className="text-xs text-[#616E69] line-clamp-2">{place.barangay.summary}</p>
+            <span className="inline-block text-[11px] font-semibold text-[#164237] pt-0.5">
+              See more in Brgy. {place.barangay.name} →
+            </span>
+          </Link>
         )}
 
-        {/* Continue Exploring Swipe Rail */}
+        {/* Continue Exploring */}
         {place.relatedPlaces.length > 0 && (
-          <section className="space-y-2.5 pt-1">
-            <h2 className="font-display text-base font-bold text-[#202B28]">
-              Continue Exploring Salcedo
+          <section className="space-y-3 pt-1">
+            <h2 className="font-display text-base font-bold text-[#1A2421]">
+              More in Salcedo
             </h2>
-            <div className="flex gap-3.5 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-1">
+            <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar -mx-4 px-4 pb-1">
               {place.relatedPlaces.map((rel) => (
                 <PlaceCard key={rel.id} place={rel} variant="rail" />
               ))}

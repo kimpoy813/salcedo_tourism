@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import {
   getAllBarangaysWithCounts,
   getPublishedArticlesAndGuides,
@@ -8,12 +9,7 @@ import { SalcedoInfoClient } from "@/components/app/SalcedoInfoClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function SalcedoInfoPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ tab?: string }>;
-}) {
-  const sp = await searchParams;
+export default async function SalcedoInfoPage() {
   const [barangays, editorial, events, products] = await Promise.all([
     getAllBarangaysWithCounts(),
     getPublishedArticlesAndGuides(),
@@ -24,25 +20,32 @@ export default async function SalcedoInfoPage({
   return (
     <div className="px-4 py-4 space-y-4">
       <div className="space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#168A8A]">
-          Official Municipal Guide
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
+          Municipality Profile
         </p>
-        <h1 className="font-display text-xl font-bold text-[#202B28]">
-          All About Salcedo, Ilocos Sur
+        <h1 className="font-display text-xl font-bold text-[#1A2421]">
+          Salcedo, Ilocos Sur
         </h1>
       </div>
 
-      <SalcedoInfoClient
-        initialTab={sp.tab || "overview"}
-        barangays={barangays}
-        historicalArticles={editorial.historical}
-        culturalArticles={editorial.cultural}
-        events={events}
-        products={products}
-        guides={editorial.guides}
-        contacts={editorial.contacts}
-        municipalInfo={editorial.municipal}
-      />
+      <Suspense
+        fallback={
+          <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
+            Loading profile...
+          </div>
+        }
+      >
+        <SalcedoInfoClient
+          barangays={barangays}
+          historicalArticles={editorial.historical}
+          culturalArticles={editorial.cultural}
+          events={events}
+          products={products}
+          guides={editorial.guides}
+          contacts={editorial.contacts}
+          municipalInfo={editorial.municipal}
+        />
+      </Suspense>
     </div>
   );
 }
