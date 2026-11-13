@@ -19,16 +19,18 @@ let db: ReturnType<typeof drizzle<typeof schema>>;
 
 beforeAll(async () => {
   client = new PGlite(); // In-memory isolated PostgreSQL instance
-  const migrationPath = path.join(
-    process.cwd(),
-    "drizzle",
-    "0000_init_salcedo_tourism.sql"
-  );
-  const ddl = fs.readFileSync(migrationPath, "utf8");
-  for (const stmt of ddl.split("--> statement-breakpoint")) {
-    const trimmed = stmt.trim();
-    if (trimmed) {
-      await client.exec(trimmed);
+  const drizzleDir = path.join(process.cwd(), "drizzle");
+  const sqlFiles = fs
+    .readdirSync(drizzleDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort();
+  for (const file of sqlFiles) {
+    const ddl = fs.readFileSync(path.join(drizzleDir, file), "utf8");
+    for (const stmt of ddl.split("--> statement-breakpoint")) {
+      const trimmed = stmt.trim();
+      if (trimmed) {
+        await client.exec(trimmed);
+      }
     }
   }
   db = drizzle(client, { schema });

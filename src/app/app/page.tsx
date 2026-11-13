@@ -19,6 +19,7 @@ import {
   getPublishedProducts,
 } from "@/lib/queries/public-tourism";
 import { HomeSearchBar } from "@/components/app/HomeSearchBar";
+import { HomeRankingsCard } from "@/components/app/HomeRankingsCard";
 import { PlaceCard } from "@/components/app/PlaceCard";
 
 export const dynamic = "force-dynamic";
@@ -164,6 +165,11 @@ export default async function TouristHomePage() {
             ))}
           </div>
         </section>
+      )}
+
+      {/* 3. Live Salcedo Rankings (Most Visited, Top Rated & By Category) */}
+      {places.length > 0 && (
+        <HomeRankingsCard places={places} categories={categories} />
       )}
 
       {/* 3. Experience Categories Pills */}
