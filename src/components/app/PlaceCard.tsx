@@ -101,22 +101,25 @@ export function PlaceCard({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/25 to-transparent" />
 
-          {rankBadge ? (
-            <span
-              className={`absolute top-3 left-3 inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold shadow-xs tabular-nums ${getRankStyle(
-                rankBadge.rank
-              )}`}
-            >
-              #{rankBadge.rank}
-              {rankBadge.label ? ` ${rankBadge.label}` : ""}
-            </span>
-          ) : hasRating ? (
-            <span className="absolute top-3 left-3 inline-flex items-center gap-1 rounded-full bg-black/50 backdrop-blur-md text-white px-2.5 py-0.5 text-[11px] font-semibold tabular-nums">
-              <Star className="w-3 h-3 text-[#F5C451]" fill="currentColor" />
-              {place.averageRating?.toFixed(1)}
-              <span className="text-white/70 font-normal">({place.ratingCount})</span>
-            </span>
-          ) : null}
+          <div className="absolute top-3 left-3 flex items-center gap-1.5">
+            {rankBadge && (
+              <span
+                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-bold shadow-xs tabular-nums ${getRankStyle(
+                  rankBadge.rank
+                )}`}
+              >
+                #{rankBadge.rank}
+                {rankBadge.label ? ` ${rankBadge.label}` : ""}
+              </span>
+            )}
+            {hasRating && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-black/55 backdrop-blur-md text-white px-2.5 py-0.5 text-[11px] font-semibold tabular-nums">
+                <Star className="w-3 h-3 text-[#F5C451]" fill="currentColor" />
+                {place.averageRating?.toFixed(1)}
+                <span className="text-white/75 font-normal">({place.ratingCount})</span>
+              </span>
+            )}
+          </div>
 
           <button
             type="button"

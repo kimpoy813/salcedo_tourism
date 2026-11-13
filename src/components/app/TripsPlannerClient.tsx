@@ -923,7 +923,7 @@ function TripsPlannerInner({
                 Tap the bookmark icon on any destination to save it offline here.
               </p>
             ) : (
-              <div className="divide-y divide-[#EAE7E0] -mx-4 px-4">
+              <div className="divide-y divide-[#EAE7E0]">
                 {savedPlaces.map((p) => (
                   <div key={p.id} className="flex items-center justify-between gap-2 py-2.5">
                     <Link
@@ -956,7 +956,7 @@ function TripsPlannerInner({
             {drafts.length === 0 ? (
               <p className="text-xs text-[#616E69]">No drafts saved yet.</p>
             ) : (
-              <div className="divide-y divide-[#EAE7E0] -mx-4 px-4">
+              <div className="divide-y divide-[#EAE7E0]">
                 {drafts.map((d) => (
                   <div key={d.id} className="py-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
@@ -1198,7 +1198,7 @@ function TripsPlannerInner({
               />
             </div>
 
-            <div className="flex-1 overflow-y-auto divide-y divide-[#EAE7E0] -mx-4 px-4">
+            <div className="flex-1 overflow-y-auto divide-y divide-[#EAE7E0]">
               {filteredPlaces.map((p) => {
                 const selected = draft.stops.some((s) => s.placeId === p.id);
                 return (

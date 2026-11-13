@@ -215,10 +215,10 @@ function DiscoverDirectoryInner({
   const selectedBarangayName = barangays.find((b) => b.slug === selectedBarangay)?.name;
 
   return (
-    <div className="space-y-3.5">
+    <div className="w-full min-w-0 space-y-3.5">
       {/* Sticky Native App Search, Ranking Tabs & Category Pills */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 pt-2 pb-2.5 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0] space-y-2.5">
-        <div className="flex items-center gap-2">
+      <div className="sticky top-0 z-30 w-full pt-2 pb-2.5 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0] space-y-2.5">
+        <div className="px-4 flex items-center gap-2">
           <div className="relative flex-1 min-w-0">
             <Search className="w-4 h-4 text-[#616E69] absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
@@ -263,47 +263,49 @@ function DiscoverDirectoryInner({
         </div>
 
         {/* Ranking Mode Segmented Bar */}
-        <div className="grid grid-cols-3 rounded-full bg-[#EFECE5] p-0.5 border border-[#EAE7E0]">
-          <button
-            type="button"
-            onClick={() => setSortBy("most_visited")}
-            className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
-              sortBy === "most_visited"
-                ? "bg-white text-[#164237] shadow-2xs"
-                : "text-[#616E69]"
-            }`}
-          >
-            <Flame className="w-3 h-3" />
-            Most Visited
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortBy("top_rated")}
-            className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
-              sortBy === "top_rated"
-                ? "bg-white text-[#B88A44] shadow-2xs"
-                : "text-[#616E69]"
-            }`}
-          >
-            <Star className="w-3 h-3" />
-            Top Rated
-          </button>
-          <button
-            type="button"
-            onClick={() => setSortBy("by_category")}
-            className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
-              sortBy === "by_category"
-                ? "bg-white text-[#1A2421] shadow-2xs"
-                : "text-[#616E69]"
-            }`}
-          >
-            <LayoutGrid className="w-3 h-3" />
-            Categorized
-          </button>
+        <div className="px-4">
+          <div className="grid grid-cols-3 rounded-full bg-[#EFECE5] p-0.5 border border-[#EAE7E0]">
+            <button
+              type="button"
+              onClick={() => setSortBy("most_visited")}
+              className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+                sortBy === "most_visited"
+                  ? "bg-white text-[#164237] shadow-2xs"
+                  : "text-[#616E69]"
+              }`}
+            >
+              <Flame className="w-3 h-3" />
+              Most Visited
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy("top_rated")}
+              className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+                sortBy === "top_rated"
+                  ? "bg-white text-[#B88A44] shadow-2xs"
+                  : "text-[#616E69]"
+              }`}
+            >
+              <Star className="w-3 h-3" />
+              Top Rated
+            </button>
+            <button
+              type="button"
+              onClick={() => setSortBy("by_category")}
+              className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+                sortBy === "by_category"
+                  ? "bg-white text-[#1A2421] shadow-2xs"
+                  : "text-[#616E69]"
+              }`}
+            >
+              <LayoutGrid className="w-3 h-3" />
+              Categorized
+            </button>
+          </div>
         </div>
 
         {/* Clean Category Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4">
+        <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar px-4 after:content-[''] after:w-1 after:shrink-0">
           <button
             type="button"
             onClick={() => {
@@ -340,6 +342,7 @@ function DiscoverDirectoryInner({
       </div>
 
       {/* Results & Active Chips */}
+      <div className="px-4 space-y-3.5">
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-xs text-[#616E69]">
           <strong className="text-[#1A2421] tabular-nums">{filteredPlaces.length}</strong>{" "}
@@ -451,6 +454,7 @@ function DiscoverDirectoryInner({
           ))}
         </div>
       )}
+      </div>
 
       {/* Slide-Up Native Bottom Sheet Filter Drawer */}
       {filterSheetOpen && (

@@ -139,10 +139,10 @@ function SalcedoInfoInner({
   ];
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-w-0 space-y-4">
       {/* Minimal Sticky Pills */}
-      <div className="sticky top-0 z-30 -mx-4 px-4 py-2 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0]">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+      <div className="sticky top-0 z-30 w-full py-2 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0]">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-4 after:content-[''] after:w-1 after:shrink-0">
           {tabs.map((t) => (
             <button
               key={t.id}
@@ -160,6 +160,7 @@ function SalcedoInfoInner({
         </div>
       </div>
 
+      <div className="px-4 space-y-4">
       {tab === "overview" && (
         <div className="space-y-4">
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
@@ -191,8 +192,8 @@ function SalcedoInfoInner({
             />
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] grid grid-cols-2 divide-x divide-y divide-[#EAE7E0] overflow-hidden">
-            <div className="p-3.5">
+          <div className="grid grid-cols-2 gap-2.5">
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
               <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
                 2020 Population
               </p>
@@ -200,19 +201,19 @@ function SalcedoInfoInner({
                 11,110
               </p>
             </div>
-            <div className="p-3.5">
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
               <p className="text-[10px] uppercase tracking-wider text-[#616E69]">ZIP Code</p>
               <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
                 2711
               </p>
             </div>
-            <div className="p-3.5">
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
               <p className="text-[10px] uppercase tracking-wider text-[#616E69]">Barangays</p>
               <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
                 {barangays.length} Official
               </p>
             </div>
-            <div className="p-3.5">
+            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
               <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
                 Land Area
               </p>
@@ -417,6 +418,7 @@ function SalcedoInfoInner({
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
