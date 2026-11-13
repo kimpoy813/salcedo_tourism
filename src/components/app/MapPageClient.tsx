@@ -19,9 +19,21 @@ const SalcedoMap = dynamic(
 export function MapPageClient({
   places,
   barangays,
+  initialPlaceSlug,
+  autoRoute,
 }: {
   places: PlaceCardData[];
   barangays: MapBarangayItem[];
+  initialPlaceSlug?: string;
+  autoRoute?: boolean;
 }) {
-  return <SalcedoMap places={places} barangays={barangays} mode="fullscreen" />;
+  return (
+    <SalcedoMap
+      places={places}
+      barangays={barangays}
+      mode="fullscreen"
+      initialPlaceSlug={initialPlaceSlug}
+      autoRoute={autoRoute}
+    />
+  );
 }

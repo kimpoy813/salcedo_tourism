@@ -77,13 +77,20 @@ const SUPPORT_ROWS = [
 export default function MoreHubPage() {
   return (
     <div className="px-4 pt-[max(18px,env(safe-area-inset-top))] pb-6 space-y-6">
-      <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
-          Guide
-        </p>
-        <h1 className="font-display text-2xl font-bold text-[#1A2421]">
-          More About Salcedo
-        </h1>
+      <div className="flex items-center gap-3">
+        <img
+          src="/images/salcedo/turi-logo.png"
+          alt="Project CEDO: Turi Logo"
+          className="w-10 h-10 rounded-xl object-cover shrink-0 shadow-xs"
+        />
+        <div className="space-y-0.5 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
+            Project CEDO: Turi
+          </p>
+          <h1 className="font-display text-xl font-bold text-[#1A2421] truncate">
+            More About Salcedo
+          </h1>
+        </div>
       </div>
 
       {/* Grouped Native Inset Rows */}

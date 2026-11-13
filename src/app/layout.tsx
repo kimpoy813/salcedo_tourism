@@ -4,12 +4,12 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 
 export const metadata: Metadata = {
   title: {
-    default: "Project CEDO: Turi App — Salcedo, Ilocos Sur",
-    template: "%s | Project CEDO: Turi App",
+    default: "Project CEDO: Turi — Salcedo, Ilocos Sur",
+    template: "%s | Project CEDO: Turi",
   },
   description:
-    "Official Municipal Tourism Discovery, Visitor Information, and Itinerary App for the Municipality of Salcedo, Ilocos Sur, Philippines.",
-  applicationName: "Project CEDO: Turi App",
+    "Project CEDO: Turi — Official Municipal Tourism Discovery, Visitor Information, and Itinerary App for the Municipality of Salcedo, Ilocos Sur, Philippines.",
+  applicationName: "Project CEDO: Turi",
   icons: {
     icon: [
       { url: "/app/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Turi",
+    title: "Project CEDO: Turi",
   },
 };
 

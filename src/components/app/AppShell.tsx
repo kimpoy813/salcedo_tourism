@@ -122,7 +122,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
     ? "Salcedo Guide"
     : pathname.startsWith("/app/offline")
     ? "Offline"
-    : "Turi";
+    : "Project CEDO: Turi";
 
   const handleBack = () => {
     if (typeof window !== "undefined" && window.history.length > 1) {

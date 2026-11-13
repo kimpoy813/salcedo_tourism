@@ -1,7 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { CheckCircle2, Edit3, Plus, Search, X } from "lucide-react";
+import { CheckCircle2, Edit3, MapPin, Plus, Search, X } from "lucide-react";
+import {
+  findSalcedoBarangayForPoint,
+  isInsideSalcedo,
+} from "@/lib/geo/salcedo-boundary";
 
 interface AdminPlaceRow {
   id: string;
@@ -106,6 +110,44 @@ export function AdminPlacesPanel({
 
   const [notice, setNotice] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+
+  const parsedLat = latitude ? Number(latitude) : NaN;
+  const parsedLng = longitude ? Number(longitude) : NaN;
+  const hasValidCoords = Number.isFinite(parsedLat) && Number.isFinite(parsedLng);
+  const coordsInsideSalcedo = hasValidCoords ? isInsideSalcedo(parsedLat, parsedLng) : null;
+  const detectedBarangay = hasValidCoords
+    ? findSalcedoBarangayForPoint(parsedLat, parsedLng)
+    : null;
+
+  const handleGeocodeSalcedo = async () => {
+    const query = [name.trim(), address.trim()].filter(Boolean).join(", ");
+    if (!query || query.length < 3) {
+      setNotice({ text: "Enter a place name or barangay before looking up coordinates.", tone: "err" });
+      return;
+    }
+    setGeocoding(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/geo/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      const first = (data.results || [])[0];
+      if (first && Number.isFinite(first.latitude) && Number.isFinite(first.longitude)) {
+        setLatitude(String(Number(first.latitude).toFixed(5)));
+        setLongitude(String(Number(first.longitude).toFixed(5)));
+        setNotice({
+          text: `Matched "${first.label}" (${first.subtitle}). Verify pin placement cleanly before saving.`,
+          tone: "ok",
+        });
+      } else {
+        setNotice({ text: "No matching Salcedo coordinates found in OpenStreetMap.", tone: "err" });
+      }
+    } catch {
+      setNotice({ text: "Unable to query geocoder right now.", tone: "err" });
+    } finally {
+      setGeocoding(false);
+    }
+  };
 
   const openCreate = () => {
     setEditingId(null);
@@ -489,6 +531,31 @@ export function AdminPlacesPanel({
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
               />
             </div>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-2 text-[11px]">
+            <div className="flex items-center gap-2">
+              {hasValidCoords && coordsInsideSalcedo && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 px-2.5 py-0.5 font-semibold">
+                  <MapPin className="w-3 h-3" />
+                  Inside Salcedo{detectedBarangay ? ` • Brgy. ${detectedBarangay.name}` : ""} ✓
+                </span>
+              )}
+              {hasValidCoords && !coordsInsideSalcedo && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 px-2.5 py-0.5 font-semibold">
+                  Outside Salcedo municipal boundary — verify lat/lng
+                </span>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={geocoding}
+              onClick={() => void handleGeocodeSalcedo()}
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-1 font-semibold text-[#164237] hover:bg-[#F3F2EE] cursor-pointer"
+            >
+              <Search className="w-3 h-3" />
+              {geocoding ? "Looking up..." : "Lookup in Salcedo (Free OSM)"}
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">

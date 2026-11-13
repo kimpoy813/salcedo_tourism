@@ -51,16 +51,16 @@ export default function AdminLoginPage() {
         <div className="bg-white rounded-3xl border border-[#EAE7E0] p-7 space-y-6">
           <div className="flex items-center gap-3">
             <img
-              src="/images/salcedo/seal-of-salcedo.png"
-              alt="Official Seal of Salcedo"
-              className="w-11 h-11 rounded-full object-contain border border-[#EAE7E0]"
+              src="/images/salcedo/turi-logo.png"
+              alt="Project CEDO: Turi Logo"
+              className="w-11 h-11 rounded-xl object-cover shrink-0 shadow-xs"
             />
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
-                Municipality of Salcedo
+                Project CEDO: Turi
               </p>
               <h1 className="font-display text-xl font-bold text-[#1A2421]">
-                CEDO Admin Console
+                Admin Console
               </h1>
             </div>
           </div>

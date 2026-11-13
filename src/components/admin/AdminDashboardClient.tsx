@@ -72,10 +72,15 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
     categories: never[];
   } | null>(null);
   const [contentData, setContentData] = useState<{
+    municipalInfo: never[];
+    historicalArticles: never[];
+    culturalArticles: never[];
+    travelGuides: never[];
     events: never[];
     products: never[];
     announcements: never[];
     emergencyContacts: never[];
+    barangays: never[];
   } | null>(null);
   const [visitorsData, setVisitorsData] = useState<{
     canReadPii: boolean;
@@ -187,17 +192,17 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
       >
         <div className="p-4 space-y-6">
           <div className="flex items-center justify-between px-1">
-            <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-2.5 min-w-0">
               <img
-                src="/images/salcedo/seal-of-salcedo.png"
-                alt="Salcedo Seal"
-                className="w-9 h-9 rounded-full object-contain border border-[#EAE7E0]"
+                src="/images/salcedo/turi-logo.png"
+                alt="Project CEDO: Turi Logo"
+                className="w-9 h-9 rounded-xl object-cover shrink-0 shadow-xs"
               />
-              <div>
-                <p className="font-display font-bold text-sm text-[#1A2421]">
-                  CEDO Admin
+              <div className="min-w-0">
+                <p className="font-display font-bold text-sm text-[#1A2421] truncate">
+                  Project CEDO: Turi
                 </p>
-                <p className="text-[11px] text-[#616E69]">Salcedo, Ilocos Sur</p>
+                <p className="text-[11px] text-[#616E69] truncate">Admin • Salcedo</p>
               </div>
             </div>
             <button
@@ -301,10 +306,15 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
           )}
           {activeTab === "content" && contentData && (
             <AdminContentPanel
+              municipalInfo={contentData.municipalInfo}
+              historicalArticles={contentData.historicalArticles}
+              culturalArticles={contentData.culturalArticles}
+              travelGuides={contentData.travelGuides}
               events={contentData.events}
               products={contentData.products}
               announcements={contentData.announcements}
               contacts={contentData.emergencyContacts}
+              barangays={contentData.barangays}
               canPublish={canContentPublish}
               onReload={() => loadActiveTab("content")}
             />

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "turi-salcedo-v1";
+const CACHE_VERSION = "turi-salcedo-v2";
 const STATIC_SHELL = [
   "/app",
   "/app/discover",
@@ -7,6 +7,7 @@ const STATIC_SHELL = [
   "/app/offline",
   "/app/icons/icon-192x192.png",
   "/app/icons/icon-512x512.png",
+  "/images/salcedo/turi-logo.png",
   "/images/salcedo/seal-of-salcedo.png",
   "/images/salcedo/hero-salcedo-valley.png",
 ];

@@ -27,18 +27,23 @@ export default async function TouristHomePage() {
 
   return (
     <div className="w-full max-w-full min-w-0 pt-[max(16px,env(safe-area-inset-top))] pb-7 space-y-6">
-      {/* 1. Clean Location Header, Title & Search */}
+      {/* 1. Clean App Header, Brand & Search */}
       <section className="px-4 space-y-3.5">
-        <div className="flex items-center justify-between gap-2">
-          <div className="inline-flex items-center gap-2 min-w-0">
+        <div className="flex items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <img
-              src="/images/salcedo/seal-of-salcedo.png"
-              alt="Salcedo Seal"
-              className="w-7 h-7 rounded-full object-contain shrink-0 border border-[#EAE7E0] bg-white"
+              src="/images/salcedo/turi-logo.png"
+              alt="Project CEDO: Turi Logo"
+              className="w-10 h-10 rounded-xl object-cover shrink-0 shadow-xs border border-[#164237]/15"
             />
-            <span className="text-xs font-semibold text-[#164237] truncate">
-              Salcedo, Ilocos Sur
-            </span>
+            <div className="min-w-0">
+              <h1 className="font-display text-lg font-bold tracking-tight text-[#1A2421] truncate leading-tight">
+                Project CEDO: Turi
+              </h1>
+              <p className="text-[11px] font-semibold text-[#164237] truncate">
+                Salcedo, Ilocos Sur
+              </p>
+            </div>
           </div>
           <Link
             href="/app/map"
@@ -48,10 +53,6 @@ export default async function TouristHomePage() {
             Map
           </Link>
         </div>
-
-        <h1 className="font-display text-[26px] font-bold tracking-tight text-[#1A2421] leading-tight">
-          Explore Salcedo
-        </h1>
 
         <HomeSearchBar />
       </section>
