@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
-import { eq } from "drizzle-orm";
+import { eq, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { verifyPassword } from "./crypto";
 
@@ -100,14 +100,22 @@ export async function loadAdminPrincipal(adminUserId: string): Promise<AdminPrin
 }
 
 export async function authenticateAdminCredentials(
-  username: string,
+  usernameOrEmail: string,
   password: string
 ): Promise<AdminPrincipal | null> {
+  const normalized = usernameOrEmail.trim().toLowerCase();
+  if (!normalized) return null;
+
   const db = await getDb();
   const [user] = await db
     .select()
     .from(schema.adminUsers)
-    .where(eq(schema.adminUsers.username, username.trim()))
+    .where(
+      or(
+        sql`lower(${schema.adminUsers.username}) = ${normalized}`,
+        sql`lower(${schema.adminUsers.email}) = ${normalized}`
+      )
+    )
     .limit(1);
 
   if (!user || !user.isActive) return null;

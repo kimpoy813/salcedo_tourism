@@ -65,10 +65,14 @@ export async function POST(req: Request) {
       },
     });
 
+    const isHttps =
+      req.headers.get("x-forwarded-proto") === "https" ||
+      req.url.startsWith("https://");
+
     res.cookies.set(ADMIN_COOKIE_NAME, token, {
       httpOnly: true,
       sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
+      secure: isHttps,
       path: "/",
       maxAge: 60 * 60 * 12,
     });

@@ -3,7 +3,7 @@ import { ADMIN_COOKIE_NAME, getAdminSession, recordAuditLog } from "@/lib/admin-
 
 export const dynamic = "force-dynamic";
 
-export async function POST() {
+export async function POST(req: Request) {
   const principal = await getAdminSession();
   if (principal) {
     await recordAuditLog({
@@ -15,11 +15,15 @@ export async function POST() {
     });
   }
 
+  const isHttps =
+    req.headers.get("x-forwarded-proto") === "https" ||
+    req.url.startsWith("https://");
+
   const res = NextResponse.json({ loggedOut: true });
   res.cookies.set(ADMIN_COOKIE_NAME, "", {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isHttps,
     path: "/",
     maxAge: 0,
   });
