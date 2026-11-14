@@ -91,9 +91,9 @@ function StatTile({
     <div className="rounded-2xl bg-white border border-[#EAE7E0] px-2 py-3 text-center space-y-1">
       <span
         className="mx-auto w-7 h-7 rounded-full flex items-center justify-center"
-        style={{ backgroundColor: tint }}
+        style={{ backgroundColor: `${tint}1A` }}
       >
-        <Icon className="w-3.5 h-3.5 text-[#164237]" />
+        <Icon className="w-3.5 h-3.5" style={{ color: tint }} />
       </span>
       <p className="font-display text-lg font-bold leading-none text-[#1A2421] tabular-nums">
         {value}
@@ -246,12 +246,12 @@ export default async function PlaceDetailPage({
                 <span
                   className={`ml-1 shrink-0 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
                     openNow
-                      ? "bg-emerald-50 text-emerald-700"
+                      ? "bg-[#1D7874]/10 text-[#164237]"
                       : "bg-rose-50 text-rose-700"
                   }`}
                 >
                   <span
-                    className={`w-1.5 h-1.5 rounded-full ${openNow ? "bg-emerald-500" : "bg-rose-500"}`}
+                    className={`w-1.5 h-1.5 rounded-full ${openNow ? "bg-[#1D7874]" : "bg-rose-500"}`}
                   />
                   {openNow ? "Open now" : "Closed"}
                 </span>
@@ -279,7 +279,7 @@ export default async function PlaceDetailPage({
             />
             <StatTile
               icon={Flame}
-              tint="#E4572E"
+              tint="#164237"
               value={`#${place.mostVisitedRank}`}
               label="Most visited"
             />
@@ -291,7 +291,7 @@ export default async function PlaceDetailPage({
             />
             <StatTile
               icon={Eye}
-              tint="#164237"
+              tint="#616E69"
               value={
                 place.visitCount >= 1000
                   ? `${(place.visitCount / 1000).toFixed(1)}k`
@@ -594,10 +594,10 @@ export default async function PlaceDetailPage({
                   {openNow !== null && (
                     <span
                       className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        openNow ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                        openNow ? "bg-[#1D7874]/10 text-[#164237]" : "bg-rose-50 text-rose-700"
                       }`}
                     >
-                      <span className={`w-1.5 h-1.5 rounded-full ${openNow ? "bg-emerald-500" : "bg-rose-500"}`} />
+                      <span className={`w-1.5 h-1.5 rounded-full ${openNow ? "bg-[#1D7874]" : "bg-rose-500"}`} />
                       {openNow ? "Open now" : "Closed now"}
                     </span>
                   )}
