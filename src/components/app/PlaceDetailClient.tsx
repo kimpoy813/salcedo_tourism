@@ -201,15 +201,16 @@ export function PlaceRatingsSection({
   const total = summary.ratingCount;
 
   return (
-    <section className="space-y-4 border-b border-[#EAE7E0] pb-5">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="font-display text-base font-bold text-[#1A2421]">
-            Tourist Ratings &amp; Reviews
-          </h2>
-          <p className="text-[11px] text-[#616E69]">
-            Account-free community ratings from visitors
+    <section className="space-y-4">
+      <div className="flex items-end justify-between gap-2">
+        <div className="space-y-0.5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">
+            Community
           </p>
+          <h2 className="font-display text-lg font-bold leading-tight text-[#1A2421]">
+            Ratings &amp; reviews
+          </h2>
+          <p className="text-xs text-[#616E69]">From visitors — no account needed</p>
         </div>
 
         <button
@@ -252,8 +253,9 @@ export function PlaceRatingsSection({
             const pct = total > 0 ? Math.round((cnt / total) * 100) : 0;
             return (
               <div key={star} className="flex items-center gap-2 text-[10px]">
-                <span className="w-4 text-[#616E69] font-semibold tabular-nums">
-                  {star}★
+                <span className="inline-flex w-5 items-center gap-0.5 text-[#616E69] font-semibold tabular-nums">
+                  {star}
+                  <Star className="w-2.5 h-2.5 text-[#B88A44]" fill="currentColor" />
                 </span>
                 <div className="flex-1 h-1.5 rounded-full bg-[#F3F2EE] overflow-hidden">
                   <div
@@ -261,7 +263,7 @@ export function PlaceRatingsSection({
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <span className="w-5 text-right text-[#616E69] tabular-nums">{cnt}</span>
+                <span className="w-8 text-right text-[#616E69] tabular-nums">{pct}%</span>
               </div>
             );
           })}
@@ -398,14 +400,24 @@ export function PlaceRatingsSection({
               className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5 space-y-1.5"
             >
               <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="font-display text-xs font-bold text-[#1A2421] truncate">
-                    {rev.reviewerName}
-                  </p>
-                  <p className="text-[10px] text-[#616E69] truncate">
-                    {rev.travelerType}
-                    {rev.originLabel ? ` • ${rev.originLabel}` : ""}
-                  </p>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className="w-9 h-9 rounded-full bg-[#164237] text-white flex items-center justify-center font-display text-xs font-bold shrink-0" aria-hidden="true">
+                    {(rev.reviewerName || "G")
+                      .split(" ")
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .map((w) => w[0]?.toUpperCase())
+                      .join("") || "G"}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-bold text-[#1A2421] truncate">
+                      {rev.reviewerName}
+                    </p>
+                    <p className="text-[11px] text-[#616E69] truncate">
+                      {rev.travelerType}
+                      {rev.originLabel ? ` • ${rev.originLabel}` : ""}
+                    </p>
+                  </div>
                 </div>
                 <span className="inline-flex items-center gap-0.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 text-[11px] font-bold text-[#1A2421] shrink-0 tabular-nums">
                   <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
@@ -413,7 +425,7 @@ export function PlaceRatingsSection({
                 </span>
               </div>
               {rev.comment && (
-                <p className="text-xs text-[#1A2421]/85 leading-relaxed">
+                <p className="text-[13px] text-[#1A2421]/85 leading-relaxed">
                   {rev.comment}
                 </p>
               )}
@@ -444,16 +456,25 @@ export function PlaceDetailActions({ place }: { place: PlaceActionPayload }) {
 
   return (
     <>
-      <div className="px-4 pt-1">
+      <div className="px-4 pt-5">
         <a
           href={googleMapsUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-4 py-2 text-xs font-semibold active:scale-95 transition"
+          className="flex items-center gap-3 rounded-2xl bg-white border border-[#EAE7E0] p-3.5 active:scale-[0.99] transition"
         >
-          <Navigation className="w-3.5 h-3.5" />
-          Get Directions on Google Maps
-          <ExternalLink className="w-3 h-3 text-white/70" />
+          <span className="w-10 h-10 rounded-full bg-[#164237] text-white flex items-center justify-center shrink-0">
+            <Navigation className="w-4 h-4" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-bold text-[#1A2421]">
+              Get directions
+            </span>
+            <span className="block text-[11px] text-[#616E69]">
+              Opens in Google Maps — fastest route to {place.name}
+            </span>
+          </span>
+          <ExternalLink className="w-4 h-4 text-[#616E69] shrink-0" />
         </a>
       </div>
 
