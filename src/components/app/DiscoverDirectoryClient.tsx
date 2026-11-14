@@ -4,13 +4,19 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
+  BedDouble,
+  Coffee,
   Flame,
+  Landmark,
   LayoutGrid,
+  Leaf,
   List,
   Map as MapIcon,
   Search,
   SlidersHorizontal,
   Star,
+  UtensilsCrossed,
+  Waves,
   X,
 } from "lucide-react";
 import { PlaceCard, type PlaceCardData } from "./PlaceCard";
@@ -266,24 +272,25 @@ function DiscoverDirectoryInner({
         <div className="px-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           <span className="text-[11px] font-semibold text-[#616E69] shrink-0">I want…</span>
           {([
-            ["all", "🌿 Everything"],
-            ["nature", "💧 Falls & nature"],
-            ["resort", "🏊 Swim & relax"],
-            ["restaurant", "🍽️ Eat"],
-            ["cafe", "☕ Coffee"],
-            ["heritage", "🏛️ Heritage"],
-            ["accommodation", "🛏️ Stay overnight"],
-          ] as const).map(([value, label]) => (
+            ["all", "Everything", Leaf],
+            ["nature", "Falls & nature", Waves],
+            ["resort", "Swim & relax", Waves],
+            ["restaurant", "Eat", UtensilsCrossed],
+            ["cafe", "Coffee", Coffee],
+            ["heritage", "Heritage", Landmark],
+            ["accommodation", "Stay overnight", BedDouble],
+          ] as const).map(([value, label, Icon]) => (
             <button
               key={value}
               type="button"
               onClick={() => { setSelectedType(value); setSelectedCategory("all"); }}
-              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold border transition active:scale-95 cursor-pointer ${
+              className={`shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-semibold border transition active:scale-95 cursor-pointer ${
                 selectedType === value
                   ? "bg-[#164237] text-white border-[#164237]"
                   : "bg-white text-[#1A2421] border-[#EAE7E0]"
               }`}
             >
+              <Icon className="w-3.5 h-3.5" />
               {label}
             </button>
           ))}
@@ -331,47 +338,19 @@ function DiscoverDirectoryInner({
           </div>
         </div>
 
-        {/* Clean Category Pills */}
-        <div className="w-full flex items-center gap-1.5 overflow-x-auto no-scrollbar px-4 after:content-[''] after:w-1 after:shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setSelectedCategory("all");
-              setSelectedType("all");
-            }}
-            className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition active:scale-95 cursor-pointer ${
-              selectedCategory === "all" && selectedType === "all"
-                ? "bg-[#164237] text-white"
-                : "bg-white text-[#1A2421] border border-[#EAE7E0]"
-            }`}
-          >
-            All ({initialPlaces.length})
-          </button>
-
-          {nonEmptyCategories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => {
-                setSelectedCategory(cat.slug);
-                setSelectedType("all");
-              }}
-              className={`shrink-0 px-3 py-1 rounded-full text-xs font-medium transition active:scale-95 cursor-pointer ${
-                selectedCategory === cat.slug
-                  ? "bg-[#164237] text-white"
-                  : "bg-white text-[#1A2421] border border-[#EAE7E0]"
-              }`}
-            >
-              {cat.name}
+        {selectedCategory !== "all" && (
+          <div className="px-4">
+            <button type="button" onClick={() => setSelectedCategory("all")} className="inline-flex items-center gap-1 rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-semibold cursor-pointer">
+              {nonEmptyCategories.find((c) => c.slug === selectedCategory)?.name ?? "Category"} <X className="w-3 h-3" />
             </button>
-          ))}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Results & Active Chips */}
       <div className="px-4 space-y-3.5">
       <p className="rounded-xl bg-[#164237]/5 border border-[#164237]/10 px-3 py-2 text-[11px] text-[#164237]">
-        👆 Tap a place to see it, or tap <strong>+ Add</strong> to put it straight into your trip. No account needed.
+        Tap a place to see it, or tap <strong>Add to Trip</strong> to put it straight into your plan. No account needed.
       </p>
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-xs text-[#616E69]">

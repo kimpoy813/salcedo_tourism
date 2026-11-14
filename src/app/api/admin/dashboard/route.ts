@@ -32,6 +32,7 @@ export async function GET() {
       allSubmissions,
       allStops,
       allArrivalRecords,
+      allRatings,
     ] = await Promise.all([
       db.select().from(schema.places),
       db.select().from(schema.barangays),
@@ -203,6 +204,40 @@ export async function GET() {
       );
     }
 
+    // Official Spot Rankings (same basis as the tourist app: visits = views + verified arrivals)
+    const ratingAgg = new Map<string, { sum: number; count: number }>();
+    for (const r of allRatings) {
+      const cur = ratingAgg.get(r.placeId) ?? { sum: 0, count: 0 };
+      cur.sum += r.rating;
+      cur.count += 1;
+      ratingAgg.set(r.placeId, cur);
+    }
+    const rankedPlaces = publishedPlaces.map((pl) => {
+      const views = placeViewCounts.get(pl.id) ?? 0;
+      const arrivals = arrivalsByPlaceMap.get(pl.id) ?? 0;
+      const ra = ratingAgg.get(pl.id) ?? { sum: 0, count: 0 };
+      return {
+        placeId: pl.id,
+        name: pl.name,
+        placeType: pl.placeType,
+        views,
+        arrivals,
+        visitCount: views + arrivals,
+        plannedStops: plannedStopMap.get(pl.id) ?? 0,
+        averageRating: ra.count > 0 ? Number((ra.sum / ra.count).toFixed(1)) : 0,
+        ratingCount: ra.count,
+      };
+    });
+    const mostVisitedRanking = [...rankedPlaces]
+      .sort((a, b) => b.visitCount - a.visitCount || b.averageRating - a.averageRating)
+      .slice(0, 10)
+      .map((r, i) => ({ ...r, rank: i + 1 }));
+    const topRatedRanking = [...rankedPlaces]
+      .filter((r) => r.ratingCount > 0)
+      .sort((a, b) => b.averageRating - a.averageRating || b.ratingCount - a.ratingCount)
+      .slice(0, 10)
+      .map((r, i) => ({ ...r, rank: i + 1 }));
+
     const recentPageViews = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(schema.pageViewEvents)
@@ -228,7 +263,7 @@ export async function GET() {
         totalSubmittedItineraries: allItineraries.filter((i) => i.status === "submitted" || i.status === "completed").length,
         tripsCompleted: allItineraries.filter((i) => i.status === "completed").length,
         stopsVisited: allStops.filter((s) => s.visitedAt).length,
-        tripRatingsSubmitted: 0,
+        tripRatingsSubmitted: allRatings.length,
         itinerariesSubmittedToday,
         plannedTravelerCount,
         popularPlannedDestinations,
@@ -262,6 +297,7 @@ export async function GET() {
           count,
         })),
       },
+      spotRankings: { mostVisited: mostVisitedRanking, topRated: topRatedRanking },
       dailyTrends: Array.from(dailyMap.values()),
     });
   } catch (err) {

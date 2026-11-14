@@ -545,6 +545,7 @@ export const itineraries = pgTable(
     plannedVisitDate: date("planned_visit_date").notNull(),
     description: text("description"),
     totalStops: integer("total_stops").default(0).notNull(),
+    numberOfDays: integer("number_of_days").default(1).notNull(),
     estimatedTotalMinutes: integer("estimated_total_minutes").default(0).notNull(),
     status: itineraryStatusEnum("status").default("submitted").notNull(),
     completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -570,6 +571,7 @@ export const itineraryStops = pgTable(
       .notNull()
       .references(() => places.id, { onDelete: "restrict" }),
     stopOrder: integer("stop_order").notNull(),
+    dayNumber: integer("day_number").default(1).notNull(),
     visitTime: text("visit_time"),
     durationMinutes: integer("duration_minutes").default(60).notNull(),
     personalNotes: text("personal_notes"),

@@ -92,6 +92,7 @@ export async function POST(req: Request) {
         .select({
           id: schema.itineraryStops.id,
           stopOrder: schema.itineraryStops.stopOrder,
+          dayNumber: schema.itineraryStops.dayNumber,
           visitTime: schema.itineraryStops.visitTime,
           durationMinutes: schema.itineraryStops.durationMinutes,
           personalNotes: schema.itineraryStops.personalNotes,
@@ -136,6 +137,7 @@ export async function POST(req: Request) {
         plannedVisitDate: itinerary.plannedVisitDate,
         description: itinerary.description,
         totalStops: itinerary.totalStops,
+        numberOfDays: itinerary.numberOfDays,
         estimatedTotalMinutes: itinerary.estimatedTotalMinutes,
         status: itinerary.status,
         completedAt: itinerary.completedAt,

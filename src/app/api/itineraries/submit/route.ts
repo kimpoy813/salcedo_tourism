@@ -100,6 +100,7 @@ export async function POST(req: Request) {
         .values({
           referenceNumber,
           title: itinInput.title,
+          numberOfDays: Math.max(1, ...itinInput.stops.map((s) => s.dayNumber ?? 1)),
           plannedVisitDate: itinInput.plannedVisitDate,
           description: itinInput.description ?? null,
           totalStops: itinInput.stops.length,
@@ -115,6 +116,7 @@ export async function POST(req: Request) {
           itineraryId: createdItinerary.id,
           placeId: stop.placeId,
           stopOrder: idx + 1,
+          dayNumber: stop.dayNumber ?? 1,
           visitTime: stop.visitTime ?? null,
           durationMinutes: stop.durationMinutes,
           personalNotes: stop.personalNotes ?? null,

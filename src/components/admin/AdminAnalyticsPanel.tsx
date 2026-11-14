@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Activity, Building2, CalendarCheck2, MapPin, Route } from "lucide-react";
+import { Activity, Building2, CalendarCheck2, MapPin, Route, Star } from "lucide-react";
 
 export interface DashboardMetrics {
   inventory: {
@@ -72,6 +72,17 @@ export interface DashboardMetrics {
     itineraries: number;
     verifiedArrivals: number;
   }>;
+  spotRankings?: {
+    mostVisited: Array<{ rank: number; placeId: string; name: string; placeType: string; visitCount: number; views: number; arrivals: number; plannedStops: number; averageRating: number; ratingCount: number }>;
+    topRated: Array<{ rank: number; placeId: string; name: string; placeType: string; visitCount: number; views: number; arrivals: number; plannedStops: number; averageRating: number; ratingCount: number }>;
+  };
+}
+
+function rankBadgeClass(rank: number) {
+  if (rank === 1) return "bg-[#B88A44] text-white";
+  if (rank === 2) return "bg-[#164237] text-white";
+  if (rank === 3) return "bg-[#1D7874] text-white";
+  return "bg-[#F3F2EE] text-[#1A2421]";
 }
 
 export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
@@ -283,6 +294,63 @@ export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
           </ResponsiveContainer>
         </div>
       </section>
+
+      {/* Official Spot Rankings — same rankings tourists see in the app */}
+      {data.spotRankings && (
+        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+            <div>
+              <h3 className="font-display text-sm font-bold text-[#1A2421]">Spot Rankings — Most Visited</h3>
+              <p className="text-[11px] text-[#616E69]">Views + verified arrivals, same order as the tourist app.</p>
+            </div>
+            {data.spotRankings.mostVisited.length === 0 ? (
+              <p className="text-xs text-[#616E69]">No published spots yet.</p>
+            ) : (
+              <ol className="divide-y divide-[#EAE7E0] text-xs">
+                {data.spotRankings.mostVisited.map((r) => (
+                  <li key={r.placeId} className="flex items-center gap-2.5 py-2">
+                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums ${rankBadgeClass(r.rank)}`}>{r.rank}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-semibold text-[#1A2421] truncate">{r.name}</span>
+                      <span className="block text-[10px] text-[#616E69] capitalize">{r.placeType} • {r.plannedStops} planned stops</span>
+                    </span>
+                    <span className="text-right shrink-0">
+                      <span className="block font-bold text-[#164237] tabular-nums">{r.visitCount} visits</span>
+                      <span className="block text-[10px] text-[#616E69] tabular-nums">{r.views} views • {r.arrivals} arrivals</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+
+          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+            <div>
+              <h3 className="font-display text-sm font-bold text-[#1A2421]">Spot Rankings — Top Rated</h3>
+              <p className="text-[11px] text-[#616E69]">Tourist star ratings submitted in the app (including after-trip ratings).</p>
+            </div>
+            {data.spotRankings.topRated.length === 0 ? (
+              <p className="text-xs text-[#616E69]">No tourist ratings yet.</p>
+            ) : (
+              <ol className="divide-y divide-[#EAE7E0] text-xs">
+                {data.spotRankings.topRated.map((r) => (
+                  <li key={r.placeId} className="flex items-center gap-2.5 py-2">
+                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums ${rankBadgeClass(r.rank)}`}>{r.rank}</span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-semibold text-[#1A2421] truncate">{r.name}</span>
+                      <span className="block text-[10px] text-[#616E69] capitalize">{r.placeType} • {r.visitCount} visits</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 font-bold text-[#1A2421] tabular-nums shrink-0">
+                      <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
+                      {r.averageRating.toFixed(1)} ({r.ratingCount})
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Detailed Rankings */}
       <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
