@@ -21,6 +21,7 @@ const itineraryEventSchema = z.object({
     "submitted",
     "retrieved",
     "downloaded",
+    "trip_completed",
   ]),
   stopCount: z.number().int().min(0).max(50).default(0),
   placeIds: z.array(z.string().uuid()).max(30).default([]),

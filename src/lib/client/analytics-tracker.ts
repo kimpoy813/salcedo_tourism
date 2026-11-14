@@ -103,7 +103,8 @@ export async function trackItineraryEvent(params: {
     | "preview_completed"
     | "submitted"
     | "retrieved"
-    | "downloaded";
+    | "downloaded"
+    | "trip_completed";
   stopCount?: number;
   placeIds?: string[];
 }) {

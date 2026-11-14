@@ -46,6 +46,7 @@ export async function GET() {
       db.select().from(schema.visitorSubmissions),
       db.select().from(schema.itineraryStops),
       db.select().from(schema.visitorArrivalRecords),
+      db.select().from(schema.placeRatings),
     ]);
 
     const publishedPlaces = allPlaces.filter((p) => p.status === "published" && !p.isPlaceholder);
@@ -224,7 +225,10 @@ export async function GET() {
       plannedTourism: {
         metricDefinition:
           "Self-reported travel plans and group sizes from submitted itineraries. Represents planned demand, not confirmed physical arrivals.",
-        totalSubmittedItineraries: allItineraries.filter((i) => i.status === "submitted").length,
+        totalSubmittedItineraries: allItineraries.filter((i) => i.status === "submitted" || i.status === "completed").length,
+        tripsCompleted: allItineraries.filter((i) => i.status === "completed").length,
+        stopsVisited: allStops.filter((s) => s.visitedAt).length,
+        tripRatingsSubmitted: 0,
         itinerariesSubmittedToday,
         plannedTravelerCount,
         popularPlannedDestinations,

@@ -44,6 +44,9 @@ export interface DashboardMetrics {
   plannedTourism: {
     metricDefinition: string;
     totalSubmittedItineraries: number;
+    tripsCompleted?: number;
+    stopsVisited?: number;
+    tripRatingsSubmitted?: number;
     itinerariesSubmittedToday: number;
     plannedTravelerCount: number;
     popularPlannedDestinations: Array<{ placeId: string; name: string; stops: number }>;

@@ -40,6 +40,7 @@ export const placeTypeEnum = pgEnum("place_type", [
 
 export const itineraryStatusEnum = pgEnum("itinerary_status", [
   "submitted",
+  "completed",
   "archived",
   "anonymized",
 ]);
@@ -50,6 +51,7 @@ export const itineraryEventTypeEnum = pgEnum("itinerary_event_type", [
   "submitted",
   "retrieved",
   "downloaded",
+  "trip_completed",
 ]);
 
 // ============================================================================
@@ -545,6 +547,7 @@ export const itineraries = pgTable(
     totalStops: integer("total_stops").default(0).notNull(),
     estimatedTotalMinutes: integer("estimated_total_minutes").default(0).notNull(),
     status: itineraryStatusEnum("status").default("submitted").notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
@@ -570,6 +573,7 @@ export const itineraryStops = pgTable(
     visitTime: text("visit_time"),
     durationMinutes: integer("duration_minutes").default(60).notNull(),
     personalNotes: text("personal_notes"),
+    visitedAt: timestamp("visited_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
