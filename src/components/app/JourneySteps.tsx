@@ -22,6 +22,9 @@ export function JourneySteps() {
     }
   });
 
+  // The X button dismisses the whole card (remembered across visits)
+  if (dismissed) return null;
+
   const hasTrip = draftStopCount > 0;
 
   const steps = [
@@ -59,21 +62,19 @@ export function JourneySteps() {
             No account. No forms unless you want them. Everything else is optional.
           </p>
         </div>
-        {!dismissed && (
-          <button
-            type="button"
-            aria-label="Dismiss welcome"
-            onClick={() => {
-              setDismissed(true);
-              try {
-                window.localStorage.setItem(WELCOME_KEY, "1");
-              } catch { /* ignore */ }
-            }}
-            className="p-1 text-[#616E69] cursor-pointer shrink-0"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          type="button"
+          aria-label="Hide this guide"
+          onClick={() => {
+            setDismissed(true);
+            try {
+              window.localStorage.setItem(WELCOME_KEY, "1");
+            } catch { /* ignore */ }
+          }}
+          className="w-7 h-7 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] active:scale-90 transition cursor-pointer shrink-0"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       <ol className="grid grid-cols-3 gap-2">
@@ -114,7 +115,7 @@ export function JourneySteps() {
       >
         {hasTrip ? `Continue my trip (${draftStopCount} ${draftStopCount === 1 ? "stop" : "stops"}) →` : "Start exploring →"}
       </Link>
-      {!hasTrip && !dismissed && (
+      {!hasTrip && (
         <p className="text-[11px] text-[#616E69] text-center inline-flex items-center justify-center gap-1 w-full">
           <Lightbulb className="w-3.5 h-3.5 text-[#B88A44] shrink-0" />
           Registration and ratings are always optional — they just help Salcedo count and thank its visitors.

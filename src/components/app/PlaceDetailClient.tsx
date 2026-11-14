@@ -8,8 +8,8 @@ import {
   Bookmark,
   Check,
   ExternalLink,
-  MapPin,
   MessageSquarePlus,
+  Navigation,
   Plus,
   Share2,
   Star,
@@ -436,32 +436,25 @@ export function PlaceDetailActions({ place }: { place: PlaceActionPayload }) {
     void trackPlaceView(place.id);
   }, [place.id]);
 
-  const mapsUrl =
+  // Directions live in Google Maps (no in-app routing)
+  const googleMapsUrl =
     place.latitude && place.longitude
-      ? `https://www.openstreetmap.org/?mlat=${place.latitude}&mlon=${place.longitude}#map=16/${place.latitude}/${place.longitude}`
-      : null;
+      ? `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, Salcedo, Ilocos Sur`)}`;
 
   return (
     <>
-      <div className="px-4 flex flex-wrap items-center gap-2 pt-1">
-        <Link
-          href={`/app/map?place=${encodeURIComponent(place.slug)}&route=1`}
-          className="inline-flex items-center gap-1.5 rounded-full bg-[#164237]/10 px-3.5 py-1.5 text-xs font-semibold text-[#164237] active:scale-95 transition"
+      <div className="px-4 pt-1">
+        <a
+          href={googleMapsUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-4 py-2 text-xs font-semibold active:scale-95 transition"
         >
-          <MapPin className="w-3.5 h-3.5" />
-          Route on Map
-        </Link>
-        {mapsUrl && (
-          <a
-            href={mapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE7E0] bg-white px-3.5 py-1.5 text-xs font-medium text-[#1A2421] active:scale-95 transition"
-          >
-            OpenStreetMap
-            <ExternalLink className="w-3 h-3 text-[#616E69]" />
-          </a>
-        )}
+          <Navigation className="w-3.5 h-3.5" />
+          Get Directions on Google Maps
+          <ExternalLink className="w-3 h-3 text-white/70" />
+        </a>
       </div>
 
       {/* Native Sticky Action Dock at Bottom of Place Sheet */}

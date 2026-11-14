@@ -20,12 +20,10 @@ export function MapPageClient({
   places,
   barangays,
   initialPlaceSlug,
-  autoRoute,
 }: {
   places: PlaceCardData[];
   barangays: MapBarangayItem[];
   initialPlaceSlug?: string;
-  autoRoute?: boolean;
 }) {
   return (
     <SalcedoMap
@@ -33,7 +31,6 @@ export function MapPageClient({
       barangays={barangays}
       mode="fullscreen"
       initialPlaceSlug={initialPlaceSlug}
-      autoRoute={autoRoute}
     />
   );
 }

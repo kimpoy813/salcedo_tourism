@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Eye, Flame, LayoutGrid, Star, Trophy } from "lucide-react";
+import { ChevronRight, Flame, LayoutGrid, Star, Trophy } from "lucide-react";
 import type { PlaceCardData } from "./PlaceCard";
 
 type HomeRankTab = "most_visited" | "top_rated" | "by_category";
@@ -176,12 +176,6 @@ export function HomeRankingsCard({
                     <span className="inline-flex items-center gap-0.5 font-semibold text-[#1A2421] shrink-0 tabular-nums">
                       <Star className="w-2.5 h-2.5 text-[#B88A44]" fill="currentColor" />
                       {p.averageRating?.toFixed(1)} ({p.ratingCount})
-                    </span>
-                  )}
-                  {(p.visitCount ?? 0) > 0 && (
-                    <span className="inline-flex items-center gap-0.5 shrink-0 tabular-nums">
-                      <Eye className="w-2.5 h-2.5" />
-                      {p.visitCount}
                     </span>
                   )}
                 </div>
