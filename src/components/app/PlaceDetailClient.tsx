@@ -169,6 +169,35 @@ export function PlaceRatingsSection({
     }
   };
 
+  /** One-tap rating: tap a star, it's saved. Everything else stays optional. */
+  const [quickRating, setQuickRating] = useState(0);
+  const quickRate = async (value: number) => {
+    setQuickRating(value);
+    setStars(value);
+    setError(null);
+    try {
+      const res = await fetch(`/api/places/${placeId}/ratings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: value,
+          travelerType,
+          reviewerToken: getOrCreateReviewerToken(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Could not save your rating.");
+        return;
+      }
+      setSummary(data.summary);
+      setSubmittedNotice(true);
+      showToast(`You rated ${placeName} ${value}★ — thank you!`, { tone: "success" });
+    } catch {
+      setError("You're offline — rating not saved yet.");
+    }
+  };
+
   const total = summary.ratingCount;
 
   return (
@@ -189,7 +218,7 @@ export function PlaceRatingsSection({
           className="no-print inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-3.5 py-1.5 text-xs font-semibold active:scale-95 transition cursor-pointer shrink-0"
         >
           <MessageSquarePlus className="w-3.5 h-3.5" />
-          {submittedNotice ? "Update Rating" : "Rate Spot"}
+          {submittedNotice ? "Edit Review" : "Write a Review"}
         </button>
       </div>
 
@@ -238,6 +267,24 @@ export function PlaceRatingsSection({
           })}
         </div>
       </div>
+
+      {/* One-tap quick rating (no form, no account) */}
+      <div className="bg-[#FAF9F6] rounded-2xl border border-[#EAE7E0] px-4 py-3 flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-xs font-bold text-[#1A2421]">{submittedNotice ? "Your rating" : "Been here? Rate it in 1 tap"}</p>
+          <p className="text-[10px] text-[#616E69]">Optional — helps other tourists choose.</p>
+        </div>
+        <div className="flex items-center gap-0.5 shrink-0" role="radiogroup" aria-label={`Quick rate ${placeName}`}>
+          {[1, 2, 3, 4, 5].map((n) => (
+            <button key={n} type="button" onClick={() => void quickRate(n)} aria-label={`${n} stars`} className="p-1 active:scale-90 transition cursor-pointer">
+              <Star className={`w-6 h-6 ${n <= quickRating ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= quickRating ? "currentColor" : "none"} />
+            </button>
+          ))}
+        </div>
+      </div>
+      {error && !formOpen && (
+        <p className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-800">{error}</p>
+      )}
 
       {/* Account-Free Interactive Rating Form */}
       {formOpen && (

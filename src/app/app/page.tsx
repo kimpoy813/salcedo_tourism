@@ -7,6 +7,7 @@ import {
   getPublishedProducts,
 } from "@/lib/queries/public-tourism";
 import { HomeSearchBar } from "@/components/app/HomeSearchBar";
+import { JourneySteps } from "@/components/app/JourneySteps";
 import { HomeRankingsCard } from "@/components/app/HomeRankingsCard";
 import { PlaceCard } from "@/components/app/PlaceCard";
 
@@ -55,6 +56,7 @@ export default async function TouristHomePage() {
         </div>
 
         <HomeSearchBar />
+        <JourneySteps />
       </section>
 
       {/* 2. Top Ranked Places Immediately Visible Above the Fold */}
