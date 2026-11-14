@@ -227,6 +227,19 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {/* Floating “continue your trip” pill — one tap back into the plan */}
+        {draftStopCount > 0 && !pathname.startsWith("/app/trips") && !isFullScreenMap && (
+          <div className="no-print absolute bottom-[74px] right-3 z-40">
+            <Link
+              href="/app/trips"
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white pl-3 pr-3.5 py-2 text-[11px] font-bold shadow-lg active:scale-95 transition"
+            >
+              <Route className="w-3.5 h-3.5" />
+              My Trip • {draftStopCount} {draftStopCount === 1 ? "stop" : "stops"} →
+            </Link>
+          </div>
+        )}
+
         {/* Native Bottom 5-Tab Navigation Bar */}
         <nav
           aria-label="Primary Tourist Navigation"

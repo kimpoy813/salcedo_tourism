@@ -683,8 +683,32 @@ function TripsPlannerInner({
     setDeleteSuccess(data.message);
   };
 
+  const journeyStep = submissionResult ? 3 : draft.stops.length > 0 ? 2 : 1;
+
   return (
     <div className="space-y-4">
+      {/* 3-step journey — tourists always know where they are and what's left */}
+      <ol className="no-print flex items-center gap-1" aria-label="Your trip progress">
+        {[
+          { n: 1, label: draft.stops.length > 0 ? `${draft.stops.length} added` : "Add places" },
+          { n: 2, label: "Check times" },
+          { n: 3, label: "Save & go" },
+        ].map((s, i) => (
+          <React.Fragment key={s.n}>
+            <li className={`flex items-center gap-1.5 ${journeyStep >= s.n ? "text-[#164237]" : "text-[#616E69]"}`}>
+              <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${journeyStep > s.n ? "bg-[#164237] text-white" : journeyStep === s.n ? "bg-[#164237] text-white" : "bg-[#EFECE5] text-[#616E69]"}`}>
+                {journeyStep > s.n ? "✓" : s.n}
+              </span>
+              <span className="text-[11px] font-semibold whitespace-nowrap">{s.label}</span>
+            </li>
+            {i < 2 && <span className={`flex-1 h-px ${journeyStep > s.n ? "bg-[#164237]" : "bg-[#EAE7E0]"}`} />}
+          </React.Fragment>
+        ))}
+      </ol>
+      <p className="no-print text-[11px] text-[#616E69] -mt-2">
+        That&apos;s all you <em>need</em> to do. Downloading, registering, and rating are optional extras.
+      </p>
+
       {/* Native Segmented Control */}
       <div className="no-print grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0]">
         <button
@@ -694,7 +718,7 @@ function TripsPlannerInner({
             activeTab === "builder" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
           }`}
         >
-          Itinerary ({draft.stops.length})
+          My Trip ({draft.stops.length})
         </button>
         <button
           type="button"
@@ -712,7 +736,7 @@ function TripsPlannerInner({
             activeTab === "retrieve" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
           }`}
         >
-          Lookup
+          Find My Trip
         </button>
       </div>
 
@@ -1102,6 +1126,15 @@ function TripsPlannerInner({
                 <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">{completionNotice}</p>
               )}
 
+              {draft.stops.length === 0 && (
+                <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 text-center space-y-2.5">
+                  <p className="text-2xl">🧳</p>
+                  <p className="font-display text-sm font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
+                  <p className="text-[11px] text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
+                  <Link href="/app/discover" className="inline-flex rounded-full bg-[#164237] text-white px-5 py-2.5 text-xs font-semibold">Browse Destinations →</Link>
+                </div>
+              )}
+
               {/* Add Destination Native Trigger */}
               <button
                 type="button"
@@ -1115,39 +1148,44 @@ function TripsPlannerInner({
               {/* Standalone Export + Optional Registration Dock */}
               {draft.stops.length > 0 && (
                 <div className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-3.5 space-y-2.5">
+                  <p className="text-[11px] text-[#616E69]">
+                    <strong className="text-[#1A2421]">You&apos;re done!</strong> Save your trip and just go — nothing else is required.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      downloadItineraryText(
+                        draft.title,
+                        draft.plannedVisitDate,
+                        draft.stops
+                      )
+                    }
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Save My Trip
+                  </button>
                   <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        downloadItineraryText(
-                          draft.title,
-                          draft.plannedVisitDate,
-                          draft.stops
-                        )
-                      }
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] py-2.5 text-xs font-semibold text-[#1A2421] active:scale-95 transition cursor-pointer"
-                    >
-                      <Download className="w-3.5 h-3.5" />
-                      Save (.txt)
-                    </button>
                     <button
                       type="button"
                       onClick={() => window.print()}
                       className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] py-2.5 text-xs font-semibold text-[#1A2421] active:scale-95 transition cursor-pointer"
                     >
                       <Printer className="w-3.5 h-3.5" />
-                      Print Trip
+                      Print
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setRegisterSheetOpen(true)}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#164237]/30 bg-white py-2.5 text-xs font-semibold text-[#164237] active:scale-95 transition cursor-pointer"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      Register (Optional)
                     </button>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setRegisterSheetOpen(true)}
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    Register with Tourism Office (Optional)
-                  </button>
+                  <p className="text-[10px] text-[#616E69] text-center">
+                    Optional registration (2 min) helps Salcedo count visitors and plan better — skip it freely.
+                  </p>
                 </div>
               )}
             </>
@@ -1561,7 +1599,7 @@ function TripsPlannerInner({
             </div>
 
             <p className="text-[11px] text-[#616E69] leading-relaxed">
-              Fields marked <strong className="text-rose-700">*</strong> are required so the Tourism Office can count your visit. Everything else is optional and helps improve Salcedo tourism planning.
+              <strong>Only 3 things needed:</strong> where you&apos;re from, how many travelers, and the privacy tick at the bottom. Everything else is optional — skip freely.
             </p>
 
             <label className="block">
@@ -1650,6 +1688,10 @@ function TripsPlannerInner({
               </label>
             </div>
 
+            <details className="rounded-xl border border-dashed border-[#EAE7E0] p-3 space-y-3">
+              <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">
+                ➕ Optional details — tap to add (name, contact, transport…)
+              </summary>
             <div>
               <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">First time visiting Salcedo?</span>
               <div className="flex gap-1.5">
@@ -1685,6 +1727,7 @@ function TripsPlannerInner({
                 </select>
               </label>
             </div>
+            </details>
 
             <details className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3">
               <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">Read the full Privacy Notice</summary>

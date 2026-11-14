@@ -155,7 +155,7 @@ export function PlaceCard({
               }`}
             >
               {inDraft ? <Check className="w-3 h-3" /> : <Plus className="w-3 h-3" />}
-              {inDraft ? "Added" : "Trip"}
+              {inDraft ? "Added ✓" : "＋ Add"}
             </button>
           </div>
         </Link>
@@ -251,12 +251,12 @@ export function PlaceCard({
               {inDraft ? (
                 <>
                   <Check className="w-3 h-3" />
-                  Added
+                  Added ✓
                 </>
               ) : (
                 <>
                   <Plus className="w-3 h-3" />
-                  Trip
+                  Add to Trip
                 </>
               )}
             </button>
@@ -353,12 +353,12 @@ export function PlaceCard({
             {inDraft ? (
               <>
                 <Check className="w-3 h-3" />
-                Added
+                Added ✓
               </>
             ) : (
               <>
                 <Plus className="w-3 h-3" />
-                Trip
+                Add to Trip
               </>
             )}
           </button>

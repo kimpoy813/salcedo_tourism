@@ -262,6 +262,33 @@ function DiscoverDirectoryInner({
           </button>
         </div>
 
+        {/* “I’m in the mood for…” — one-tap browsing, no filter knowledge needed */}
+        <div className="px-4 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+          <span className="text-[11px] font-semibold text-[#616E69] shrink-0">I want…</span>
+          {([
+            ["all", "🌿 Everything"],
+            ["nature", "💧 Falls & nature"],
+            ["resort", "🏊 Swim & relax"],
+            ["restaurant", "🍽️ Eat"],
+            ["cafe", "☕ Coffee"],
+            ["heritage", "🏛️ Heritage"],
+            ["accommodation", "🛏️ Stay overnight"],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => { setSelectedType(value); setSelectedCategory("all"); }}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-semibold border transition active:scale-95 cursor-pointer ${
+                selectedType === value
+                  ? "bg-[#164237] text-white border-[#164237]"
+                  : "bg-white text-[#1A2421] border-[#EAE7E0]"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+
         {/* Ranking Mode Segmented Bar */}
         <div className="px-4">
           <div className="grid grid-cols-3 rounded-full bg-[#EFECE5] p-0.5 border border-[#EAE7E0]">
@@ -275,7 +302,7 @@ function DiscoverDirectoryInner({
               }`}
             >
               <Flame className="w-3 h-3" />
-              Most Visited
+              Popular
             </button>
             <button
               type="button"
@@ -287,7 +314,7 @@ function DiscoverDirectoryInner({
               }`}
             >
               <Star className="w-3 h-3" />
-              Top Rated
+              Best Rated
             </button>
             <button
               type="button"
@@ -299,7 +326,7 @@ function DiscoverDirectoryInner({
               }`}
             >
               <LayoutGrid className="w-3 h-3" />
-              Categorized
+              By Category
             </button>
           </div>
         </div>
@@ -343,6 +370,9 @@ function DiscoverDirectoryInner({
 
       {/* Results & Active Chips */}
       <div className="px-4 space-y-3.5">
+      <p className="rounded-xl bg-[#164237]/5 border border-[#164237]/10 px-3 py-2 text-[11px] text-[#164237]">
+        👆 Tap a place to see it, or tap <strong>+ Add</strong> to put it straight into your trip. No account needed.
+      </p>
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-xs text-[#616E69]">
           <strong className="text-[#1A2421] tabular-nums">{filteredPlaces.length}</strong>{" "}
