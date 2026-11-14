@@ -19,6 +19,11 @@ export interface LocalItineraryDraft {
   description: string;
   stops: LocalItineraryStop[];
   updatedAt: string;
+  /** Local lifecycle so finished trips count on-device even without registration. */
+  status?: "planning" | "completed";
+  completedAt?: string | null;
+  /** placeId -> star rating the tourist gave after the trip. */
+  ratings?: Record<string, number>;
 }
 
 export interface LocalTripReceipt {
@@ -28,6 +33,9 @@ export interface LocalTripReceipt {
   totalStops: number;
   savedAt: string;
   note?: string;
+  status?: "submitted" | "completed";
+  completedAt?: string | null;
+  ratings?: Record<string, number>;
 }
 
 const DB_NAME = "turi-salcedo-local-v1";

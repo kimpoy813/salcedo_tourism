@@ -15,6 +15,13 @@
       "when": 1794550836578,
       "tag": "0001_add_place_ratings",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1794557000000,
+      "tag": "0002_trip_completion_ratings",
+      "breakpoints": true
     }
   ]
 }

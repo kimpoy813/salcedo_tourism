@@ -14,14 +14,24 @@ import {
   KeyRound,
   Plus,
   Printer,
+  Minus,
   RefreshCw,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
+  Star,
   Trash2,
+  Wand2,
   X,
 } from "lucide-react";
+import {
+  analyzeSchedule,
+  buildSuggestedSchedule,
+  endTimeFor,
+  formatTime12h,
+  suggestedNextTime,
+} from "@/lib/trip-time";
 import {
   deleteLocalDraft,
   listLocalDrafts,
@@ -45,6 +55,19 @@ interface PrivacyNoticeData {
   bodyMarkdown: string;
 }
 
+function getReviewerToken(): string {
+  if (typeof window === "undefined") return "browser-guest";
+  const key = "cedo_reviewer_token";
+  let token = window.localStorage.getItem(key);
+  if (!token) {
+    token = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `rev-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(key, token);
+  }
+  return token;
+}
+
+const TIME_PRESETS = ["07:00", "08:30", "10:00", "11:30", "13:00", "14:30", "16:00"];
+
 interface RetrievedItinerary {
   id: string;
   referenceNumber: string;
@@ -53,6 +76,8 @@ interface RetrievedItinerary {
   description: string | null;
   totalStops: number;
   estimatedTotalMinutes: number;
+  status?: string;
+  completedAt?: string | null;
   expiresAt: string | null;
   stops: Array<{
     id: string;
@@ -60,6 +85,7 @@ interface RetrievedItinerary {
     visitTime: string | null;
     durationMinutes: number;
     personalNotes: string | null;
+    visitedAt?: string | null;
     placeId: string;
     placeName: string;
     placeSlug: string;
@@ -171,11 +197,18 @@ function TripsPlannerInner({
   const [emailAddress, setEmailAddress] = useState("");
   const [travelerCount, setTravelerCount] = useState<number>(2);
   const [purposeOfVisit, setPurposeOfVisit] = useState("Leisure & Nature Sightseeing");
-  const [firstTimeVisitor] = useState<"yes" | "no" | "prefer_not_to_say">("yes");
-  const [transportationType] = useState("Private Vehicle");
-  const [lengthOfStay] = useState("Day Trip");
-  const [discoverySource] = useState("Social Media / Online Search");
-  const [preferredExperience] = useState("Waterfalls & Resorts");
+  const [firstTimeVisitor, setFirstTimeVisitor] = useState<"yes" | "no" | "prefer_not_to_say">("yes");
+  const [transportationType, setTransportationType] = useState("Private Vehicle");
+  const [lengthOfStay, setLengthOfStay] = useState("Day Trip");
+  const [discoverySource, setDiscoverySource] = useState("Social Media / Online Search");
+  const [preferredExperience, setPreferredExperience] = useState("Waterfalls & Resorts");
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  // After-trip rating state: placeId -> stars (builder/local + retrieved trips)
+  const [stopRatings, setStopRatings] = useState<Record<string, number>>({});
+  const [stopComments, setStopComments] = useState<Record<string, string>>({});
+  const [visitedStops, setVisitedStops] = useState<Record<string, boolean>>({});
+  const [completing, setCompleting] = useState(false);
+  const [completionNotice, setCompletionNotice] = useState<string | null>(null);
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [followUpConsentGiven, setFollowUpConsentGiven] = useState(false);
 
@@ -246,6 +279,107 @@ function TripsPlannerInner({
     return Number(total.toFixed(1));
   }, [draft.stops]);
 
+  const scheduleIssues = useMemo(() => analyzeSchedule(draft.stops), [draft.stops]);
+  const issuesByIndex = useMemo(() => {
+    const m = new Map<number, (typeof scheduleIssues)[number]>();
+    for (const i of scheduleIssues) m.set(i.index, i);
+    return m;
+  }, [scheduleIssues]);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const tripIsDue = draft.plannedVisitDate <= todayStr;
+  const completedStopsCount = draft.stops.filter((s) => visitedStops[s.placeId] ?? true).length;
+
+  const applySuggestedSchedule = async () => {
+    const first = draft.stops.find((s) => s.visitTime)?.visitTime || "08:30";
+    const stops = buildSuggestedSchedule(draft.stops, first).map((s, i) => ({
+      ...draft.stops[i],
+      visitTime: s.visitTime,
+    }));
+    await persistDraft({ ...draft, stops });
+    showToast("Times auto-arranged with travel gaps", { tone: "success" });
+  };
+
+  /** Local (unregistered) trip completion: rate each stop into the public ratings system. */
+  const handleCompleteLocalTrip = async () => {
+    setCompleting(true);
+    setCompletionNotice(null);
+    try {
+      let rated = 0;
+      for (const s of draft.stops) {
+        if ((visitedStops[s.placeId] ?? true) && stopRatings[s.placeId]) {
+          const res = await fetch(`/api/places/${s.placeId}/ratings`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              rating: stopRatings[s.placeId],
+              comment: stopComments[s.placeId]?.trim() || null,
+              travelerType: "Leisure",
+              reviewerToken: getReviewerToken(),
+            }),
+          });
+          if (res.ok) rated += 1;
+        }
+      }
+      const completed: LocalItineraryDraft = {
+        ...draft,
+        status: "completed",
+        completedAt: new Date().toISOString(),
+        ratings: { ...(draft.ratings ?? {}), ...stopRatings },
+      };
+      await persistDraft(completed);
+      void trackItineraryEvent({ eventType: "trip_completed", stopCount: completedStopsCount, placeIds: draft.stops.map((s) => s.placeId) });
+      setCompletionNotice(
+        `Trip completed and counted: ${completedStopsCount} destination(s) visited, ${rated} rating(s) saved to the destination pages. Agyaman kami!`
+      );
+      showToast("Trip completed 🎉", { tone: "success" });
+    } catch {
+      setCompletionNotice("Could not save completion while offline. Your ratings are kept in this draft — try again when connected.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  /** Registered trip completion (counts in Tourism Office statistics). */
+  const handleCompleteRegisteredTrip = async () => {
+    if (!retrieved) return;
+    setCompleting(true);
+    setRetError(null);
+    try {
+      const res = await fetch("/api/itineraries/complete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referenceNumber: retrieved.referenceNumber,
+          privateCode: retCode.trim(),
+          reviewerToken: getReviewerToken(),
+          stops: retrieved.stops.map((s) => ({
+            placeId: s.placeId,
+            visited: visitedStops[s.placeId] ?? Boolean(s.visitedAt) ?? true,
+            rating: stopRatings[s.placeId] ?? null,
+            comment: stopComments[s.placeId]?.trim() || null,
+          })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRetError(data.error || "Could not complete this trip.");
+        return;
+      }
+      setRetrieved({ ...retrieved, status: "completed", completedAt: data.completedAt });
+      const receipt = localReceipts.find((r) => r.referenceNumber === retrieved.referenceNumber);
+      if (receipt) {
+        await saveLocalReceipt({ ...receipt, status: "completed", completedAt: data.completedAt, ratings: stopRatings });
+        setLocalReceipts(await listLocalReceipts());
+      }
+      setCompletionNotice(data.message);
+      showToast("Trip completed & counted 🎉", { tone: "success" });
+    } catch {
+      setRetError("Network error while completing trip.");
+    } finally {
+      setCompleting(false);
+    }
+  };
+
   const persistDraft = async (nextDraft: LocalItineraryDraft, showNotice = false) => {
     const updated = { ...nextDraft, updatedAt: new Date().toISOString() };
     setDraft(updated);
@@ -312,7 +446,10 @@ function TripsPlannerInner({
             featuredImageUrl: place.featuredImageUrl ?? null,
             latitude: place.latitude ?? null,
             longitude: place.longitude ?? null,
-            visitTime: draft.stops.length === 0 ? "08:30" : "",
+            visitTime:
+              draft.stops.length === 0
+                ? "08:30"
+                : suggestedNextTime(draft.stops, draft.stops.length) || "",
             durationMinutes: 90,
             personalNotes: "",
           },
@@ -386,8 +523,14 @@ function TripsPlannerInner({
       setSubmitError("Add at least one destination first.");
       return;
     }
-    if (!privacyAcknowledged) {
-      setSubmitError("Accept the RA 10173 Privacy Notice before submitting.");
+    const errors: Record<string, string> = {};
+    if (originMunicipality.trim().length < 2) errors.originMunicipality = "Enter your city or municipality.";
+    if (originProvince.trim().length < 2) errors.originProvince = "Enter your province.";
+    if (emailAddress.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress.trim())) errors.emailAddress = "Enter a valid email, or leave it blank.";
+    if (!privacyAcknowledged) errors.privacy = "Please tick the Privacy Notice acknowledgement below.";
+    setFormErrors(errors);
+    if (Object.keys(errors).length > 0) {
+      setSubmitError("Please fix the highlighted fields above.");
       return;
     }
 
@@ -817,45 +960,146 @@ function TripsPlannerInner({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="time"
-                            value={s.visitTime}
-                            onChange={(e) =>
-                              void updateStopField(idx, "visitTime", e.target.value)
-                            }
-                            aria-label="Visit time"
-                            className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-2.5 py-1.5 text-xs tabular-nums"
-                          />
-                          <div className="flex items-center gap-1">
-                            {DURATION_PRESETS.map((mins) => (
-                              <button
-                                key={mins}
-                                type="button"
-                                onClick={() =>
-                                  void updateStopField(idx, "durationMinutes", mins)
-                                }
-                                className={`flex-1 rounded-xl py-1.5 text-[10px] font-semibold border cursor-pointer ${
-                                  s.durationMinutes === mins
-                                    ? "bg-[#164237] text-white border-[#164237]"
-                                    : "bg-[#FAF9F6] text-[#616E69] border-[#EAE7E0]"
-                                }`}
-                              >
-                                {mins === 60
-                                  ? "1h"
-                                  : mins === 90
-                                  ? "1.5h"
-                                  : mins === 120
-                                  ? "2h"
-                                  : "30m"}
+                        {/* Designed time planner: arrival, stay length, computed departure */}
+                        <div className="space-y-2 rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-2.5">
+                          <div className="flex items-end gap-2">
+                            <label className="flex-1 min-w-0">
+                              <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Arrive at</span>
+                              <input
+                                type="time"
+                                value={s.visitTime}
+                                onChange={(e) => void updateStopField(idx, "visitTime", e.target.value)}
+                                aria-label={`Arrival time at ${s.placeName}`}
+                                className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2 py-1.5 text-xs font-semibold tabular-nums focus:outline-none focus:border-[#164237]"
+                              />
+                            </label>
+                            <div className="text-center shrink-0 pb-0.5">
+                              <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Leave</span>
+                              <span className="text-xs font-bold text-[#164237] tabular-nums">{formatTime12h(endTimeFor(s.visitTime, s.durationMinutes))}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {TIME_PRESETS.map((t) => (
+                              <button key={t} type="button" onClick={() => void updateStopField(idx, "visitTime", t)}
+                                className={`rounded-full px-2 py-1 text-[10px] font-semibold border cursor-pointer ${s.visitTime === t ? "bg-[#164237] text-white border-[#164237]" : "bg-white text-[#616E69] border-[#EAE7E0]"}`}>
+                                {formatTime12h(t)}
                               </button>
                             ))}
+                            {idx > 0 && suggestedNextTime(draft.stops, idx) && (
+                              <button type="button" onClick={() => { const t = suggestedNextTime(draft.stops, idx); if (t) void updateStopField(idx, "visitTime", t); }}
+                                className="rounded-full px-2 py-1 text-[10px] font-semibold border border-dashed border-[#B88A44] text-[#B88A44] bg-white cursor-pointer">
+                                ✨ Suggest {formatTime12h(suggestedNextTime(draft.stops, idx))}
+                              </button>
+                            )}
                           </div>
+                          <div>
+                            <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Stay for</span>
+                            <div className="flex items-center gap-1">
+                              <button type="button" aria-label="Shorter stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.max(15, (s.durationMinutes || 60) - 15))}
+                                className="w-7 h-7 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3 h-3" /></button>
+                              {DURATION_PRESETS.map((mins) => (
+                                <button key={mins} type="button" onClick={() => void updateStopField(idx, "durationMinutes", mins)}
+                                  className={`flex-1 rounded-lg py-1.5 text-[10px] font-semibold border cursor-pointer ${s.durationMinutes === mins ? "bg-[#164237] text-white border-[#164237]" : "bg-white text-[#616E69] border-[#EAE7E0]"}`}>
+                                  {mins === 60 ? "1h" : mins === 90 ? "1.5h" : mins === 120 ? "2h" : "30m"}
+                                </button>
+                              ))}
+                              <button type="button" aria-label="Longer stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.min(480, (s.durationMinutes || 60) + 15))}
+                                className="w-7 h-7 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Plus className="w-3 h-3" /></button>
+                              <span className="text-[11px] font-bold text-[#1A2421] tabular-nums w-10 text-right">{s.durationMinutes}m</span>
+                            </div>
+                          </div>
+                          {issuesByIndex.get(idx) && (
+                            <p className={`rounded-lg px-2 py-1.5 text-[11px] ${issuesByIndex.get(idx)!.kind === "overlap" ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}>
+                              ⚠ {issuesByIndex.get(idx)!.message}
+                              {issuesByIndex.get(idx)!.suggestedTime && (
+                                <button type="button" onClick={() => void updateStopField(idx, "visitTime", issuesByIndex.get(idx)!.suggestedTime!)}
+                                  className="ml-1 font-bold underline cursor-pointer">Use {formatTime12h(issuesByIndex.get(idx)!.suggestedTime)}</button>
+                              )}
+                            </p>
+                          )}
+                          <input
+                            type="text"
+                            value={s.personalNotes}
+                            onChange={(e) => void updateStopField(idx, "personalNotes", e.target.value)}
+                            placeholder="Note for this stop (e.g. bring swimwear, buy tickets)…"
+                            aria-label={`Notes for ${s.placeName}`}
+                            className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#164237]"
+                          />
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+
+              {/* Day summary: makes the plan (and its totals) explicit at a glance */}
+              {draft.stops.length > 0 && (
+                <div className="bg-[#164237] text-white rounded-2xl p-3.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Your day at a glance</p>
+                    <button type="button" onClick={() => void applySuggestedSchedule()}
+                      className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition">
+                      <Wand2 className="w-3 h-3" /> Auto-arrange times
+                    </button>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center">
+                    <div><p className="font-display text-base font-bold tabular-nums">{draft.stops.length}</p><p className="text-[10px] text-white/70">Stops</p></div>
+                    <div><p className="font-display text-base font-bold tabular-nums">{formatTime12h(draft.stops.find((s) => s.visitTime)?.visitTime)}</p><p className="text-[10px] text-white/70">Starts</p></div>
+                    <div><p className="font-display text-base font-bold tabular-nums">{formatTime12h(endTimeFor(draft.stops[draft.stops.length - 1]?.visitTime, draft.stops[draft.stops.length - 1]?.durationMinutes))}</p><p className="text-[10px] text-white/70">Ends</p></div>
+                    <div><p className="font-display text-base font-bold tabular-nums">{totalDistanceKm > 0 ? `${totalDistanceKm}km` : "—"}</p><p className="text-[10px] text-white/70">Travel</p></div>
+                  </div>
+                  {scheduleIssues.length > 0 && (
+                    <p className="text-[11px] text-amber-200">⚠ {scheduleIssues.length} timing {scheduleIssues.length === 1 ? "issue" : "issues"} to fix — tap “Use …” on the stop, or Auto-arrange.</p>
+                  )}
+                  <p className="text-[11px] text-white/70">
+                    {draft.status === "completed"
+                      ? `✅ Completed${draft.completedAt ? ` on ${draft.completedAt.slice(0, 10)}` : ""} — this trip and its ratings now count in Salcedo's destination rankings.`
+                      : "Tip: Register below so this plan counts in Tourism Office statistics, then come back after your trip to rate each destination."}
+                  </p>
+                </div>
+              )}
+
+              {/* After-trip: mark visited + rate each destination */}
+              {draft.stops.length > 0 && tripIsDue && draft.status !== "completed" && (
+                <div className="no-print bg-white rounded-2xl border-2 border-[#B88A44]/50 p-4 space-y-3">
+                  <div>
+                    <h2 className="font-display text-sm font-bold text-[#1A2421]">How was your Salcedo trip? 🎉</h2>
+                    <p className="text-[11px] text-[#616E69]">Tick the places you actually visited and rate each one — ratings appear on the destination pages and help the next tourists (and the Tourism Office counts completed trips).</p>
+                  </div>
+                  {draft.stops.map((s) => (
+                    <div key={s.placeId} className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-display text-xs font-bold text-[#1A2421] truncate">{s.placeName}</p>
+                        <label className="flex items-center gap-1.5 text-[11px] font-semibold text-[#164237] cursor-pointer shrink-0">
+                          <input type="checkbox" checked={visitedStops[s.placeId] ?? true} onChange={(e) => setVisitedStops((v) => ({ ...v, [s.placeId]: e.target.checked }))} className="accent-[#164237]" />
+                          Visited
+                        </label>
+                      </div>
+                      {(visitedStops[s.placeId] ?? true) && (
+                        <>
+                          <div className="flex items-center gap-1" role="radiogroup" aria-label={`Rate ${s.placeName}`}>
+                            {[1, 2, 3, 4, 5].map((n) => (
+                              <button key={n} type="button" onClick={() => setStopRatings((r) => ({ ...r, [s.placeId]: n }))} aria-label={`${n} stars`} className="p-0.5 active:scale-90 transition cursor-pointer">
+                                <Star className={`w-6 h-6 ${n <= (stopRatings[s.placeId] ?? 0) ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= (stopRatings[s.placeId] ?? 0) ? "currentColor" : "none"} />
+                              </button>
+                            ))}
+                            <span className="text-[11px] font-semibold text-[#616E69]">{stopRatings[s.placeId] ? `${stopRatings[s.placeId]}/5` : "Tap to rate"}</span>
+                          </div>
+                          <input type="text" value={stopComments[s.placeId] ?? ""} onChange={(e) => setStopComments((c) => ({ ...c, [s.placeId]: e.target.value }))} placeholder="One-line tip for other tourists (optional)…" maxLength={500}
+                            className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2 py-1.5 text-[11px]" />
+                        </>
+                      )}
+                    </div>
+                  ))}
+                  {completionNotice && <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">{completionNotice}</p>}
+                  <button type="button" disabled={completing} onClick={() => void handleCompleteLocalTrip()}
+                    className="w-full rounded-full bg-[#B88A44] text-white py-3 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer">
+                    {completing ? "Saving…" : "Finish Trip & Submit Ratings"}
+                  </button>
+                </div>
+              )}
+              {draft.status === "completed" && completionNotice && (
+                <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">{completionNotice}</p>
               )}
 
               {/* Add Destination Native Trigger */}
@@ -1102,12 +1346,56 @@ function TripsPlannerInner({
                   >
                     <span className="font-medium text-[#1A2421]">
                       {s.stopOrder}. {s.placeName}
+                      {s.visitedAt && <span className="ml-1.5 text-[10px] font-bold text-[#164237]">✓ Visited</span>}
                     </span>
                     <span className="text-[#616E69] tabular-nums">
-                      {s.visitTime || "Flexible"} ({s.durationMinutes}m)
+                      {s.visitTime ? formatTime12h(s.visitTime) : "Flexible"} ({s.durationMinutes}m)
                     </span>
                   </div>
                 ))}
+              </div>
+
+              {/* After-trip completion + per-destination ratings (counts in Tourism Office stats) */}
+              <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3 space-y-3">
+                {retrieved.status === "completed" ? (
+                  <p className="text-xs font-semibold text-[#164237]">
+                    ✅ Trip completed{retrieved.completedAt ? ` on ${String(retrieved.completedAt).slice(0, 10)}` : ""} — counted by the Tourism Office. You can still update your ratings below.
+                  </p>
+                ) : (
+                  <div>
+                    <p className="text-xs font-bold text-[#1A2421]">Finished this trip?</p>
+                    <p className="text-[11px] text-[#616E69]">Mark the stops you visited and rate each destination. Completed trips and ratings count in Salcedo&apos;s official tourism statistics and destination rankings.</p>
+                  </div>
+                )}
+                {retrieved.stops.map((s) => (
+                  <div key={s.id} className="rounded-lg bg-white border border-[#EAE7E0] p-2.5 space-y-1.5">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-bold text-[#1A2421] truncate">{s.placeName}</p>
+                      <label className="flex items-center gap-1.5 text-[11px] font-semibold text-[#164237] cursor-pointer shrink-0">
+                        <input type="checkbox" checked={visitedStops[s.placeId] ?? Boolean(s.visitedAt) ?? true} onChange={(e) => setVisitedStops((v) => ({ ...v, [s.placeId]: e.target.checked }))} className="accent-[#164237]" />
+                        Visited
+                      </label>
+                    </div>
+                    {(visitedStops[s.placeId] ?? Boolean(s.visitedAt) ?? true) && (
+                      <>
+                        <div className="flex items-center gap-1">
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <button key={n} type="button" onClick={() => setStopRatings((r) => ({ ...r, [s.placeId]: n }))} aria-label={`Rate ${s.placeName} ${n} stars`} className="p-0.5 active:scale-90 transition cursor-pointer">
+                              <Star className={`w-6 h-6 ${n <= (stopRatings[s.placeId] ?? 0) ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= (stopRatings[s.placeId] ?? 0) ? "currentColor" : "none"} />
+                            </button>
+                          ))}
+                          <span className="text-[11px] font-semibold text-[#616E69]">{stopRatings[s.placeId] ? `${stopRatings[s.placeId]}/5` : "Tap to rate"}</span>
+                        </div>
+                        <input type="text" value={stopComments[s.placeId] ?? ""} onChange={(e) => setStopComments((c) => ({ ...c, [s.placeId]: e.target.value }))} placeholder="Tip for other tourists (optional)…" maxLength={500} className="w-full rounded-lg border border-[#EAE7E0] bg-[#FAF9F6] px-2 py-1.5 text-[11px]" />
+                      </>
+                    )}
+                  </div>
+                ))}
+                {completionNotice && <p className="rounded-lg bg-[#F3F2EE] p-2.5 text-[11px] text-[#164237]">{completionNotice}</p>}
+                <button type="button" disabled={completing} onClick={() => void handleCompleteRegisteredTrip()}
+                  className="w-full rounded-full bg-[#B88A44] text-white py-2.5 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer">
+                  {completing ? "Saving…" : retrieved.status === "completed" ? "Update My Ratings" : "Complete Trip & Submit Ratings"}
+                </button>
               </div>
 
               <div className="no-print pt-3 border-t border-[#EAE7E0] space-y-2">
@@ -1272,15 +1560,25 @@ function TripsPlannerInner({
               </span>
             </div>
 
-            <input
-              type="text"
-              value={visitorName}
-              onChange={(e) => setVisitorName(e.target.value)}
-              placeholder="Full Name (Optional)"
-              className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
-            />
+            <p className="text-[11px] text-[#616E69] leading-relaxed">
+              Fields marked <strong className="text-rose-700">*</strong> are required so the Tourism Office can count your visit. Everything else is optional and helps improve Salcedo tourism planning.
+            </p>
 
-            <div className="flex flex-wrap gap-1.5">
+            <label className="block">
+              <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Your full name <span className="font-normal text-[#616E69]">(optional)</span></span>
+              <input
+                type="text"
+                value={visitorName}
+                onChange={(e) => setVisitorName(e.target.value)}
+                placeholder="e.g. Maria Clara"
+                autoComplete="name"
+                className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
+              />
+            </label>
+
+            <div>
+              <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Where are you visiting from? *</span>
+              <div className="flex flex-wrap gap-1.5">
               {ORIGIN_QUICK_CITIES.map((c) => (
                 <button
                   key={c.city}
@@ -1301,63 +1599,98 @@ function TripsPlannerInner({
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <input
-                type="text"
-                required
-                value={originMunicipality}
-                onChange={(e) => setOriginMunicipality(e.target.value)}
-                placeholder="City / Municipality *"
-                className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
-              />
-              <input
-                type="text"
-                required
-                value={originProvince}
-                onChange={(e) => setOriginProvince(e.target.value)}
-                placeholder="Province *"
-                className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
-              />
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">City / Municipality <span className="text-rose-700">*</span></span>
+                <input type="text" required value={originMunicipality} onChange={(e) => setOriginMunicipality(e.target.value)} placeholder="e.g. Candon City" autoComplete="address-level2"
+                  className={`w-full rounded-xl border bg-[#FAF9F6] px-3.5 py-2.5 text-sm ${formErrors.originMunicipality ? "border-rose-400" : "border-[#EAE7E0]"}`} />
+                {formErrors.originMunicipality && <span className="block text-[11px] text-rose-700 mt-1">{formErrors.originMunicipality}</span>}
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Province <span className="text-rose-700">*</span></span>
+                <input type="text" required value={originProvince} onChange={(e) => setOriginProvince(e.target.value)} placeholder="e.g. Ilocos Sur" autoComplete="address-level1"
+                  className={`w-full rounded-xl border bg-[#FAF9F6] px-3.5 py-2.5 text-sm ${formErrors.originProvince ? "border-rose-400" : "border-[#EAE7E0]"}`} />
+                {formErrors.originProvince && <span className="block text-[11px] text-rose-700 mt-1">{formErrors.originProvince}</span>}
+              </label>
+            </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
-              <input
-                type="tel"
-                value={contactNumber}
-                onChange={(e) => setContactNumber(e.target.value)}
-                placeholder="Phone (Optional)"
-                className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
-              />
-              <input
-                type="email"
-                value={emailAddress}
-                onChange={(e) => setEmailAddress(e.target.value)}
-                placeholder="Email (Optional)"
-                className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
-              />
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Mobile number <span className="font-normal text-[#616E69]">(optional)</span></span>
+                <input type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="09XX XXX XXXX" autoComplete="tel"
+                  className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm" />
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Email <span className="font-normal text-[#616E69]">(optional)</span></span>
+                <input type="email" value={emailAddress} onChange={(e) => setEmailAddress(e.target.value)} placeholder="you@email.com" autoComplete="email"
+                  className={`w-full rounded-xl border bg-[#FAF9F6] px-3.5 py-2.5 text-sm ${formErrors.emailAddress ? "border-rose-400" : "border-[#EAE7E0]"}`} />
+                {formErrors.emailAddress && <span className="block text-[11px] text-rose-700 mt-1">{formErrors.emailAddress}</span>}
+              </label>
             </div>
 
-            <div className="grid grid-cols-3 gap-2">
-              <input
-                type="number"
-                min={1}
-                max={200}
-                value={travelerCount}
-                onChange={(e) => setTravelerCount(Number(e.target.value))}
-                aria-label="Travelers"
-                className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm tabular-nums"
-              />
-              <select
-                value={purposeOfVisit}
-                onChange={(e) => setPurposeOfVisit(e.target.value)}
-                className="col-span-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs"
-              >
-                <option>Leisure &amp; Nature Sightseeing</option>
-                <option>Family Resort Outing</option>
-                <option>Agri-Tourism / Farm Visit</option>
-                <option>Cultural / Fiesta Participation</option>
-                <option>Research / Educational Fieldwork</option>
-              </select>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">How many travelers? *</span>
+                <div className="flex items-center gap-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-2 py-1.5">
+                  <button type="button" aria-label="Fewer travelers" onClick={() => setTravelerCount((c) => Math.max(1, c - 1))} className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
+                  <span className="flex-1 text-center text-sm font-bold tabular-nums">{travelerCount}</span>
+                  <button type="button" aria-label="More travelers" onClick={() => setTravelerCount((c) => Math.min(200, c + 1))} className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Purpose of visit</span>
+                <select value={purposeOfVisit} onChange={(e) => setPurposeOfVisit(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                  <option>Leisure &amp; Nature Sightseeing</option>
+                  <option>Family Resort Outing</option>
+                  <option>Agri-Tourism / Farm Visit</option>
+                  <option>Cultural / Fiesta Participation</option>
+                  <option>Research / Educational Fieldwork</option>
+                  <option>Business / Official Travel</option>
+                </select>
+              </label>
             </div>
+
+            <div>
+              <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">First time visiting Salcedo?</span>
+              <div className="flex gap-1.5">
+                {([["yes", "Yes, first time"], ["no", "Returning visitor"], ["prefer_not_to_say", "Prefer not to say"]] as const).map(([v, label]) => (
+                  <button key={v} type="button" onClick={() => setFirstTimeVisitor(v)} className={`flex-1 rounded-full px-2 py-1.5 text-[11px] font-semibold border cursor-pointer ${firstTimeVisitor === v ? "bg-[#164237] text-white border-[#164237]" : "bg-[#FAF9F6] border-[#EAE7E0] text-[#1A2421]"}`}>{label}</button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Transportation</span>
+                <select value={transportationType} onChange={(e) => setTransportationType(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                  <option>Private Vehicle</option><option>Public Bus / Van</option><option>Tricycle / Local Transport</option><option>Motorcycle</option><option>Organized Tour Van</option><option>Walking / Cycling</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Length of stay</span>
+                <select value={lengthOfStay} onChange={(e) => setLengthOfStay(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                  <option>Day Trip</option><option>Overnight (1 night)</option><option>2–3 Days</option><option>4+ Days</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">How did you discover Salcedo?</span>
+                <select value={discoverySource} onChange={(e) => setDiscoverySource(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                  <option>Social Media / Online Search</option><option>Friend / Family Recommendation</option><option>Tourism Office / LGU</option><option>School / Work</option><option>Passed By / Nearby Resident</option>
+                </select>
+              </label>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Preferred experience</span>
+                <select value={preferredExperience} onChange={(e) => setPreferredExperience(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                  <option>Waterfalls &amp; Resorts</option><option>Heritage &amp; Culture</option><option>Food &amp; Local Products</option><option>Farms &amp; Nature</option><option>Adventure / Hiking</option>
+                </select>
+              </label>
+            </div>
+
+            <details className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3">
+              <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">Read the full Privacy Notice</summary>
+              <p className="text-[11px] text-[#616E69] leading-relaxed mt-2 whitespace-pre-line max-h-32 overflow-y-auto">{privacyNotice.bodyMarkdown}</p>
+            </details>
+            {formErrors.privacy && <p className="text-[11px] text-rose-700">{formErrors.privacy}</p>}
 
             <label className="flex items-start gap-2.5 rounded-xl border border-[#EAE7E0] p-3 text-xs text-[#1A2421] cursor-pointer">
               <input
