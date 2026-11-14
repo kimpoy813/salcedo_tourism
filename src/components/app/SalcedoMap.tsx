@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -10,13 +10,11 @@ import {
   Crosshair,
   Eye,
   Flame,
-  Footprints,
   Layers,
   MapPin,
   Mountain,
   Navigation,
   Plus,
-  Route,
   Search,
   Star,
   Tag,
@@ -30,7 +28,6 @@ import {
   SALCEDO_CENTER,
   SALCEDO_MASK_OUTER_RING,
   SALCEDO_MUNICIPAL_POLYGON,
-  SALCEDO_TOWN_PLAZA_COORD,
   type LatLngTuple,
 } from "@/lib/geo/salcedo-boundary";
 import type { PlaceCardData } from "./PlaceCard";
@@ -137,18 +134,7 @@ function computeCentroid(coords: LatLngTuple[]): LatLngTuple {
   return [latSum / coords.length, lngSum / coords.length];
 }
 
-function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
 
-function formatDuration(seconds: number): string {
-  const mins = Math.max(1, Math.round(seconds / 60));
-  if (mins < 60) return `${mins} min`;
-  const hrs = Math.floor(mins / 60);
-  const rem = mins % 60;
-  return rem ? `${hrs}h ${rem}m` : `${hrs}h`;
-}
 
 interface SearchHit {
   id: string;
@@ -160,17 +146,6 @@ interface SearchHit {
   longitude: number;
 }
 
-interface ActiveRouteInfo {
-  placeId: string;
-  placeName: string;
-  mode: "driving" | "foot";
-  source: "osrm" | "estimate";
-  originLabel: string;
-  distanceMeters: number;
-  durationSeconds: number;
-  coordinates: LatLngTuple[];
-  steps: Array<{ instruction: string; distanceMeters: number }>;
-}
 
 export interface MapBarangayItem {
   id: string;
@@ -187,21 +162,18 @@ export function SalcedoMap({
   mode = "embedded",
   heightClass = "h-[58vh] min-h-[380px]",
   initialPlaceSlug,
-  autoRoute = false,
 }: {
   places: PlaceCardData[];
   barangays?: MapBarangayItem[];
   mode?: "fullscreen" | "embedded";
   heightClass?: string;
   initialPlaceSlug?: string;
-  autoRoute?: boolean;
 }) {
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const barangaysLayerRef = useRef<L.LayerGroup | null>(null);
   const barangayLabelsLayerRef = useRef<L.LayerGroup | null>(null);
-  const routeLayerRef = useRef<L.LayerGroup | null>(null);
   const userLayerRef = useRef<L.LayerGroup | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const searchMarkerLayerRef = useRef<L.LayerGroup | null>(null);
@@ -233,9 +205,6 @@ export function SalcedoMap({
     barangayName: string | null;
   } | null>(null);
 
-  const [routeMode, setRouteMode] = useState<"driving" | "foot">("driving");
-  const [routing, setRouting] = useState(false);
-  const [activeRoute, setActiveRoute] = useState<ActiveRouteInfo | null>(null);
 
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -344,46 +313,6 @@ export function SalcedoMap({
     };
   }, [searchQuery, searchOpen]);
 
-  const calculateRouteToPlace = useCallback(
-    async (place: PlaceCardData, requestedMode: "driving" | "foot" = routeMode) => {
-      if (place.latitude == null || place.longitude == null) return;
-      setRouting(true);
-
-      const useGps = Boolean(userLocation);
-      const fromLat = useGps ? userLocation!.lat : SALCEDO_TOWN_PLAZA_COORD[0];
-      const fromLng = useGps ? userLocation!.lng : SALCEDO_TOWN_PLAZA_COORD[1];
-      const originLabel = useGps
-        ? userLocation!.barangayName
-          ? `Your GPS (Brgy. ${userLocation!.barangayName})`
-          : "Your GPS Location"
-        : "Salcedo Town Plaza";
-
-      try {
-        const res = await fetch(
-          `/api/geo/route?fromLat=${fromLat}&fromLng=${fromLng}&toLat=${place.latitude}&toLng=${place.longitude}&mode=${requestedMode}`
-        );
-        const data = await res.json();
-        if (res.ok && Array.isArray(data.coordinates)) {
-          setActiveRoute({
-            placeId: place.id,
-            placeName: place.name,
-            mode: requestedMode,
-            source: data.source === "osrm" ? "osrm" : "estimate",
-            originLabel,
-            distanceMeters: data.distanceMeters,
-            durationSeconds: data.durationSeconds,
-            coordinates: data.coordinates,
-            steps: data.steps || [],
-          });
-        }
-      } catch {
-        showToast("Unable to compute route right now", { tone: "info" });
-      } finally {
-        setRouting(false);
-      }
-    },
-    [routeMode, showToast, userLocation]
-  );
 
   // Initialize Leaflet Map strictly centered & isolated to Salcedo, Ilocos Sur
   useEffect(() => {
@@ -423,9 +352,6 @@ export function SalcedoMap({
     const boundaryPane = map.createPane("salcedoBoundaryPane");
     boundaryPane.style.zIndex = "340";
 
-    const routePane = map.createPane("salcedoRoutePane");
-    routePane.style.zIndex = "355";
-    routePane.style.pointerEvents = "none";
 
     const labelPane = map.createPane("salcedoLabelPane");
     labelPane.style.zIndex = "360";
@@ -463,7 +389,6 @@ export function SalcedoMap({
 
     const brgyLayer = L.layerGroup().addTo(map);
     const brgyLabelsLayer = L.layerGroup().addTo(map);
-    const routeLayer = L.layerGroup().addTo(map);
     const userLayer = L.layerGroup().addTo(map);
     const markerLayer = L.layerGroup().addTo(map);
     const searchMarkerLayer = L.layerGroup().addTo(map);
@@ -471,7 +396,6 @@ export function SalcedoMap({
     mapRef.current = map;
     barangaysLayerRef.current = brgyLayer;
     barangayLabelsLayerRef.current = brgyLabelsLayer;
-    routeLayerRef.current = routeLayer;
     userLayerRef.current = userLayer;
     markersLayerRef.current = markerLayer;
     searchMarkerLayerRef.current = searchMarkerLayer;
@@ -500,27 +424,20 @@ export function SalcedoMap({
       tileLayerRef.current = null;
       barangaysLayerRef.current = null;
       barangayLabelsLayerRef.current = null;
-      routeLayerRef.current = null;
       userLayerRef.current = null;
       markersLayerRef.current = null;
       searchMarkerLayerRef.current = null;
     };
   }, [mode]);
 
-  // Handle deep links like /app/map?place=<slug>&route=1
+  // Handle deep links like /app/map?place=<slug> (focus only — directions open in Google Maps)
   useEffect(() => {
     if (!initialPlaceSlug || deepLinkAppliedRef.current || !mapRef.current) return;
     const target = places.find((p) => p.slug === initialPlaceSlug);
     if (!target || target.latitude == null || target.longitude == null) return;
     deepLinkAppliedRef.current = true;
     mapRef.current.setView([target.latitude, target.longitude], 15, { animate: true });
-    if (autoRoute) {
-      const t = window.setTimeout(() => {
-        void calculateRouteToPlace(target, "driving");
-      }, 60);
-      return () => window.clearTimeout(t);
-    }
-  }, [initialPlaceSlug, autoRoute, places, calculateRouteToPlace]);
+  }, [initialPlaceSlug, places]);
 
   // Swap Basemap Tile Layer (OSM / Clean / Terrain / Satellite)
   useEffect(() => {
@@ -571,7 +488,6 @@ export function SalcedoMap({
 
         poly.on("click", () => {
           setActivePlace(null);
-          setActiveRoute(null);
           setSelectedBarangay((prev) => (prev === brgy.slug ? "all" : brgy.slug));
         });
 
@@ -606,53 +522,6 @@ export function SalcedoMap({
       }
     }
   }, [selectedBarangay, showBarangayBorders, showBarangayNames, basemap, mode]);
-
-  // Render Live OSRM Road Route Polyline
-  useEffect(() => {
-    const map = mapRef.current;
-    const layer = routeLayerRef.current;
-    if (!map || !layer) return;
-
-    layer.clearLayers();
-    if (!activeRoute || activeRoute.coordinates.length < 2) return;
-
-    // White halo casing + crisp forest-teal dashed/solid route line
-    L.polyline(activeRoute.coordinates, {
-      pane: "salcedoRoutePane",
-      color: "#FFFFFF",
-      weight: 8,
-      opacity: 0.92,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(layer);
-
-    const mainLine = L.polyline(activeRoute.coordinates, {
-      pane: "salcedoRoutePane",
-      color: activeRoute.mode === "foot" ? "#B88A44" : "#164237",
-      weight: 4.5,
-      opacity: 0.95,
-      dashArray: activeRoute.source === "estimate" || activeRoute.mode === "foot" ? "8 8" : undefined,
-      lineCap: "round",
-      lineJoin: "round",
-    }).addTo(layer);
-
-    // Start anchor marker (Plaza or User GPS)
-    const startPt = activeRoute.coordinates[0];
-    const startIcon = L.divIcon({
-      className: "salcedo-route-start",
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-      html: `<div style="width:14px;height:14px;border-radius:9999px;background:#1D7874;border:2.5px solid #FFFFFF;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
-    });
-    L.marker(startPt, { icon: startIcon, interactive: false }).addTo(layer);
-
-    map.fitBounds(mainLine.getBounds(), {
-      paddingTopLeft: [36, mode === "fullscreen" ? 156 : 36],
-      paddingBottomRight: [36, mode === "fullscreen" ? 190 : 36],
-      maxZoom: 16,
-      animate: true,
-    });
-  }, [activeRoute, mode]);
 
   // Render Live User GPS Blue Pulse Dot & Accuracy Ring
   useEffect(() => {
@@ -794,22 +663,18 @@ export function SalcedoMap({
         setActivePlace(p);
         setPinnedOsmResult(null);
         setRankingDrawerOpen(false);
-        if (activeRoute && activeRoute.placeId !== p.id) {
-          setActiveRoute(null);
-        }
         map.panTo([p.latitude!, p.longitude!], { animate: true });
       });
 
       marker.addTo(layer);
     });
-  }, [visiblePlaces, activePlace, activeRoute, rankMode, mode]);
+  }, [visiblePlaces, activePlace, rankMode, mode]);
 
   const handleRecenter = () => {
     const map = mapRef.current;
     if (!map) return;
     setSelectedBarangay("all");
     setActivePlace(null);
-    setActiveRoute(null);
     setPinnedOsmResult(null);
     const bounds = L.latLngBounds(
       [SALCEDO_BOUNDS.south, SALCEDO_BOUNDS.west],
@@ -848,7 +713,7 @@ export function SalcedoMap({
             { tone: "info" }
           );
         } else {
-          showToast("Located outside Salcedo — tap Route on any spot for road directions", {
+          showToast("Located outside Salcedo", {
             tone: "info",
           });
           mapRef.current?.setView(SALCEDO_CENTER, 12, { animate: true });
@@ -856,7 +721,7 @@ export function SalcedoMap({
       },
       () => {
         setLocating(false);
-        showToast("Allow location access to measure routes from your GPS", { tone: "info" });
+        showToast("Allow location access to see where you are on the map", { tone: "info" });
       },
       { enableHighAccuracy: true, timeout: 7000 }
     );
@@ -866,9 +731,6 @@ export function SalcedoMap({
     setActivePlace(p);
     setPinnedOsmResult(null);
     setRankingDrawerOpen(false);
-    if (activeRoute && activeRoute.placeId !== p.id) {
-      setActiveRoute(null);
-    }
     if (p.latitude != null && p.longitude != null) {
       mapRef.current?.setView([p.latitude, p.longitude], 16, { animate: true });
     }
@@ -888,7 +750,6 @@ export function SalcedoMap({
     }
     if (hit.kind === "barangay" && hit.slug) {
       setActivePlace(null);
-      setActiveRoute(null);
       setPinnedOsmResult(null);
       setSelectedBarangay(hit.slug);
       return;
@@ -896,7 +757,6 @@ export function SalcedoMap({
 
     // Live OpenStreetMap road/landmark inside Salcedo
     setActivePlace(null);
-    setActiveRoute(null);
     setPinnedOsmResult(hit);
     mapRef.current?.setView([hit.latitude, hit.longitude], 16, { animate: true });
   };
@@ -972,7 +832,6 @@ export function SalcedoMap({
                   const val = e.target.value;
                   setSelectedBarangay(val);
                   setActivePlace(null);
-                  setActiveRoute(null);
                   if (val === "all") {
                     const bounds = L.latLngBounds(
                       [SALCEDO_BOUNDS.south, SALCEDO_BOUNDS.west],
@@ -1117,7 +976,6 @@ export function SalcedoMap({
                 onClick={() => {
                   setSelectedType(t.id);
                   setActivePlace(null);
-                  setActiveRoute(null);
                 }}
                 className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold shadow-2xs transition active:scale-95 cursor-pointer ${
                   selectedType === t.id
@@ -1232,7 +1090,6 @@ export function SalcedoMap({
                       type="button"
                       onClick={() => {
                         setActivePlace(null);
-                        setActiveRoute(null);
                       }}
                       aria-label="Close spot preview"
                       className="w-6 h-6 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] shrink-0 cursor-pointer"
@@ -1248,19 +1105,17 @@ export function SalcedoMap({
                     >
                       Open &amp; Rate
                     </Link>
-                    <button
-                      type="button"
-                      disabled={routing}
-                      onClick={() => void calculateRouteToPlace(activePlace, routeMode)}
-                      className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-[11px] font-semibold active:scale-95 transition cursor-pointer ${
-                        activeRoute?.placeId === activePlace.id
-                          ? "bg-[#1D7874] text-white border-[#1D7874]"
-                          : "border-[#EAE7E0] bg-[#FAF9F6] text-[#164237]"
-                      }`}
-                    >
-                      <Route className="w-3 h-3" />
-                      {routing ? "Routing..." : "Route"}
-                    </button>
+                    {activePlace.latitude != null && activePlace.longitude != null && (
+                      <a
+                        href={`https://www.google.com/maps/dir/?api=1&destination=${activePlace.latitude},${activePlace.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-1.5 text-[11px] font-semibold text-[#164237] active:scale-95 transition"
+                      >
+                        <Navigation className="w-3 h-3" />
+                        Google Maps
+                      </a>
+                    )}
                     <button
                       type="button"
                       onClick={() =>
@@ -1284,63 +1139,6 @@ export function SalcedoMap({
                 </div>
               </div>
 
-              {/* Active OSRM Road Route Bar */}
-              {activeRoute && activeRoute.placeId === activePlace.id && (
-                <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] px-3 py-2 flex items-center justify-between gap-2 text-[11px]">
-                  <div className="min-w-0">
-                    <p className="font-bold text-[#164237] tabular-nums">
-                      {formatDistance(activeRoute.distanceMeters)} •{" "}
-                      {formatDuration(activeRoute.durationSeconds)}{" "}
-                      <span className="font-normal text-[#616E69]">
-                        ({activeRoute.source === "osrm" ? "OSRM road" : "Est."})
-                      </span>
-                    </p>
-                    <p className="text-[10px] text-[#616E69] truncate">
-                      From {activeRoute.originLabel}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-1 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRouteMode("driving");
-                        void calculateRouteToPlace(activePlace, "driving");
-                      }}
-                      className={`px-2 py-1 rounded-full text-[10px] font-semibold cursor-pointer ${
-                        routeMode === "driving"
-                          ? "bg-[#164237] text-white"
-                          : "bg-white border border-[#EAE7E0] text-[#616E69]"
-                      }`}
-                    >
-                      Drive
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setRouteMode("foot");
-                        void calculateRouteToPlace(activePlace, "foot");
-                      }}
-                      className={`inline-flex items-center gap-0.5 px-2 py-1 rounded-full text-[10px] font-semibold cursor-pointer ${
-                        routeMode === "foot"
-                          ? "bg-[#B88A44] text-white"
-                          : "bg-white border border-[#EAE7E0] text-[#616E69]"
-                      }`}
-                    >
-                      <Footprints className="w-2.5 h-2.5" />
-                      Walk
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveRoute(null)}
-                      aria-label="Clear route"
-                      className="p-1 text-[#616E69] hover:text-[#1A2421] cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              )}
             </div>
           ) : pinnedOsmResult ? (
             <div className="bg-white/98 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-3 shadow-xl flex items-center justify-between gap-3">
@@ -1570,7 +1368,6 @@ export function SalcedoMap({
           onChange={(e) => {
             setSelectedBarangay(e.target.value);
             setActivePlace(null);
-            setActiveRoute(null);
           }}
           aria-label="Filter map by Barangay"
           className="flex-1 rounded-full border border-[#EAE7E0] bg-white px-3.5 py-1.5 text-xs font-medium text-[#1A2421]"
@@ -1654,7 +1451,8 @@ export function SalcedoMap({
                 </span>
                 {(activePlace.ratingCount ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-0.5 font-semibold text-[#1A2421]">
-                    • ★{activePlace.averageRating?.toFixed(1)}
+                    • <Star className="w-3 h-3 text-[#B88A44] fill-[#B88A44]" />
+                    {activePlace.averageRating?.toFixed(1)}
                   </span>
                 )}
               </p>

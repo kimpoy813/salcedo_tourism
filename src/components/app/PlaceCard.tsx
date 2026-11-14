@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { Bookmark, Check, Eye, MapPin, Plus, Star } from "lucide-react";
+import { Bookmark, Check, MapPin, Plus, Star } from "lucide-react";
 import { useMobileApp } from "./MobileAppContext";
 
 export interface PlaceCardData {
@@ -66,7 +66,6 @@ export function PlaceCard({
   const imageSrc = place.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png";
 
   const hasRating = (place.ratingCount ?? 0) > 0 && (place.averageRating ?? 0) > 0;
-  const visitCount = place.visitCount ?? 0;
 
   const handleToggleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -137,9 +136,6 @@ export function PlaceCard({
               <p className="text-[10px] font-semibold uppercase tracking-wider text-white/80 flex items-center gap-1.5">
                 <span>{TYPE_LABELS[place.placeType] || "Salcedo"}</span>
                 {place.barangay && <span>• Brgy. {place.barangay.name}</span>}
-                {visitCount > 0 && (
-                  <span className="tabular-nums">• {visitCount} visits</span>
-                )}
               </p>
               <h3 className="font-display text-base font-bold leading-snug line-clamp-1">
                 {place.name}
@@ -222,17 +218,8 @@ export function PlaceCard({
                   <span className="font-normal text-[#616E69]">({place.ratingCount})</span>
                 </span>
               )}
-              {visitCount > 0 && (
-                <span className="inline-flex items-center gap-0.5 tabular-nums">
-                  <Eye className="w-3 h-3 text-[#616E69]" />
-                  {visitCount}
-                </span>
-              )}
             </div>
 
-            <p className="text-xs text-[#616E69] line-clamp-2 leading-snug">
-              {place.shortDescription}
-            </p>
           </div>
 
           <div className="flex items-center justify-between gap-2 pt-0.5">
@@ -320,18 +307,12 @@ export function PlaceCard({
               {TYPE_LABELS[place.placeType] || "Salcedo"}
               {place.barangay ? ` • Brgy. ${place.barangay.name}` : ""}
             </span>
-            {visitCount > 0 && (
-              <span className="tabular-nums shrink-0">{visitCount} visits</span>
-            )}
           </div>
           <Link href={`/app/places/${place.slug}`}>
             <h3 className="font-display font-bold text-[15px] text-[#1A2421] line-clamp-1">
               {place.name}
             </h3>
           </Link>
-          <p className="text-xs text-[#616E69] line-clamp-2 leading-relaxed">
-            {place.shortDescription}
-          </p>
         </div>
 
         <div className="flex items-center justify-between gap-2 pt-2 border-t border-[#EAE7E0]">

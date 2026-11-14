@@ -6,9 +6,9 @@ export const dynamic = "force-dynamic";
 export default async function InteractiveMapPage({
   searchParams,
 }: {
-  searchParams: Promise<{ place?: string; route?: string }>;
+  searchParams: Promise<{ place?: string }>;
 }) {
-  const [{ place, route }, places, barangays] = await Promise.all([
+  const [{ place }, places, barangays] = await Promise.all([
     searchParams,
     getPublishedPlaces(),
     getAllBarangaysWithCounts(),
@@ -16,12 +16,7 @@ export default async function InteractiveMapPage({
 
   return (
     <div className="w-full h-full">
-      <MapPageClient
-        places={places}
-        barangays={barangays}
-        initialPlaceSlug={place}
-        autoRoute={route === "1"}
-      />
+      <MapPageClient places={places} barangays={barangays} initialPlaceSlug={place} />
     </div>
   );
 }
