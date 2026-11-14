@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Check, Compass, Route, Send, X } from "lucide-react";
+import { Check, Compass, Lightbulb, Route, Send, X } from "lucide-react";
 import { useMobileApp } from "./MobileAppContext";
 
 const WELCOME_KEY = "cedo_welcome_dismissed_v1";
@@ -115,8 +115,9 @@ export function JourneySteps() {
         {hasTrip ? `Continue my trip (${draftStopCount} ${draftStopCount === 1 ? "stop" : "stops"}) →` : "Start exploring →"}
       </Link>
       {!hasTrip && !dismissed && (
-        <p className="text-[11px] text-[#616E69] text-center">
-          💡 Tip: registration and ratings are always optional — they just help Salcedo count and thank its visitors.
+        <p className="text-[11px] text-[#616E69] text-center inline-flex items-center justify-center gap-1 w-full">
+          <Lightbulb className="w-3.5 h-3.5 text-[#B88A44] shrink-0" />
+          Registration and ratings are always optional — they just help Salcedo count and thank its visitors.
         </p>
       )}
     </section>

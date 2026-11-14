@@ -10,12 +10,16 @@ export interface LocalItineraryStop {
   visitTime: string;
   durationMinutes: number;
   personalNotes: string;
+  /** 1-based day of a multi-day trip (Day 1 = plannedVisitDate). */
+  day?: number;
 }
 
 export interface LocalItineraryDraft {
   id: string;
   title: string;
   plannedVisitDate: string;
+  /** Total trip length in days (1–14). Stops carry their own `day`. */
+  numberOfDays?: number;
   description: string;
   stops: LocalItineraryStop[];
   updatedAt: string;

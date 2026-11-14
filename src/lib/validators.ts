@@ -3,6 +3,7 @@ import { z } from "zod";
 export const itineraryStopInputSchema = z.object({
   placeId: z.string().uuid("Valid destination ID is required."),
   stopOrder: z.number().int().min(1).max(50),
+  dayNumber: z.number().int().min(1).max(14).default(1),
   visitTime: z.string().max(40).optional().nullable(),
   durationMinutes: z.number().int().min(15).max(1440).default(60),
   personalNotes: z.string().max(400).optional().nullable(),

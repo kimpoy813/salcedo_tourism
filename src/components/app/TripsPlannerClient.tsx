@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
+  BadgeCheck,
   Calendar,
   Check,
   Clock,
@@ -16,12 +17,14 @@ import {
   Printer,
   Minus,
   RefreshCw,
+  Route as RouteIcon,
   Search,
   Send,
   ShieldCheck,
   Sparkles,
   Star,
   Trash2,
+  TriangleAlert,
   Wand2,
   X,
 } from "lucide-react";
@@ -75,6 +78,7 @@ interface RetrievedItinerary {
   plannedVisitDate: string;
   description: string | null;
   totalStops: number;
+  numberOfDays?: number;
   estimatedTotalMinutes: number;
   status?: string;
   completedAt?: string | null;
@@ -82,6 +86,7 @@ interface RetrievedItinerary {
   stops: Array<{
     id: string;
     stopOrder: number;
+    dayNumber?: number;
     visitTime: string | null;
     durationMinutes: number;
     personalNotes: string | null;
@@ -179,6 +184,7 @@ function TripsPlannerInner({
 
   // Native bottom sheets instead of multi-step web forms
   const [stopPickerOpen, setStopPickerOpen] = useState(false);
+  const [activeDay, setActiveDay] = useState(1);
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
 
   const [drafts, setDrafts] = useState<LocalItineraryDraft[]>([]);
@@ -279,24 +285,94 @@ function TripsPlannerInner({
     return Number(total.toFixed(1));
   }, [draft.stops]);
 
-  const scheduleIssues = useMemo(() => analyzeSchedule(draft.stops), [draft.stops]);
+  const tripDaysCount = Math.max(1, draft.numberOfDays ?? 1, ...draft.stops.map((s) => s.day ?? 1));
+  const dateForDay = (day: number) => {
+    const d = new Date(`${draft.plannedVisitDate}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return "";
+    d.setDate(d.getDate() + (day - 1));
+    return d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+  };
+  const displayStops = useMemo(() => {
+    const perDayCount = new Map<number, number>();
+    return draft.stops
+      .map((s, origIdx) => ({ s, origIdx, day: Math.min(Math.max(1, s.day ?? 1), Math.max(1, draft.numberOfDays ?? 1, s.day ?? 1)) }))
+      .sort((a, b) => a.day - b.day || a.origIdx - b.origIdx)
+      .map((item) => {
+        const n = (perDayCount.get(item.day) ?? 0) + 1;
+        perDayCount.set(item.day, n);
+        return { ...item, dayIndex: n };
+      });
+  }, [draft.stops, draft.numberOfDays]);
+  const scheduleIssues = useMemo(() => {
+    const byPlace = new Map<string, ReturnType<typeof analyzeSchedule>[number]>();
+    let total = 0;
+    const days = Math.max(1, draft.numberOfDays ?? 1, ...draft.stops.map((s) => s.day ?? 1));
+    for (let d = 1; d <= days; d++) {
+      const dayStops = draft.stops.filter((s) => (s.day ?? 1) === d);
+      for (const issue of analyzeSchedule(dayStops)) {
+        total += 1;
+        const stop = dayStops[issue.index];
+        if (stop) byPlace.set(stop.placeId, issue);
+      }
+    }
+    return { byPlace, total };
+  }, [draft.stops, draft.numberOfDays]);
   const issuesByIndex = useMemo(() => {
-    const m = new Map<number, (typeof scheduleIssues)[number]>();
-    for (const i of scheduleIssues) m.set(i.index, i);
+    const m = new Map<number, ReturnType<typeof analyzeSchedule>[number]>();
+    for (const { s, origIdx } of displayStops) {
+      const issue = scheduleIssues.byPlace.get(s.placeId);
+      if (issue) m.set(origIdx, issue);
+    }
     return m;
-  }, [scheduleIssues]);
+  }, [displayStops, scheduleIssues]);
   const todayStr = new Date().toISOString().slice(0, 10);
   const tripIsDue = draft.plannedVisitDate <= todayStr;
   const completedStopsCount = draft.stops.filter((s) => visitedStops[s.placeId] ?? true).length;
 
   const applySuggestedSchedule = async () => {
-    const first = draft.stops.find((s) => s.visitTime)?.visitTime || "08:30";
-    const stops = buildSuggestedSchedule(draft.stops, first).map((s, i) => ({
-      ...draft.stops[i],
-      visitTime: s.visitTime,
-    }));
+    const times = new Map<string, string>();
+    for (let d = 1; d <= tripDaysCount; d++) {
+      const dayStops = draft.stops.filter((s) => (s.day ?? 1) === d);
+      if (dayStops.length === 0) continue;
+      const first = dayStops.find((s) => s.visitTime)?.visitTime || "08:30";
+      buildSuggestedSchedule(dayStops, first).forEach((s) => times.set(s.placeId, s.visitTime));
+    }
+    const stops = draft.stops.map((s) => ({ ...s, visitTime: times.get(s.placeId) ?? s.visitTime }));
     await persistDraft({ ...draft, stops });
-    showToast("Times auto-arranged with travel gaps", { tone: "success" });
+    showToast("Times auto-arranged per day", { tone: "success" });
+  };
+
+  const setStopDay = async (origIdx: number, day: number) => {
+    const moving = draft.stops[origIdx];
+    if (!moving) return;
+    const rest = draft.stops.filter((_, i) => i !== origIdx);
+    const lastOfDay = rest.map((s, i) => ((s.day ?? 1) === day ? i : -1)).filter((i) => i >= 0).pop();
+    const insertAt = lastOfDay == null ? rest.length : lastOfDay + 1;
+    const stops = [...rest.slice(0, insertAt), { ...moving, day }, ...rest.slice(insertAt)];
+    await persistDraft({ ...draft, stops, numberOfDays: Math.max(tripDaysCount, day) });
+  };
+
+  /** Rate a stop right now — before any form. One tap, saved to the destination page. */
+  const quickRateStop = async (placeId: string, placeName: string, value: number) => {
+    setStopRatings((r) => ({ ...r, [placeId]: value }));
+    try {
+      const res = await fetch(`/api/places/${placeId}/ratings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          rating: value,
+          comment: stopComments[placeId]?.trim() || null,
+          travelerType: "Leisure",
+          reviewerToken: getReviewerToken(),
+        }),
+      });
+      if (res.ok) {
+        await persistDraft({ ...draft, ratings: { ...(draft.ratings ?? {}), [placeId]: value } });
+        showToast(`Rated ${placeName} ${value} of 5 stars`, { tone: "success" });
+      }
+    } catch {
+      // Kept locally in the draft; will still count if the trip is completed later.
+    }
   };
 
   /** Local (unregistered) trip completion: rate each stop into the public ratings system. */
@@ -331,7 +407,7 @@ function TripsPlannerInner({
       setCompletionNotice(
         `Trip completed and counted: ${completedStopsCount} destination(s) visited, ${rated} rating(s) saved to the destination pages. Agyaman kami!`
       );
-      showToast("Trip completed 🎉", { tone: "success" });
+      showToast("Trip completed — thank you!", { tone: "success" });
     } catch {
       setCompletionNotice("Could not save completion while offline. Your ratings are kept in this draft — try again when connected.");
     } finally {
@@ -372,7 +448,7 @@ function TripsPlannerInner({
         setLocalReceipts(await listLocalReceipts());
       }
       setCompletionNotice(data.message);
-      showToast("Trip completed & counted 🎉", { tone: "success" });
+      showToast("Trip completed & counted — thank you!", { tone: "success" });
     } catch {
       setRetError("Network error while completing trip.");
     } finally {
@@ -446,10 +522,11 @@ function TripsPlannerInner({
             featuredImageUrl: place.featuredImageUrl ?? null,
             latitude: place.latitude ?? null,
             longitude: place.longitude ?? null,
-            visitTime:
-              draft.stops.length === 0
-                ? "08:30"
-                : suggestedNextTime(draft.stops, draft.stops.length) || "",
+            day: activeDay,
+            visitTime: (() => {
+              const dayStops = draft.stops.filter((x) => (x.day ?? 1) === activeDay);
+              return dayStops.length === 0 ? "08:30" : suggestedNextTime(dayStops, dayStops.length) || "08:30";
+            })(),
             durationMinutes: 90,
             personalNotes: "",
           },
@@ -461,9 +538,13 @@ function TripsPlannerInner({
   };
 
   const moveStop = async (fromIdx: number, toIdx: number) => {
-    if (toIdx < 0 || toIdx >= draft.stops.length) return;
-    const copy = [...draft.stops];
-    const [item] = copy.splice(fromIdx, 1);
+    const ordered = displayStops.map(({ s }) => s);
+    const from = ordered.findIndex((s) => s.placeId === draft.stops[fromIdx]?.placeId);
+    if (from < 0 || toIdx < 0 || toIdx >= ordered.length) return;
+    // Only reorder within the same day
+    if ((ordered[from].day ?? 1) !== (ordered[toIdx].day ?? 1)) return;
+    const copy = [...ordered];
+    const [item] = copy.splice(from, 1);
     copy.splice(toIdx, 0, item);
     await persistDraft({ ...draft, stops: copy });
   };
@@ -485,6 +566,7 @@ function TripsPlannerInner({
       visitTime?: string | null;
       durationMinutes: number;
       personalNotes?: string | null;
+      day?: number;
     }>,
     refNum?: string
   ) => {
@@ -498,7 +580,7 @@ function TripsPlannerInner({
       "STOPS:",
       ...stops.map(
         (s, idx) =>
-          `${idx + 1}. ${s.placeName}${s.visitTime ? ` @ ${s.visitTime}` : ""} (${
+          `${(s.day ?? 1) > 1 || stops.some((x) => (x.day ?? 1) > 1) ? `Day ${s.day ?? 1} — ` : ""}${idx + 1}. ${s.placeName}${s.visitTime ? ` @ ${formatTime12h(s.visitTime)}` : ""} (${
             s.durationMinutes
           } mins)${s.personalNotes ? `\n   Notes: ${s.personalNotes}` : ""}`
       ),
@@ -547,6 +629,7 @@ function TripsPlannerInner({
             stops: draft.stops.map((s, idx) => ({
               placeId: s.placeId,
               stopOrder: idx + 1,
+              dayNumber: s.day ?? 1,
               visitTime: s.visitTime || null,
               durationMinutes: Number(s.durationMinutes) || 60,
               personalNotes: s.personalNotes || null,
@@ -697,7 +780,7 @@ function TripsPlannerInner({
           <React.Fragment key={s.n}>
             <li className={`flex items-center gap-1.5 ${journeyStep >= s.n ? "text-[#164237]" : "text-[#616E69]"}`}>
               <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${journeyStep > s.n ? "bg-[#164237] text-white" : journeyStep === s.n ? "bg-[#164237] text-white" : "bg-[#EFECE5] text-[#616E69]"}`}>
-                {journeyStep > s.n ? "✓" : s.n}
+                {journeyStep > s.n ? <Check className="w-3 h-3" /> : s.n}
               </span>
               <span className="text-[11px] font-semibold whitespace-nowrap">{s.label}</span>
             </li>
@@ -873,6 +956,11 @@ function TripsPlannerInner({
                       ~{(totalMinutes / 60).toFixed(1)}h
                       {totalDistanceKm > 0 ? ` • ${totalDistanceKm} km` : ""}
                     </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] pl-3 pr-1 py-1">
+                      <span className="text-[11px] font-semibold text-[#1A2421]">{tripDaysCount} {tripDaysCount === 1 ? "day" : "days"}</span>
+                      <button type="button" aria-label="One day less" onClick={() => { const n = Math.max(1, tripDaysCount - 1); void persistDraft({ ...draft, numberOfDays: n, stops: draft.stops.map((s) => ({ ...s, day: Math.min(s.day ?? 1, n) })) }); }} className="w-6 h-6 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3 h-3" /></button>
+                      <button type="button" aria-label="Add a day" onClick={() => void persistDraft({ ...draft, numberOfDays: Math.min(14, tripDaysCount + 1) })} className="w-6 h-6 rounded-full bg-[#164237] text-white flex items-center justify-center cursor-pointer"><Plus className="w-3 h-3" /></button>
+                    </span>
                   </div>
                 </div>
 
@@ -912,14 +1000,22 @@ function TripsPlannerInner({
               {/* Native Vertical Route Timeline */}
               {draft.stops.length > 0 && (
                 <div className="space-y-2.5">
-                  {draft.stops.map((s, idx) => (
-                    <div key={s.placeId} className="relative flex gap-2.5">
+                  {displayStops.map(({ s, origIdx: idx, day, dayIndex }) => (
+                    <React.Fragment key={s.placeId}>
+                    {dayIndex === 1 && (
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-bold">Day {day}{dateForDay(day) ? ` • ${dateForDay(day)}` : ""}</span>
+                        <span className="text-[11px] text-[#616E69]">{displayStops.filter((x) => x.day === day).length} stops</span>
+                        <span className="flex-1 h-px bg-[#EAE7E0]" />
+                      </div>
+                    )}
+                    <div className="relative flex gap-2.5">
                       {/* Vertical Route Track */}
                       <div className="flex flex-col items-center pt-3">
                         <span className="w-6 h-6 rounded-full bg-[#164237] text-white text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums z-10">
-                          {idx + 1}
+                          {dayIndex}
                         </span>
-                        {idx < draft.stops.length - 1 && (
+                        {displayStops.findIndex((x) => x.s.placeId === s.placeId) < displayStops.length - 1 && displayStops[displayStops.findIndex((x) => x.s.placeId === s.placeId) + 1]?.day === day && (
                           <div className="w-px flex-1 border-l-2 border-dashed border-[#D8D3C8] my-1" />
                         )}
                       </div>
@@ -946,6 +1042,16 @@ function TripsPlannerInner({
                               <p className="text-[11px] text-[#616E69] truncate">
                                 {s.barangayName ? `Brgy. ${s.barangayName}` : s.placeType}
                               </p>
+                              {tripDaysCount > 1 && (
+                                <label className="inline-flex items-center gap-1 mt-0.5">
+                                  <span className="text-[10px] font-semibold text-[#616E69]">Day</span>
+                                  <select value={day} onChange={(e) => void setStopDay(idx, Number(e.target.value))} aria-label={`Day for ${s.placeName}`} className="rounded-md border border-[#EAE7E0] bg-[#FAF9F6] px-1 py-0.5 text-[10px] font-bold text-[#164237]">
+                                    {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => (
+                                      <option key={d} value={d}>{d}{dateForDay(d) ? ` (${dateForDay(d)})` : ""}</option>
+                                    ))}
+                                  </select>
+                                </label>
+                              )}
                             </div>
                           </div>
 
@@ -1009,12 +1115,11 @@ function TripsPlannerInner({
                                 {formatTime12h(t)}
                               </button>
                             ))}
-                            {idx > 0 && suggestedNextTime(draft.stops, idx) && (
-                              <button type="button" onClick={() => { const t = suggestedNextTime(draft.stops, idx); if (t) void updateStopField(idx, "visitTime", t); }}
-                                className="rounded-full px-2 py-1 text-[10px] font-semibold border border-dashed border-[#B88A44] text-[#B88A44] bg-white cursor-pointer">
-                                ✨ Suggest {formatTime12h(suggestedNextTime(draft.stops, idx))}
-                              </button>
-                            )}
+                            {(() => { const dayStops = displayStops.filter((x) => x.day === day).map((x) => x.s); const pos = dayStops.findIndex((x) => x.placeId === s.placeId); const sug = pos > 0 ? suggestedNextTime(dayStops, pos) : null; return sug ? (
+                              <button type="button" onClick={() => void updateStopField(idx, "visitTime", sug)}
+                                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold border border-dashed border-[#B88A44] text-[#B88A44] bg-white cursor-pointer">
+                                <Sparkles className="w-3 h-3" /> Suggest {formatTime12h(sug)}
+                              </button> ) : null; })()}
                           </div>
                           <div>
                             <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Stay for</span>
@@ -1034,7 +1139,7 @@ function TripsPlannerInner({
                           </div>
                           {issuesByIndex.get(idx) && (
                             <p className={`rounded-lg px-2 py-1.5 text-[11px] ${issuesByIndex.get(idx)!.kind === "overlap" ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}>
-                              ⚠ {issuesByIndex.get(idx)!.message}
+                              <span className="inline-flex items-start gap-1"><TriangleAlert className="w-3 h-3 mt-px shrink-0" />{issuesByIndex.get(idx)!.message}</span>
                               {issuesByIndex.get(idx)!.suggestedTime && (
                                 <button type="button" onClick={() => void updateStopField(idx, "visitTime", issuesByIndex.get(idx)!.suggestedTime!)}
                                   className="ml-1 font-bold underline cursor-pointer">Use {formatTime12h(issuesByIndex.get(idx)!.suggestedTime)}</button>
@@ -1052,6 +1157,7 @@ function TripsPlannerInner({
                         </div>
                       </div>
                     </div>
+                    </React.Fragment>
                   ))}
                 </div>
               )}
@@ -1060,7 +1166,7 @@ function TripsPlannerInner({
               {draft.stops.length > 0 && (
                 <div className="bg-[#164237] text-white rounded-2xl p-3.5 space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">Your day at a glance</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">{tripDaysCount > 1 ? `Your ${tripDaysCount}-day trip at a glance` : "Your day at a glance"}</p>
                     <button type="button" onClick={() => void applySuggestedSchedule()}
                       className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition">
                       <Wand2 className="w-3 h-3" /> Auto-arrange times
@@ -1072,12 +1178,12 @@ function TripsPlannerInner({
                     <div><p className="font-display text-base font-bold tabular-nums">{formatTime12h(endTimeFor(draft.stops[draft.stops.length - 1]?.visitTime, draft.stops[draft.stops.length - 1]?.durationMinutes))}</p><p className="text-[10px] text-white/70">Ends</p></div>
                     <div><p className="font-display text-base font-bold tabular-nums">{totalDistanceKm > 0 ? `${totalDistanceKm}km` : "—"}</p><p className="text-[10px] text-white/70">Travel</p></div>
                   </div>
-                  {scheduleIssues.length > 0 && (
-                    <p className="text-[11px] text-amber-200">⚠ {scheduleIssues.length} timing {scheduleIssues.length === 1 ? "issue" : "issues"} to fix — tap “Use …” on the stop, or Auto-arrange.</p>
+                  {scheduleIssues.total > 0 && (
+                    <p className="text-[11px] text-amber-200 inline-flex items-center gap-1"><TriangleAlert className="w-3 h-3" />{scheduleIssues.total} timing {scheduleIssues.total === 1 ? "issue" : "issues"} to fix — tap “Use …” on the stop, or Auto-arrange.</p>
                   )}
                   <p className="text-[11px] text-white/70">
                     {draft.status === "completed"
-                      ? `✅ Completed${draft.completedAt ? ` on ${draft.completedAt.slice(0, 10)}` : ""} — this trip and its ratings now count in Salcedo's destination rankings.`
+                      ? `Completed${draft.completedAt ? ` on ${draft.completedAt.slice(0, 10)}` : ""} — this trip and its ratings now count in Salcedo's destination rankings.`
                       : "Tip: Register below so this plan counts in Tourism Office statistics, then come back after your trip to rate each destination."}
                   </p>
                 </div>
@@ -1087,7 +1193,7 @@ function TripsPlannerInner({
               {draft.stops.length > 0 && tripIsDue && draft.status !== "completed" && (
                 <div className="no-print bg-white rounded-2xl border-2 border-[#B88A44]/50 p-4 space-y-3">
                   <div>
-                    <h2 className="font-display text-sm font-bold text-[#1A2421]">How was your Salcedo trip? 🎉</h2>
+                    <h2 className="font-display text-sm font-bold text-[#1A2421]">How was your Salcedo trip?</h2>
                     <p className="text-[11px] text-[#616E69]">Tick the places you actually visited and rate each one — ratings appear on the destination pages and help the next tourists (and the Tourism Office counts completed trips).</p>
                   </div>
                   {draft.stops.map((s) => (
@@ -1128,7 +1234,7 @@ function TripsPlannerInner({
 
               {draft.stops.length === 0 && (
                 <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 text-center space-y-2.5">
-                  <p className="text-2xl">🧳</p>
+                  <span className="mx-auto w-10 h-10 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
                   <p className="font-display text-sm font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
                   <p className="text-[11px] text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
                   <Link href="/app/discover" className="inline-flex rounded-full bg-[#164237] text-white px-5 py-2.5 text-xs font-semibold">Browse Destinations →</Link>
@@ -1142,8 +1248,33 @@ function TripsPlannerInner({
                 className="no-print w-full rounded-2xl border-2 border-dashed border-[#D8D3C8] bg-white/70 hover:bg-white py-3.5 text-xs font-semibold text-[#164237] inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                Add Destination Stop
+                {tripDaysCount > 1 ? `Add Stop to Day ${activeDay}` : "Add Destination Stop"}
               </button>
+
+              {/* Rate your destinations FIRST — before any form (always optional) */}
+              {draft.stops.length > 0 && draft.status !== "completed" && (
+                <div className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Star className="w-4 h-4 text-[#B88A44]" fill="currentColor" />
+                    <div>
+                      <h2 className="font-display text-sm font-bold text-[#1A2421]">Rate your destinations</h2>
+                      <p className="text-[11px] text-[#616E69]">Already visited, or just want to help other tourists? Tap stars now — no form needed. You can also do this later.</p>
+                    </div>
+                  </div>
+                  {displayStops.map(({ s, day }) => (
+                    <div key={s.placeId} className="flex items-center justify-between gap-2 rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] px-3 py-2">
+                      <p className="text-xs font-semibold text-[#1A2421] truncate">{s.placeName} <span className="font-normal text-[#616E69]">• Day {day}</span></p>
+                      <div className="flex items-center gap-0.5 shrink-0" role="radiogroup" aria-label={`Rate ${s.placeName}`}>
+                        {[1,2,3,4,5].map((n) => (
+                          <button key={n} type="button" onClick={() => void quickRateStop(s.placeId, s.placeName, n)} aria-label={`${n} stars`} className="p-0.5 active:scale-90 transition cursor-pointer">
+                            <Star className={`w-5 h-5 ${n <= (stopRatings[s.placeId] ?? draft.ratings?.[s.placeId] ?? 0) ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= (stopRatings[s.placeId] ?? draft.ratings?.[s.placeId] ?? 0) ? "currentColor" : "none"} />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
 
               {/* Standalone Export + Optional Registration Dock */}
               {draft.stops.length > 0 && (
@@ -1383,8 +1514,8 @@ function TripsPlannerInner({
                     className="flex items-center justify-between gap-2 text-xs"
                   >
                     <span className="font-medium text-[#1A2421]">
-                      {s.stopOrder}. {s.placeName}
-                      {s.visitedAt && <span className="ml-1.5 text-[10px] font-bold text-[#164237]">✓ Visited</span>}
+                      {(retrieved.numberOfDays ?? 1) > 1 ? `Day ${s.dayNumber ?? 1} • ` : ""}{s.placeName}
+                      {s.visitedAt && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-bold text-[#164237]"><Check className="w-3 h-3" />Visited</span>}
                     </span>
                     <span className="text-[#616E69] tabular-nums">
                       {s.visitTime ? formatTime12h(s.visitTime) : "Flexible"} ({s.durationMinutes}m)
@@ -1396,8 +1527,8 @@ function TripsPlannerInner({
               {/* After-trip completion + per-destination ratings (counts in Tourism Office stats) */}
               <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3 space-y-3">
                 {retrieved.status === "completed" ? (
-                  <p className="text-xs font-semibold text-[#164237]">
-                    ✅ Trip completed{retrieved.completedAt ? ` on ${String(retrieved.completedAt).slice(0, 10)}` : ""} — counted by the Tourism Office. You can still update your ratings below.
+                  <p className="text-xs font-semibold text-[#164237] inline-flex items-center gap-1">
+                    <BadgeCheck className="w-4 h-4 shrink-0" /> Trip completed{retrieved.completedAt ? ` on ${String(retrieved.completedAt).slice(0, 10)}` : ""} — counted by the Tourism Office. You can still update your ratings below.
                   </p>
                 ) : (
                   <div>
@@ -1500,6 +1631,16 @@ function TripsPlannerInner({
           <div className="w-full max-w-[430px] max-h-[82dvh] bg-white rounded-t-[28px] border-t border-[#EAE7E0] p-4 pb-6 flex flex-col gap-3 shadow-2xl animate-in slide-in-from-bottom-6 duration-200">
             <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto" />
 
+            {tripDaysCount > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+                <span className="text-[11px] font-semibold text-[#616E69] shrink-0">Adding to:</span>
+                {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => (
+                  <button key={d} type="button" onClick={() => setActiveDay(d)} className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-bold border cursor-pointer ${activeDay === d ? "bg-[#164237] text-white border-[#164237]" : "bg-[#FAF9F6] border-[#EAE7E0] text-[#1A2421]"}`}>
+                    Day {d}{dateForDay(d) ? ` • ${dateForDay(d)}` : ""}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <h2 className="font-display text-base font-bold text-[#1A2421]">
                 Choose Stops ({draft.stops.length})
@@ -1598,6 +1739,10 @@ function TripsPlannerInner({
               </span>
             </div>
 
+            <p className="rounded-xl bg-[#B88A44]/10 border border-[#B88A44]/25 px-3 py-2 text-[11px] text-[#1A2421] inline-flex items-start gap-1.5">
+              <Star className="w-3.5 h-3.5 text-[#B88A44] shrink-0 mt-px" fill="currentColor" />
+              <span><strong>Before this form:</strong> you can rate your destinations anytime in the “Rate your destinations” card above — optional, one tap, no form. This registration is separate and also optional.</span>
+            </p>
             <p className="text-[11px] text-[#616E69] leading-relaxed">
               <strong>Only 3 things needed:</strong> where you&apos;re from, how many travelers, and the privacy tick at the bottom. Everything else is optional — skip freely.
             </p>
@@ -1690,7 +1835,7 @@ function TripsPlannerInner({
 
             <details className="rounded-xl border border-dashed border-[#EAE7E0] p-3 space-y-3">
               <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">
-                ➕ Optional details — tap to add (name, contact, transport…)
+                Optional details — tap to add (name, contact, transport…)
               </summary>
             <div>
               <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">First time visiting Salcedo?</span>

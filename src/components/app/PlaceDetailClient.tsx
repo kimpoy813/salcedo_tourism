@@ -161,7 +161,7 @@ export function PlaceRatingsSection({
       setSummary(data.summary);
       setFormOpen(false);
       setSubmittedNotice(true);
-      showToast(`Rated ${placeName} ${stars}★`, { tone: "success" });
+      showToast(`Rated ${placeName}: ${stars} of 5 stars`, { tone: "success" });
     } catch {
       setError("Network error while saving rating.");
     } finally {
@@ -192,7 +192,7 @@ export function PlaceRatingsSection({
       }
       setSummary(data.summary);
       setSubmittedNotice(true);
-      showToast(`You rated ${placeName} ${value}★ — thank you!`, { tone: "success" });
+      showToast(`You rated ${placeName}: ${value} of 5 stars — thank you!`, { tone: "success" });
     } catch {
       setError("You're offline — rating not saved yet.");
     }
