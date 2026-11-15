@@ -428,10 +428,17 @@ export function PlaceRatingsSection({
                     </p>
                   </div>
                 </div>
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 text-[11px] font-bold text-[#1A2421] shrink-0 tabular-nums">
-                  <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
-                  {rev.rating}.0
-                </span>
+                {rev.rating != null ? (
+                  <span className="inline-flex items-center gap-0.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 text-[11px] font-bold text-[#1A2421] shrink-0 tabular-nums">
+                    <Star className="w-3 h-3 text-[#8A6527]" fill="currentColor" />
+                    {rev.rating}.0
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 text-[11px] font-semibold text-[#616E69] shrink-0">
+                    <MessageSquarePlus className="w-3 h-3" />
+                    Comment
+                  </span>
+                )}
               </div>
               {rev.comment && (
                 <p className="text-[13px] text-[#1A2421]/85 leading-relaxed">

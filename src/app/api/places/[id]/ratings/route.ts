@@ -14,7 +14,7 @@ import { checkRateLimit, getClientThrottleKey } from "@/lib/rate-limit";
 export const dynamic = "force-dynamic";
 
 const submitRatingSchema = z.object({
-  rating: z.number().int().min(1).max(5),
+  rating: z.number().int().min(1).max(5).optional().nullable(),
   reviewerName: z.string().trim().max(60).optional().nullable(),
   originLabel: z.string().trim().max(80).optional().nullable(),
   travelerType: z
@@ -70,7 +70,14 @@ export async function POST(
     const parsed = submitRatingSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Please select 1 to 5 stars and check your feedback length." },
+        { error: "Please check your feedback length." },
+        { status: 400 }
+      );
+    }
+    // A review needs at least stars or a comment — either one is welcome.
+    if (!parsed.data.rating && !parsed.data.comment?.trim()) {
+      return NextResponse.json(
+        { error: "Please tap a star rating or write a short comment." },
         { status: 400 }
       );
     }
@@ -106,7 +113,7 @@ export async function POST(
         reviewerToken,
         reviewerName,
         originLabel,
-        rating: parsed.data.rating,
+        rating: parsed.data.rating ?? null,
         comment,
         travelerType: parsed.data.travelerType,
         status: "published",
@@ -116,7 +123,7 @@ export async function POST(
       .onConflictDoUpdate({
         target: [schema.placeRatings.placeId, schema.placeRatings.reviewerToken],
         set: {
-          rating: parsed.data.rating,
+          rating: parsed.data.rating ?? null,
           reviewerName,
           originLabel,
           comment,

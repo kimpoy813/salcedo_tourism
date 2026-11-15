@@ -90,15 +90,15 @@ export async function POST(req: Request) {
             await tx.update(schema.itineraryStops).set({ visitedAt: now }).where(eq(schema.itineraryStops.id, stop.id));
           }
         }
-        if (s.visited && s.rating) {
-          ratedCount += 1;
+        if (s.visited && (s.rating || s.comment?.trim())) {
+          if (s.rating) ratedCount += 1;
           await tx.insert(schema.placeRatings).values({
             placeId: s.placeId,
             anonymousSessionId: session.sessionId,
             reviewerToken,
             reviewerName: input.reviewerName?.trim() || "Salcedo Visitor",
             originLabel: input.originLabel?.trim() || null,
-            rating: s.rating,
+            rating: s.rating ?? null,
             comment: s.comment?.trim() || null,
             travelerType: input.travelerType,
             status: "published",
@@ -106,7 +106,7 @@ export async function POST(req: Request) {
             updatedAt: now,
           }).onConflictDoUpdate({
             target: [schema.placeRatings.placeId, schema.placeRatings.reviewerToken],
-            set: { rating: s.rating, comment: s.comment?.trim() || null, reviewerName: input.reviewerName?.trim() || "Salcedo Visitor", originLabel: input.originLabel?.trim() || null, travelerType: input.travelerType, updatedAt: now },
+            set: { rating: s.rating ?? null, comment: s.comment?.trim() || null, reviewerName: input.reviewerName?.trim() || "Salcedo Visitor", originLabel: input.originLabel?.trim() || null, travelerType: input.travelerType, updatedAt: now },
           });
         }
       }

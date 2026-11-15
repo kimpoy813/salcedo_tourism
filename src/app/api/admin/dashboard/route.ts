@@ -207,6 +207,7 @@ export async function GET() {
     // Official Spot Rankings (same basis as the tourist app: visits = views + verified arrivals)
     const ratingAgg = new Map<string, { sum: number; count: number }>();
     for (const r of allRatings) {
+      if (r.rating == null) continue; // comment-only review
       const cur = ratingAgg.get(r.placeId) ?? { sum: 0, count: 0 };
       cur.sum += r.rating;
       cur.count += 1;
