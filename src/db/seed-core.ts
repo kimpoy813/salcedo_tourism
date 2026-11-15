@@ -1284,6 +1284,73 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
     "placeholder-poblacion-cafe": [17.1514, 120.5359],
   };
 
+
+  // Extra gallery photos per place type (cover photo stays displayOrder 0).
+  // Shared scene assets so every opened place shows more than its cover.
+  const GALLERY_BY_TYPE: Record<string, Array<{ url: string; caption: string }>> = {
+    nature: [
+      { url: "/images/salcedo/gallery-waterfall-pool.jpg", caption: "Natural swimming basin" },
+      { url: "/images/salcedo/gallery-mountain-viewpoint.jpg", caption: "Trail and valley views" },
+      { url: "/images/salcedo/hero-salcedo-valley.png", caption: "Salcedo upland valley" },
+    ],
+    attraction: [
+      { url: "/images/salcedo/gallery-mountain-viewpoint.jpg", caption: "Viewpoint and trail" },
+      { url: "/images/salcedo/gallery-waterfall-pool.jpg", caption: "Waters and rock formations" },
+      { url: "/images/salcedo/hero-salcedo-valley.png", caption: "Salcedo upland valley" },
+    ],
+    heritage: [
+      { url: "/images/salcedo/gallery-heritage-church.jpg", caption: "Heritage stone church and plaza" },
+      { url: "/images/salcedo/plaza-heritage.png", caption: "Town plaza heritage" },
+      { url: "/images/salcedo/hero-salcedo-valley.png", caption: "Salcedo town and valley" },
+    ],
+    resort: [
+      { url: "/images/salcedo/gallery-resort-cottages.jpg", caption: "Spring pools and cottages" },
+      { url: "/images/salcedo/spring-water-resort.png", caption: "Spring water resort" },
+      { url: "/images/salcedo/gallery-waterfall-pool.jpg", caption: "Natural waters" },
+    ],
+    accommodation: [
+      { url: "/images/salcedo/gallery-resort-cottages.jpg", caption: "Grounds and cottages" },
+      { url: "/images/salcedo/spring-water-resort.png", caption: "Nearby spring resort" },
+      { url: "/images/salcedo/hero-salcedo-valley.png", caption: "Valley surroundings" },
+    ],
+    restaurant: [
+      { url: "/images/salcedo/gallery-ilocano-grill.jpg", caption: "Ilocano grill specialties" },
+      { url: "/images/salcedo/local-eatery-table.png", caption: "Local eatery table" },
+      { url: "/images/salcedo/rambutan-cacao-harvest.png", caption: "Local harvest ingredients" },
+    ],
+    cafe: [
+      { url: "/images/salcedo/gallery-cafe-tablea.jpg", caption: "Tablea and café treats" },
+      { url: "/images/salcedo/local-eatery-table.png", caption: "Café table" },
+      { url: "/images/salcedo/rambutan-cacao-harvest.png", caption: "Cacao harvest" },
+    ],
+    business: [
+      { url: "/images/salcedo/rambutan-cacao-harvest.png", caption: "Farm harvest" },
+      { url: "/images/salcedo/gallery-cafe-tablea.jpg", caption: "Local cacao products" },
+      { url: "/images/salcedo/hero-salcedo-valley.png", caption: "Salcedo farmlands" },
+    ],
+    service: [
+      { url: "/images/salcedo/plaza-heritage.png", caption: "Poblacion surroundings" },
+      { url: "/images/salcedo/hero-salcedo-valley.png", caption: "Salcedo town" },
+    ],
+  };
+
+  const seedGallery = async (placeId: string, placeType: string, featuredUrl: string) => {
+    const extras = (GALLERY_BY_TYPE[placeType] ?? []).filter((g) => g.url !== featuredUrl);
+    for (const [i, g] of extras.entries()) {
+      await db
+        .insert(schema.placeImages)
+        .values({
+          placeId,
+          url: g.url,
+          caption: g.caption,
+          attribution: "Project CEDO: Turi App — Editorial Visual Asset",
+          isIllustrative: true,
+          displayOrder: i + 1,
+        })
+        .onConflictDoNothing();
+    }
+  };
+
   for (const sp of seedPlaces) {
     const existing = await db
       .select()
@@ -1302,6 +1369,14 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
           .update(schema.places)
           .set({ latitude: sp.latitude, longitude: sp.longitude, updatedAt: new Date() })
           .where(eq(schema.places.id, existing[0].id));
+      }
+      // Backfill gallery photos for places seeded before galleries existed
+      const existingImages = await db
+        .select()
+        .from(schema.placeImages)
+        .where(eq(schema.placeImages.placeId, existing[0].id));
+      if (existingImages.length <= 1) {
+        await seedGallery(existing[0].id, sp.placeType, sp.featuredImageUrl);
       }
       continue;
     }
@@ -1351,6 +1426,8 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
       isIllustrative: true,
       displayOrder: 0,
     });
+
+    await seedGallery(createdPlace.id, sp.placeType, sp.featuredImageUrl);
 
     if (sp.attraction) {
       await db.insert(schema.attractionDetails).values({
