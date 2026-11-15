@@ -131,7 +131,7 @@ export function PlaceGallery({
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/30 pointer-events-none" />
 
-        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
+        <div className="absolute bottom-10 right-3 flex items-center gap-1.5 z-10">
           <span className="rounded-full bg-black/55 backdrop-blur-md text-white px-2.5 py-1 text-[11px] font-semibold tabular-nums">
             {index + 1} / {total}
           </span>
@@ -167,7 +167,7 @@ export function PlaceGallery({
         )}
 
         {current.caption && (
-          <p className="absolute bottom-3 left-3 z-10 max-w-[62%] rounded-full bg-black/55 backdrop-blur-md text-white px-3 py-1 text-[11px] font-medium truncate">
+          <p className="absolute bottom-10 left-3 z-10 max-w-[62%] rounded-full bg-black/55 backdrop-blur-md text-white px-3 py-1 text-[11px] font-medium truncate">
             {current.caption}
           </p>
         )}
