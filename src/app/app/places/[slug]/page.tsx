@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Banknote,
@@ -34,6 +33,7 @@ import {
 } from "@/components/app/PlaceDetailClient";
 import { PlaceCard } from "@/components/app/PlaceCard";
 import { Chip, FeatureTile, InfoRow, SectionHeader, StatTile } from "@/components/ui/design";
+import { PlaceGallery, PlacePhotosSection, type GalleryImage } from "@/components/app/PlaceGallery";
 
 export const dynamic = "force-dynamic";
 
@@ -89,12 +89,24 @@ export default async function PlaceDetailPage({
   }
   const categoryLabel = place.primaryCategory?.name || place.placeType;
 
+  // Photo gallery: cover first, then the place's gallery images (deduped)
+  const gallery: GalleryImage[] = [];
+  const seenUrls = new Set<string>();
+  const pushImage = (url?: string | null, caption?: string | null) => {
+    if (url && !seenUrls.has(url)) {
+      seenUrls.add(url);
+      gallery.push({ url, caption: caption ?? null });
+    }
+  };
+  pushImage(place.featuredImageUrl, place.featuredImageCaption);
+  for (const img of place.images) pushImage(img.url, img.caption);
+  if (gallery.length === 0) pushImage(imageSrc, null);
+
   return (
     <div className="min-h-full bg-[#FAF9F6]">
       {/* Hero */}
       <section className="relative h-[290px] bg-[#164237] overflow-hidden">
-        <Image src={imageSrc} alt={place.name} fill priority sizes="100vw" className="object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/25 pointer-events-none" />
+        <PlaceGallery name={place.name} images={gallery} />
         <PlaceHeroOverlayControls place={actionPayload} />
       </section>
 
@@ -184,6 +196,14 @@ export default async function PlaceDetailPage({
               label="Visits"
             />
           </div>
+
+          {/* Photos — more than just the cover */}
+          {gallery.length > 1 && (
+            <section className="space-y-3">
+              <SectionHeader eyebrow="Gallery" title="Photos" description={`${gallery.length} photos of ${place.name}`} />
+              <PlacePhotosSection name={place.name} images={gallery} />
+            </section>
+          )}
 
           {/* Café */}
           {place.cafeDetails && (
