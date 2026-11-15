@@ -189,6 +189,7 @@ function TripsPlannerInner({
   // Native bottom sheets instead of multi-step web forms
   const [stopPickerOpen, setStopPickerOpen] = useState(false);
   const [activeDay, setActiveDay] = useState(1);
+  const [showAllDays, setShowAllDays] = useState(true);
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
@@ -315,6 +316,7 @@ function TripsPlannerInner({
   }, [draft.stops]);
 
   const tripDaysCount = Math.max(1, draft.numberOfDays ?? 1, ...draft.stops.map((s) => s.day ?? 1));
+  const focusedDay = Math.min(activeDay, tripDaysCount);
   const dateForDay = (day: number) => {
     const d = new Date(`${draft.plannedVisitDate}T12:00:00`);
     if (Number.isNaN(d.getTime())) return "";
@@ -332,6 +334,23 @@ function TripsPlannerInner({
         return { ...item, dayIndex: n };
       });
   }, [draft.stops, draft.numberOfDays]);
+  const visibleStops =
+    showAllDays || tripDaysCount <= 1
+      ? displayStops
+      : displayStops.filter((x) => x.day === focusedDay);
+  const daySummary = (day: number) => {
+    const stops = displayStops.filter((x) => x.day === day).map((x) => x.s);
+    if (stops.length === 0) return null;
+    const first = stops.find((s) => s.visitTime)?.visitTime;
+    const last = stops[stops.length - 1];
+    return {
+      count: stops.length,
+      range: first
+        ? `${formatTime12h(first)} – ${formatTime12h(endTimeFor(last.visitTime, last.durationMinutes))}`
+        : "",
+    };
+  };
+
   const scheduleIssues = useMemo(() => {
     const byPlace = new Map<string, ReturnType<typeof analyzeSchedule>[number]>();
     let total = 0;
@@ -1027,23 +1046,44 @@ function TripsPlannerInner({
                   )}
                 </div>
                 {tripDaysCount > 1 && (
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1">
-                    {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => {
-                      const count = draft.stops.filter((s) => (s.day ?? 1) === d).length;
-                      return (
-                        <button
-                          key={d}
-                          type="button"
-                          onClick={() => { setActiveDay(d); setStopPickerOpen(true); }}
-                          className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] ${activeDay === d ? "border-[#164237] bg-[#164237]/5" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
-                          aria-label={`Day ${d}: ${count} stops. Tap to add destinations to this day.`}
-                        >
-                          <span className="block text-[11px] font-bold text-[#1A2421]">Day {d}</span>
-                          <span className="block text-[10px] text-[#616E69] tabular-nums">{dateForDay(d) ?? ""} · {count} {count === 1 ? "stop" : "stops"}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1" role="tablist" aria-label="Plan by day">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={showAllDays}
+                        onClick={() => setShowAllDays(true)}
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] min-h-[48px] ${showAllDays ? "border-[#164237] bg-[#164237] text-white" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
+                      >
+                        <span className="block text-[11px] font-bold">All days</span>
+                        <span className={`block text-[10px] tabular-nums ${showAllDays ? "text-white/75" : "text-[#616E69]"}`}>{tripDaysCount} days · {draft.stops.length} stops</span>
+                      </button>
+                      {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => {
+                        const summary = daySummary(d);
+                        const isActive = !showAllDays && focusedDay === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => { setActiveDay(d); setShowAllDays(false); }}
+                            className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] min-h-[48px] ${isActive ? "border-[#164237] bg-[#164237] text-white" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
+                          >
+                            <span className="block text-[11px] font-bold">Day {d}</span>
+                            <span className={`block text-[10px] tabular-nums ${isActive ? "text-white/75" : "text-[#616E69]"}`}>
+                              {dateForDay(d) ?? ""} · {summary ? `${summary.count} ${summary.count === 1 ? "stop" : "stops"}` : "No stops"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-[#616E69]">
+                      {showAllDays
+                        ? "Overview of every day. Tap a day to focus on it."
+                        : `Planning Day ${focusedDay}${dateForDay(focusedDay) ? ` (${dateForDay(focusedDay)})` : ""} — new destinations are added to this day.`}
+                    </p>
+                  </>
                 )}
               </section>
 
@@ -1052,15 +1092,31 @@ function TripsPlannerInner({
                 <div className="space-y-2.5">
                   <SectionHeader
                     eyebrow="Step 1 · Destinations"
-                    title={`Your destinations (${draft.stops.length})`}
-                    description="Added from Discover. Assign each one to a day."
+                    title={
+                      showAllDays || tripDaysCount <= 1
+                        ? `Your destinations (${draft.stops.length})`
+                        : `Day ${focusedDay} of ${tripDaysCount} (${visibleStops.length} ${visibleStops.length === 1 ? "stop" : "stops"})`
+                    }
+                    description={
+                      showAllDays || tripDaysCount <= 1
+                        ? "Added from Discover. Assign each one to a day."
+                        : `${dateForDay(focusedDay)}${daySummary(focusedDay) ? ` · ${daySummary(focusedDay)!.range}` : ""} — reorder, set times, or move stops between days.`
+                    }
+                    action={
+                      !showAllDays && tripDaysCount > 1 ? (
+                        <div className="flex items-center gap-1">
+                          <button type="button" disabled={focusedDay <= 1} onClick={() => setActiveDay(focusedDay - 1)} aria-label="Previous day" className="w-9 h-9 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><ArrowUp className="w-4 h-4 -rotate-90" /></button>
+                          <button type="button" disabled={focusedDay >= tripDaysCount} onClick={() => setActiveDay(focusedDay + 1)} aria-label="Next day" className="w-9 h-9 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><ArrowDown className="w-4 h-4 -rotate-90" /></button>
+                        </div>
+                      ) : undefined
+                    }
                   />
-                  {displayStops.map(({ s, origIdx: idx, day, dayIndex }) => (
+                  {visibleStops.map(({ s, origIdx: idx, day, dayIndex }) => (
                     <React.Fragment key={s.placeId}>
                     {dayIndex === 1 && (
                       <div className="flex items-center gap-2 pt-1">
                         <span className="rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-bold">Day {day}{dateForDay(day) ? ` • ${dateForDay(day)}` : ""}</span>
-                        <span className="text-[11px] text-[#616E69]">{displayStops.filter((x) => x.day === day).length} stops</span>
+                        <span className="text-[11px] text-[#616E69] tabular-nums">{displayStops.filter((x) => x.day === day).length} stops{daySummary(day) ? ` · ${daySummary(day)!.range}` : ""}</span>
                         <span className="flex-1 h-px bg-[#EAE7E0]" />
                       </div>
                     )}
@@ -1097,11 +1153,11 @@ function TripsPlannerInner({
                                 {s.barangayName ? `Brgy. ${s.barangayName}` : s.placeType}
                               </p>
                               {tripDaysCount > 1 && (
-                                <label className="inline-flex items-center gap-1 mt-0.5">
-                                  <span className="text-[10px] font-semibold text-[#616E69]">Day</span>
-                                  <select value={day} onChange={(e) => void setStopDay(idx, Number(e.target.value))} aria-label={`Day for ${s.placeName}`} className="rounded-md border border-[#EAE7E0] bg-[#FAF9F6] px-1 py-0.5 text-[10px] font-bold text-[#164237]">
+                                <label className="inline-flex items-center gap-1.5 mt-1">
+                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[#616E69]">Day</span>
+                                  <select value={day} onChange={(e) => { const d = Number(e.target.value); void setStopDay(idx, d); setActiveDay(d); }} aria-label={`Move ${s.placeName} to another day`} className="rounded-full border border-[#164237]/25 bg-[#164237]/5 px-2.5 min-h-[32px] text-[11px] font-bold text-[#164237] cursor-pointer">
                                     {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => (
-                                      <option key={d} value={d}>{d}{dateForDay(d) ? ` (${dateForDay(d)})` : ""}</option>
+                                      <option key={d} value={d}>Day {d}{dateForDay(d) ? ` · ${dateForDay(d)}` : ""}</option>
                                     ))}
                                   </select>
                                 </label>
@@ -1110,24 +1166,33 @@ function TripsPlannerInner({
                           </div>
 
                           <div className="no-print flex items-center gap-1 shrink-0">
-                            <button
-                              type="button"
-                              onClick={() => void moveStop(idx, idx - 1)}
-                              disabled={idx === 0}
-                              aria-label="Move stop up"
-                              className="p-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] disabled:opacity-30 cursor-pointer"
-                            >
-                              <ArrowUp className="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => void moveStop(idx, idx + 1)}
-                              disabled={idx === draft.stops.length - 1}
-                              aria-label="Move stop down"
-                              className="p-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] disabled:opacity-30 cursor-pointer"
-                            >
-                              <ArrowDown className="w-3 h-3" />
-                            </button>
+                            {(() => {
+                              const dispIdx = displayStops.findIndex((x) => x.s.placeId === s.placeId);
+                              const canUp = dispIdx > 0 && displayStops[dispIdx - 1].day === day;
+                              const canDown = dispIdx >= 0 && dispIdx < displayStops.length - 1 && displayStops[dispIdx + 1].day === day;
+                              return (
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => void moveStop(idx, dispIdx - 1)}
+                                    disabled={!canUp}
+                                    aria-label={`Move ${s.placeName} earlier in Day ${day}`}
+                                    className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                                  >
+                                    <ArrowUp className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => void moveStop(idx, dispIdx + 1)}
+                                    disabled={!canDown}
+                                    aria-label={`Move ${s.placeName} later in Day ${day}`}
+                                    className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                                  >
+                                    <ArrowDown className="w-4 h-4" />
+                                  </button>
+                                </>
+                              );
+                            })()}
                             <button
                               type="button"
                               onClick={() =>
@@ -1200,6 +1265,30 @@ function TripsPlannerInner({
                     </div>
                     </React.Fragment>
                   ))}
+
+                  {/* Focused day with nothing assigned yet */}
+                  {!showAllDays && tripDaysCount > 1 && visibleStops.length === 0 && (
+                    <div className="rounded-2xl border-2 border-dashed border-[#D8D3C8] bg-white/70 p-5 text-center space-y-2">
+                      <p className="font-display text-sm font-bold text-[#1A2421]">Day {focusedDay} is still empty</p>
+                      <p className="text-[11px] text-[#616E69]">Add destinations to {dateForDay(focusedDay) || `Day ${focusedDay}`}, or move a stop here from another day.</p>
+                      <button type="button" onClick={() => setStopPickerOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-4 py-2.5 text-xs font-semibold active:scale-95 transition cursor-pointer min-h-[40px]">
+                        <Plus className="w-3.5 h-3.5" /> Add to Day {focusedDay}
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Empty days stay visible in the overview so nothing gets forgotten */}
+                  {showAllDays && tripDaysCount > 1 &&
+                    Array.from({ length: tripDaysCount }, (_, i) => i + 1)
+                      .filter((d) => !daySummary(d))
+                      .map((d) => (
+                        <button key={d} type="button" onClick={() => { setActiveDay(d); setShowAllDays(false); }} className="w-full flex items-center gap-2 rounded-xl border border-dashed border-[#D8D3C8] bg-white/60 px-3 py-2.5 text-left cursor-pointer min-h-[44px]">
+                          <span className="rounded-full bg-[#EFECE5] text-[#616E69] px-2.5 py-0.5 text-[11px] font-bold">Day {d}</span>
+                          <span className="text-[11px] text-[#616E69] tabular-nums">{dateForDay(d)}</span>
+                          <span className="flex-1 text-[11px] text-[#616E69]">No stops yet</span>
+                          <span className="text-[11px] font-semibold text-[#164237]">Plan →</span>
+                        </button>
+                      ))}
                 </div>
               )}
 
@@ -1354,7 +1443,7 @@ function TripsPlannerInner({
                 className="no-print w-full rounded-2xl border-2 border-dashed border-[#D8D3C8] bg-white/70 hover:bg-white py-3.5 text-xs font-semibold text-[#164237] inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                {tripDaysCount > 1 ? `Add Stop to Day ${activeDay}` : "Add Destination Stop"}
+                {tripDaysCount > 1 ? `Add Stop to Day ${focusedDay}` : "Add Destination Stop"}
               </button>
 
               {/* STEP 4: Your details (optional) + trip file */}
