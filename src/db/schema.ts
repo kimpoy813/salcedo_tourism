@@ -187,7 +187,7 @@ export const placeRatings = pgTable(
     reviewerToken: text("reviewer_token").notNull(),
     reviewerName: text("reviewer_name").default("Salcedo Visitor").notNull(),
     originLabel: text("origin_label"),
-    rating: integer("rating").notNull(),
+    rating: integer("rating"), // nullable: comment-only reviews are allowed
     comment: text("comment"),
     travelerType: text("traveler_type").default("Leisure").notNull(),
     status: contentStatusEnum("status").default("published").notNull(),

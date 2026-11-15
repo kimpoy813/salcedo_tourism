@@ -28,7 +28,7 @@ export interface PlaceReviewItem {
   id: string;
   reviewerName: string;
   originLabel: string | null;
-  rating: number;
+  rating: number | null; // null = comment-only review
   comment: string | null;
   travelerType: string;
   createdAt: string;
@@ -86,7 +86,7 @@ async function computePublishedRankingsMap() {
       db
         .select({
           placeId: schema.placeRatings.placeId,
-          cnt: sql<number>`count(*)::int`,
+          cnt: sql<number>`count(${schema.placeRatings.rating})::int`,
           avg: sql<number>`coalesce(avg(${schema.placeRatings.rating}), 0)::float`,
         })
         .from(schema.placeRatings)
@@ -394,13 +394,16 @@ export async function getPlaceRatingsSummary(
   };
 
   let sum = 0;
+  let ratedCount = 0;
   for (const r of rows) {
+    if (r.rating == null) continue; // comment-only review
     const star = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
     distribution[star] = (distribution[star] ?? 0) + 1;
     sum += r.rating;
+    ratedCount += 1;
   }
 
-  const ratingCount = rows.length;
+  const ratingCount = ratedCount;
   const averageRating =
     ratingCount > 0 ? Number((sum / ratingCount).toFixed(1)) : 0;
 
