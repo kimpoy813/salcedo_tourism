@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { SectionHeader } from "@/components/ui/design";
 import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -316,7 +317,7 @@ function DiscoverDirectoryInner({
               onClick={() => setSortBy("top_rated")}
               className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
                 sortBy === "top_rated"
-                  ? "bg-white text-[#B88A44] shadow-2xs"
+                  ? "bg-white text-[#8A6527] shadow-2xs"
                   : "text-[#616E69]"
               }`}
             >
@@ -424,14 +425,11 @@ function DiscoverDirectoryInner({
         <div className="space-y-6">
           {categorizedGroups.map((group) => (
             <section key={group.slug} className="space-y-2.5">
-              <div className="flex items-center justify-between px-0.5">
-                <h2 className="font-display text-base font-bold text-[#1A2421]">
-                  {group.name}
-                </h2>
-                <span className="text-[11px] font-semibold text-[#616E69] tabular-nums">
-                  Top {group.places.length}
-                </span>
-              </div>
+              <SectionHeader
+                eyebrow="Category"
+                title={group.name}
+                action={<span className="text-[11px] font-semibold text-[#616E69] tabular-nums">Top {group.places.length}</span>}
+              />
               <div className="space-y-2.5">
                 {group.places.map((place, idx) => (
                   <PlaceCard

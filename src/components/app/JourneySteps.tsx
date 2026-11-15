@@ -71,7 +71,7 @@ export function JourneySteps() {
               window.localStorage.setItem(WELCOME_KEY, "1");
             } catch { /* ignore */ }
           }}
-          className="w-7 h-7 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] active:scale-90 transition cursor-pointer shrink-0"
+          className="w-10 h-10 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] active:scale-90 transition cursor-pointer shrink-0"
         >
           <X className="w-4 h-4" />
         </button>

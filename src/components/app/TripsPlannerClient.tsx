@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { SectionHeader } from "@/components/ui/design";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -40,6 +42,8 @@ import {
   listLocalDrafts,
   listLocalReceipts,
   listSavedPlaceIds,
+  listSavedPlaceSnapshots,
+  type SavedPlaceSnapshot,
   removeLocalReceipt,
   saveLocalDraft,
   saveLocalReceipt,
@@ -192,6 +196,7 @@ function TripsPlannerInner({
   const [placeSearch, setPlaceSearch] = useState("");
 
   const [savedPlaceIds, setSavedPlaceIds] = useState<string[]>([]);
+  const [savedSnapshots, setSavedSnapshots] = useState<SavedPlaceSnapshot[]>([]);
   const [localReceipts, setLocalReceipts] = useState<LocalTripReceipt[]>([]);
 
   // Optional RA 10173 Submission Form state (in Register bottom sheet)
@@ -241,11 +246,13 @@ function TripsPlannerInner({
 
   useEffect(() => {
     Promise.resolve().then(async () => {
-      const [loadedDrafts, savedIds, receipts] = await Promise.all([
+      const [loadedDrafts, savedIds, receipts, snapshots] = await Promise.all([
         listLocalDrafts(),
         listSavedPlaceIds(),
         listLocalReceipts(),
+        listSavedPlaceSnapshots(),
       ]);
+      setSavedSnapshots(snapshots);
       setDrafts(loadedDrafts);
       if (loadedDrafts.length > 0) {
         setDraft(loadedDrafts[0]);
@@ -266,10 +273,30 @@ function TripsPlannerInner({
     );
   }, [availablePlaces, placeSearch]);
 
-  const savedPlaces = useMemo(
-    () => availablePlaces.filter((p) => savedPlaceIds.includes(p.id)),
-    [availablePlaces, savedPlaceIds]
-  );
+  const savedPlaces = useMemo(() => {
+    const fromServer = availablePlaces.filter((p) => savedPlaceIds.includes(p.id));
+    // Offline fallback: places saved on-device that the server list doesn't
+    // include (e.g. no signal) still appear from their IndexedDB snapshots.
+    const known = new Set(fromServer.map((p) => p.id));
+    const fromSnapshots = savedSnapshots
+      .filter((s) => savedPlaceIds.includes(s.id) && !known.has(s.id))
+      .map(
+        (s) =>
+          ({
+            id: s.id,
+            name: s.name,
+            slug: s.slug,
+            shortDescription: "",
+            placeType: s.placeType,
+            address: "",
+            latitude: s.latitude ?? null,
+            longitude: s.longitude ?? null,
+            featuredImageUrl: s.featuredImageUrl ?? null,
+            barangay: s.barangayName ? { name: s.barangayName, slug: "" } : null,
+          }) as (typeof availablePlaces)[number]
+      );
+    return [...fromServer, ...fromSnapshots];
+  }, [availablePlaces, savedPlaceIds, savedSnapshots]);
 
   const totalMinutes = useMemo(
     () => draft.stops.reduce((acc, s) => acc + (s.durationMinutes || 60), 0),
@@ -1024,12 +1051,11 @@ function TripsPlannerInner({
                       <div className="flex-1 min-w-0 bg-white rounded-2xl border border-[#EAE7E0] p-3 space-y-2.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex items-center gap-2.5 min-w-0">
-                            <img
-                              src={
-                                s.featuredImageUrl ||
-                                "/images/salcedo/hero-salcedo-valley.png"
-                              }
+                            <Image
+                              src={s.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
                               alt={s.placeName}
+                              width={40}
+                              height={40}
                               className="w-10 h-10 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
                             />
                             <div className="min-w-0">
@@ -1642,9 +1668,7 @@ function TripsPlannerInner({
               </div>
             )}
             <div className="flex items-center justify-between">
-              <h2 className="font-display text-base font-bold text-[#1A2421]">
-                Choose Stops ({draft.stops.length})
-              </h2>
+              <SectionHeader eyebrow="Step 1 · Explore" title={`Choose stops (${draft.stops.length})`} />
               <button
                 type="button"
                 onClick={() => setStopPickerOpen(false)}
@@ -1675,9 +1699,11 @@ function TripsPlannerInner({
                     onClick={() => void toggleStop(p)}
                     className="w-full flex items-center gap-3 py-3 text-left active:bg-[#FAF9F6] cursor-pointer"
                   >
-                    <img
+                    <Image
                       src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
                       alt={p.name}
+                      width={44}
+                      height={44}
                       className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
                     />
                     <div className="flex-1 min-w-0">
@@ -1719,9 +1745,7 @@ function TripsPlannerInner({
             <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto shrink-0" />
 
             <div className="flex items-center justify-between gap-2">
-              <h2 className="font-display text-base font-bold text-[#1A2421]">
-                Register Trip with Salcedo CEDO
-              </h2>
+              <SectionHeader eyebrow="Optional" title="Register trip with Salcedo CEDO" />
               <button
                 type="button"
                 onClick={() => setRegisterSheetOpen(false)}

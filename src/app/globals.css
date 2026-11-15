@@ -133,3 +133,13 @@ a,
     background: #ffffff !important;
   }
 }
+
+/* Accessibility: always-visible focus for keyboard & switch navigation */
+:focus-visible {
+  outline: 2px solid #1D7874;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

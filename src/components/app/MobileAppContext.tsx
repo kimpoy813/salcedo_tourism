@@ -12,8 +12,11 @@ import {
   listLocalDrafts,
   listSavedPlaceIds,
   saveLocalDraft,
+  putSavedPlaceSnapshot,
+  removeSavedPlaceSnapshot,
   toggleSavedPlaceId,
   type LocalItineraryDraft,
+  type SavedPlaceSnapshot,
 } from "@/lib/client/indexeddb";
 
 export interface ToastState {
@@ -42,7 +45,11 @@ interface MobileAppContextValue {
     latitude?: number | null;
     longitude?: number | null;
   }) => Promise<boolean>;
-  toggleBookmark: (placeId: string, placeName?: string) => Promise<boolean>;
+  toggleBookmark: (
+    placeId: string,
+    placeName?: string,
+    snapshot?: Omit<SavedPlaceSnapshot, "savedAt">
+  ) => Promise<boolean>;
   showToast: (
     message: string,
     options?: { actionLabel?: string; actionHref?: string; tone?: "success" | "info" }
@@ -165,8 +172,18 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
   );
 
   const toggleBookmark = useCallback(
-    async (placeId: string, placeName?: string) => {
+    async (
+      placeId: string,
+      placeName?: string,
+      snapshot?: Omit<SavedPlaceSnapshot, "savedAt">
+    ) => {
       const isNowSaved = await toggleSavedPlaceId(placeId);
+      // Keep a full offline snapshot of saved places (drafts already live in IndexedDB)
+      if (isNowSaved && snapshot) {
+        await putSavedPlaceSnapshot(snapshot).catch(() => undefined);
+      } else if (!isNowSaved) {
+        await removeSavedPlaceSnapshot(placeId).catch(() => undefined);
+      }
       await refreshCounts();
       showToast(
         isNowSaved

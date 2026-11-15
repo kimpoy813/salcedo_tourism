@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Bookmark, Check, MapPin, Plus, Star } from "lucide-react";
 import { useMobileApp } from "./MobileAppContext";
 
@@ -70,7 +71,16 @@ export function PlaceCard({
   const handleToggleSave = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    await toggleBookmark(place.id, place.name);
+    await toggleBookmark(place.id, place.name, {
+      id: place.id,
+      name: place.name,
+      slug: place.slug,
+      placeType: place.placeType,
+      barangayName: place.barangay?.name ?? null,
+      featuredImageUrl: place.featuredImageUrl ?? null,
+      latitude: place.latitude ?? null,
+      longitude: place.longitude ?? null,
+    });
   };
 
   const handleQuickAdd = async (e: React.MouseEvent) => {
@@ -93,11 +103,13 @@ export function PlaceCard({
     return (
       <article className="relative w-[84%] max-w-[330px] shrink-0 snap-start rounded-[24px] overflow-hidden border border-[#EAE7E0] bg-[#164237] shadow-xs active:scale-[0.985] transition-transform">
         <Link href={`/app/places/${place.slug}`} className="block relative aspect-[16/10]">
-          <img
+          <Image
             src={imageSrc}
             alt={place.name}
-            className="w-full h-full object-cover"
-          />
+            fill
+            sizes="(max-width: 430px) 84vw, 330px"
+            className="object-cover"
+            />
           <div className="absolute inset-0 bg-gradient-to-t from-black/82 via-black/25 to-transparent" />
 
           <div className="absolute top-3 left-3 flex items-center gap-1.5">
@@ -167,11 +179,12 @@ export function PlaceCard({
           href={`/app/places/${place.slug}`}
           className="relative w-26 shrink-0 overflow-hidden bg-[#F3F2EE]"
         >
-          <img
+          <Image
             src={imageSrc}
             alt={place.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            sizes="104px"
+            className="object-cover"
           />
           {rankBadge && (
             <span
@@ -261,12 +274,13 @@ export function PlaceCard({
       }`}
     >
       <Link href={`/app/places/${place.slug}`} className="block relative overflow-hidden">
-        <div className="aspect-[16/10] bg-[#F3F2EE]">
-          <img
+        <div className="relative aspect-[16/10] bg-[#F3F2EE]">
+          <Image
             src={imageSrc}
             alt={place.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            sizes="104px"
+            className="object-cover"
           />
         </div>
 
@@ -292,7 +306,7 @@ export function PlaceCard({
           aria-label={saved ? "Remove from saved" : "Save place"}
           className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-sm transition active:scale-90 cursor-pointer ${
             saved
-              ? "bg-white text-[#B88A44] shadow-xs"
+              ? "bg-white text-[#8A6527] shadow-xs"
               : "bg-white/85 text-[#1A2421] hover:bg-white"
           }`}
         >

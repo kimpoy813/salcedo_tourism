@@ -11,7 +11,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { Activity, Building2, CalendarCheck2, MapPin, Route, Star } from "lucide-react";
+import { Activity, CalendarCheck2, Coffee, FileEdit, Home, MapPin, Route, Star, UtensilsCrossed, Waves } from "lucide-react";
+import { PALETTE, SectionHeader, StatTile } from "@/components/ui/design";
 
 export interface DashboardMetrics {
   inventory: {
@@ -97,28 +98,17 @@ export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
 
       {/* Inventory KPI Strip */}
       <section className="space-y-2.5">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#616E69]">
-          <Building2 className="w-3.5 h-3.5 text-[#164237]" />
-          <span>Published Inventory</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        <SectionHeader eyebrow="Inventory" title="Published inventory" />
+        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
           {[
-            { label: "Attractions", val: data.inventory.totalAttractions },
-            { label: "Resorts", val: data.inventory.totalResorts },
-            { label: "Cafés", val: data.inventory.totalCafes },
-            { label: "Restaurants", val: data.inventory.totalRestaurants },
-            { label: "Barangays", val: data.inventory.totalBarangays },
-            { label: "Draft / Review", val: data.inventory.draftOrPendingPlaces },
+            { label: "Attractions", val: data.inventory.totalAttractions, icon: MapPin, tint: PALETTE.green },
+            { label: "Resorts", val: data.inventory.totalResorts, icon: Waves, tint: PALETTE.teal },
+            { label: "Cafés", val: data.inventory.totalCafes, icon: Coffee, tint: PALETTE.gold },
+            { label: "Restaurants", val: data.inventory.totalRestaurants, icon: UtensilsCrossed, tint: PALETTE.green },
+            { label: "Barangays", val: data.inventory.totalBarangays, icon: Home, tint: PALETTE.teal },
+            { label: "Draft / Review", val: data.inventory.draftOrPendingPlaces, icon: FileEdit, tint: PALETTE.gold },
           ].map((k) => (
-            <div
-              key={k.label}
-              className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5 space-y-0.5"
-            >
-              <p className="text-[11px] text-[#616E69]">{k.label}</p>
-              <p className="font-display text-xl font-bold text-[#1A2421] tabular-nums">
-                {k.val}
-              </p>
-            </div>
+            <StatTile key={k.label} icon={k.icon} tint={k.tint} value={`${k.val}`} label={k.label} />
           ))}
         </div>
       </section>
@@ -299,10 +289,7 @@ export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
       {data.spotRankings && (
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-            <div>
-              <h3 className="font-display text-sm font-bold text-[#1A2421]">Spot Rankings — Most Visited</h3>
-              <p className="text-[11px] text-[#616E69]">Views + verified arrivals, same order as the tourist app.</p>
-            </div>
+            <SectionHeader eyebrow="Spot Rankings" title="Most Visited" description="Views + verified arrivals, same order as the tourist app." />
             {data.spotRankings.mostVisited.length === 0 ? (
               <p className="text-xs text-[#616E69]">No published spots yet.</p>
             ) : (
@@ -325,10 +312,7 @@ export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
           </div>
 
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-            <div>
-              <h3 className="font-display text-sm font-bold text-[#1A2421]">Spot Rankings — Top Rated</h3>
-              <p className="text-[11px] text-[#616E69]">Tourist star ratings submitted in the app (including after-trip ratings).</p>
-            </div>
+            <SectionHeader eyebrow="Spot Rankings" title="Top Rated" description="Tourist star ratings submitted in the app (including after-trip ratings)." />
             {data.spotRankings.topRated.length === 0 ? (
               <p className="text-xs text-[#616E69]">No tourist ratings yet.</p>
             ) : (
@@ -341,7 +325,7 @@ export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
                       <span className="block text-[10px] text-[#616E69] capitalize">{r.placeType} • {r.visitCount} visits</span>
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 font-bold text-[#1A2421] tabular-nums shrink-0">
-                      <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
+                      <Star className="w-3 h-3 text-[#8A6527]" fill="currentColor" />
                       {r.averageRating.toFixed(1)} ({r.ratingCount})
                     </span>
                   </li>
