@@ -281,7 +281,7 @@ function SalcedoInfoInner({
               className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
             >
               {art.eraOrYear && (
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B88A44]">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8A6527]">
                   {art.eraOrYear}
                 </p>
               )}

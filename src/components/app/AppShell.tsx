@@ -7,7 +7,6 @@ import {
   ArrowLeft,
   Check,
   Compass,
-  Download,
   Home,
   Info,
   LayoutGrid,
@@ -18,11 +17,6 @@ import {
 } from "lucide-react";
 import { trackPageView } from "@/lib/client/analytics-tracker";
 import { MobileAppProvider, useMobileApp } from "./MobileAppContext";
-
-interface BeforeInstallPromptEvent extends Event {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-}
 
 const NAV_ITEMS = [
   { href: "/app", label: "Home", icon: Home, matchExact: true },
@@ -45,7 +39,6 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const scrollRef = useRef<HTMLElement | null>(null);
   const { draftStopCount, toast, dismissToast } = useMobileApp();
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isOffline, setIsOffline] = useState(false);
 
   // Register Service Worker scoped strictly to /app/
@@ -57,19 +50,13 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
         .catch(() => undefined);
     }
 
-    const handleBeforeInstall = (e: Event) => {
-      e.preventDefault();
-      setInstallPrompt(e as BeforeInstallPromptEvent);
-    };
     const updateOnline = () => setIsOffline(!navigator.onLine);
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstall);
     window.addEventListener("online", updateOnline);
     window.addEventListener("offline", updateOnline);
     Promise.resolve().then(() => updateOnline());
 
     return () => {
-      window.removeEventListener("beforeinstallprompt", handleBeforeInstall);
       window.removeEventListener("online", updateOnline);
       window.removeEventListener("offline", updateOnline);
     };
@@ -99,15 +86,6 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
         : "app_page";
     void trackPageView({ path: pathname, pageType });
   }, [pathname]);
-
-  const handleInstall = async () => {
-    if (!installPrompt) return;
-    await installPrompt.prompt();
-    const res = await installPrompt.userChoice;
-    if (res.outcome === "accepted") {
-      setInstallPrompt(null);
-    }
-  };
 
   // Native route layouts:
   // - /app/map: 100% full-screen interactive map (no top header, no scroll wrapper)
@@ -156,25 +134,13 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
           </header>
         )}
 
-        {/* Floating Offline / Install Pill (Only visible when offline or installable) */}
-        {!isPushBarPage && (isOffline || installPrompt) && (
-          <div className="no-print absolute top-[max(10px,env(safe-area-inset-top))] right-3 z-40 flex items-center gap-1.5">
-            {isOffline && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] px-2.5 py-1 text-[10px] font-semibold text-[#616E69] shadow-xs">
-                <WifiOff className="w-3 h-3" />
-                Offline
-              </span>
-            )}
-            {installPrompt && (
-              <button
-                type="button"
-                onClick={handleInstall}
-                className="inline-flex items-center gap-1 rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-semibold shadow-sm active:scale-95 transition cursor-pointer"
-              >
-                <Download className="w-3 h-3" />
-                Install App
-              </button>
-            )}
+        {/* Offline indicator only — no install prompt (the app works in-browser) */}
+        {!isPushBarPage && isOffline && (
+          <div className="no-print absolute top-[max(10px,env(safe-area-inset-top))] right-3 z-40">
+            <span className="inline-flex items-center gap-1 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] px-2.5 py-1 text-[10px] font-semibold text-[#616E69] shadow-xs">
+              <WifiOff className="w-3 h-3" />
+              Offline — saved trips available
+            </span>
           </div>
         )}
 

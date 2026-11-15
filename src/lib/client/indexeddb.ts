@@ -43,10 +43,11 @@ export interface LocalTripReceipt {
 }
 
 const DB_NAME = "turi-salcedo-local-v1";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const STORE_DRAFTS = "drafts";
 const STORE_SAVED = "saved_places";
 const STORE_RECEIPTS = "submitted_receipts";
+const STORE_SNAPSHOTS = "saved_place_snapshots";
 
 function openTuriDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -65,6 +66,9 @@ function openTuriDb(): Promise<IDBDatabase> {
       }
       if (!db.objectStoreNames.contains(STORE_RECEIPTS)) {
         db.createObjectStore(STORE_RECEIPTS, { keyPath: "referenceNumber" });
+      }
+      if (!db.objectStoreNames.contains(STORE_SNAPSHOTS)) {
+        db.createObjectStore(STORE_SNAPSHOTS, { keyPath: "id" });
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -225,5 +229,65 @@ export async function removeLocalReceipt(referenceNumber: string): Promise<void>
       (r) => r.referenceNumber !== referenceNumber
     );
     lsWrite("turi_receipts", existing);
+  }
+}
+
+/** Full place snapshot stored when a tourist saves a place, so Saved Places
+ *  (and their photos, via the service-worker image cache) work fully offline. */
+export interface SavedPlaceSnapshot {
+  id: string;
+  name: string;
+  slug: string;
+  placeType: string;
+  barangayName?: string | null;
+  featuredImageUrl?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  savedAt: string;
+}
+
+const LS_SNAPSHOTS = "turi_saved_snapshots";
+
+export async function putSavedPlaceSnapshot(place: Omit<SavedPlaceSnapshot, "savedAt">): Promise<void> {
+  const snap: SavedPlaceSnapshot = { ...place, savedAt: new Date().toISOString() };
+  try {
+    const db = await openTuriDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_SNAPSHOTS, "readwrite");
+      tx.objectStore(STORE_SNAPSHOTS).put(snap);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch {
+    const existing = lsRead<SavedPlaceSnapshot[]>(LS_SNAPSHOTS, []).filter((s) => s.id !== snap.id);
+    lsWrite(LS_SNAPSHOTS, [snap, ...existing]);
+  }
+}
+
+export async function removeSavedPlaceSnapshot(placeId: string): Promise<void> {
+  try {
+    const db = await openTuriDb();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_SNAPSHOTS, "readwrite");
+      tx.objectStore(STORE_SNAPSHOTS).delete(placeId);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch {
+    lsWrite(LS_SNAPSHOTS, lsRead<SavedPlaceSnapshot[]>(LS_SNAPSHOTS, []).filter((s) => s.id !== placeId));
+  }
+}
+
+export async function listSavedPlaceSnapshots(): Promise<SavedPlaceSnapshot[]> {
+  try {
+    const db = await openTuriDb();
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_SNAPSHOTS, "readonly");
+      const req = tx.objectStore(STORE_SNAPSHOTS).getAll();
+      req.onsuccess = () => resolve((req.result as SavedPlaceSnapshot[]) || []);
+      req.onerror = () => reject(req.error);
+    });
+  } catch {
+    return lsRead<SavedPlaceSnapshot[]>(LS_SNAPSHOTS, []);
   }
 }

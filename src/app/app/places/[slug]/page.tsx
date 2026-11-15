@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import {
   Banknote,
@@ -33,6 +33,7 @@ import {
   PlaceRatingsSection,
 } from "@/components/app/PlaceDetailClient";
 import { PlaceCard } from "@/components/app/PlaceCard";
+import { Chip, FeatureTile, InfoRow, SectionHeader, StatTile } from "@/components/ui/design";
 
 export const dynamic = "force-dynamic";
 
@@ -45,123 +46,6 @@ const DAY_NAMES = [
   "Friday",
   "Saturday",
 ];
-
-/* ---------- Clean detail-page design system ----------
-   Eyebrow: 10px uppercase, wide tracking, teal
-   Section title: Fraunces 18px
-   Body: 15px / 1.75 for prose, 13px for secondary data
-   Data is shown as graphic tiles/rows, not badge soup. */
-
-function Section({
-  eyebrow,
-  title,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="space-y-3">
-      <div className="space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">
-          {eyebrow}
-        </p>
-        <h2 className="font-display text-lg font-bold leading-tight text-[#1A2421]">
-          {title}
-        </h2>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function StatTile({
-  icon: Icon,
-  tint,
-  value,
-  label,
-}: {
-  icon: typeof Star;
-  tint: string;
-  value: string;
-  label: string;
-}) {
-  return (
-    <div className="rounded-2xl bg-white border border-[#EAE7E0] px-2 py-3 text-center space-y-1">
-      <span
-        className="mx-auto w-7 h-7 rounded-full flex items-center justify-center"
-        style={{ backgroundColor: `${tint}1A` }}
-      >
-        <Icon className="w-3.5 h-3.5" style={{ color: tint }} />
-      </span>
-      <p className="font-display text-lg font-bold leading-none text-[#1A2421] tabular-nums">
-        {value}
-      </p>
-      <p className="text-[9px] font-semibold uppercase tracking-wider text-[#616E69] leading-tight">
-        {label}
-      </p>
-    </div>
-  );
-}
-
-function InfoRow({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: typeof Clock;
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex gap-3 py-2.5">
-      <span className="w-8 h-8 rounded-full bg-[#164237]/5 flex items-center justify-center shrink-0">
-        <Icon className="w-4 h-4 text-[#164237]" />
-      </span>
-      <div className="min-w-0 space-y-0.5">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-[#616E69]">
-          {label}
-        </p>
-        <div className="text-[13px] leading-relaxed text-[#1A2421]">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function Chip({ children }: { children: ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-white border border-[#EAE7E0] px-3 py-1.5 text-xs font-medium text-[#1A2421]">
-      {children}
-    </span>
-  );
-}
-
-function FeatureTile({
-  icon: Icon,
-  label,
-  available,
-}: {
-  icon: typeof Wifi;
-  label: string;
-  available: boolean | null;
-}) {
-  if (available === null) return null;
-  return (
-    <div className="flex items-center gap-2.5 rounded-xl bg-white border border-[#EAE7E0] px-3 py-2.5">
-      <Icon
-        className={`w-4 h-4 shrink-0 ${available ? "text-[#164237]" : "text-[#D8D3C8]"}`}
-      />
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-[#1A2421] leading-tight">{label}</p>
-        <p className="text-[10px] text-[#616E69]">{available ? "Available" : "Not available"}</p>
-      </div>
-      {available ? (
-        <Check className="w-3.5 h-3.5 text-[#1D7874] ml-auto shrink-0" />
-      ) : null}
-    </div>
-  );
-}
 
 export default async function PlaceDetailPage({
   params,
@@ -209,7 +93,7 @@ export default async function PlaceDetailPage({
     <div className="min-h-full bg-[#FAF9F6]">
       {/* Hero */}
       <section className="relative h-[290px] bg-[#164237] overflow-hidden">
-        <img src={imageSrc} alt={place.name} className="w-full h-full object-cover" />
+        <Image src={imageSrc} alt={place.name} fill priority sizes="100vw" className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/25 pointer-events-none" />
         <PlaceHeroOverlayControls place={actionPayload} />
       </section>
@@ -303,7 +187,7 @@ export default async function PlaceDetailPage({
 
           {/* Café */}
           {place.cafeDetails && (
-            <Section eyebrow="Café" title="Café highlights">
+            <section className="space-y-3"><SectionHeader eyebrow="Café" title="Café highlights" /><div className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
                 <FeatureTile icon={Wifi} label="Wi-Fi" available={place.cafeDetails.hasWifi} />
                 <FeatureTile icon={Car} label="Parking" available={place.cafeDetails.hasParking} />
@@ -338,12 +222,12 @@ export default async function PlaceDetailPage({
                   </div>
                 </div>
               )}
-            </Section>
+            </div></section>
           )}
 
           {/* Stay */}
           {place.accommodationDetails && (
-            <Section eyebrow="Stay" title="Stay details">
+            <section className="space-y-3"><SectionHeader eyebrow="Stay" title="Stay details" /><div className="space-y-3">
               <div className="rounded-2xl bg-white border border-[#EAE7E0] px-4 divide-y divide-[#F0EEE7]">
                 {place.accommodationDetails.accommodationType && (
                   <InfoRow icon={Home} label="Type">
@@ -366,12 +250,12 @@ export default async function PlaceDetailPage({
                   </InfoRow>
                 )}
               </div>
-            </Section>
+            </div></section>
           )}
 
           {/* Resort */}
           {place.resortDetails && (
-            <Section eyebrow="Resort" title="Facilities & rates">
+            <section className="space-y-3"><SectionHeader eyebrow="Resort" title="Facilities & rates" /><div className="space-y-3">
               <div className="rounded-2xl bg-white border border-[#EAE7E0] px-4 divide-y divide-[#F0EEE7]">
                 {place.resortDetails.poolsSummary && (
                   <InfoRow icon={Waves} label="Pools & water">
@@ -426,12 +310,12 @@ export default async function PlaceDetailPage({
                   Official inquiry page <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               )}
-            </Section>
+            </div></section>
           )}
 
           {/* Restaurant */}
           {place.restaurantDetails && (
-            <Section eyebrow="Dining" title="Dining & specialties">
+            <section className="space-y-3"><SectionHeader eyebrow="Dining" title="Dining & specialties" /><div className="space-y-3">
               {place.restaurantDetails.cuisineType && (
                 <p className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#164237]">
                   <UtensilsCrossed className="w-4 h-4" />
@@ -451,12 +335,12 @@ export default async function PlaceDetailPage({
                   {place.restaurantDetails.priceRangeNote}
                 </div>
               )}
-            </Section>
+            </div></section>
           )}
 
           {/* Attraction */}
           {place.attractionDetails && (
-            <Section eyebrow="Visit" title="Visitor guide">
+            <section className="space-y-3"><SectionHeader eyebrow="Visit" title="Visitor guide" /><div className="space-y-3">
               <div className="grid grid-cols-3 gap-2">
                 {place.attractionDetails.difficultyLevel && (
                   <div className="rounded-2xl bg-white border border-[#EAE7E0] px-2 py-3 text-center space-y-1">
@@ -522,12 +406,12 @@ export default async function PlaceDetailPage({
                   </ul>
                 </div>
               )}
-            </Section>
+            </div></section>
           )}
 
           {/* Amenities */}
           {place.amenities.length > 0 && (
-            <Section eyebrow="On site" title="Amenities">
+            <section className="space-y-3"><SectionHeader eyebrow="On site" title="Amenities" /><div className="space-y-3">
               <div className="flex flex-wrap gap-1.5">
                 {place.amenities.map((a) => (
                   <span
@@ -539,11 +423,11 @@ export default async function PlaceDetailPage({
                   </span>
                 ))}
               </div>
-            </Section>
+            </div></section>
           )}
 
           {/* Practical info */}
-          <Section eyebrow="Plan" title="Practical info">
+          <section className="space-y-3"><SectionHeader eyebrow="Plan" title="Practical info" /><div className="space-y-3">
             <div className="rounded-2xl bg-white border border-[#EAE7E0] px-4 py-1 divide-y divide-[#F0EEE7]">
               {place.phone && (
                 <div className="flex items-center justify-between gap-2 py-3">
@@ -633,7 +517,7 @@ export default async function PlaceDetailPage({
             )}
 
             <p className="text-[11px] text-[#616E69]">Source: {place.sourceReference}</p>
-          </Section>
+          </div></section>
 
           {/* Ratings & reviews */}
           <PlaceRatingsSection

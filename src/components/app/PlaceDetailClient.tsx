@@ -100,7 +100,16 @@ export function PlaceHeroOverlayControls({ place }: { place: PlaceActionPayload 
         </button>
         <button
           type="button"
-          onClick={() => void toggleBookmark(place.id, place.name)}
+          onClick={() => void toggleBookmark(place.id, place.name, {
+            id: place.id,
+            name: place.name,
+            slug: place.slug,
+            placeType: place.placeType,
+            barangayName: place.barangayName ?? null,
+            featuredImageUrl: place.featuredImageUrl ?? null,
+            latitude: place.latitude ?? null,
+            longitude: place.longitude ?? null,
+          })}
           aria-label={saved ? "Remove from saved" : "Save offline"}
           className={`w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-white/60 shadow-sm flex items-center justify-center active:scale-90 transition cursor-pointer ${
             saved ? "text-[#B88A44]" : "text-[#1A2421]"
@@ -482,7 +491,16 @@ export function PlaceDetailActions({ place }: { place: PlaceActionPayload }) {
       <div className="no-print sticky bottom-0 left-0 right-0 z-30 px-4 py-3 mt-4 bg-white/95 backdrop-blur-md border-t border-[#EAE7E0] flex items-center gap-2.5">
         <button
           type="button"
-          onClick={() => void toggleBookmark(place.id, place.name)}
+          onClick={() => void toggleBookmark(place.id, place.name, {
+            id: place.id,
+            name: place.name,
+            slug: place.slug,
+            placeType: place.placeType,
+            barangayName: place.barangayName ?? null,
+            featuredImageUrl: place.featuredImageUrl ?? null,
+            latitude: place.latitude ?? null,
+            longitude: place.longitude ?? null,
+          })}
           aria-label={saved ? "Remove from saved" : "Save offline"}
           className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 active:scale-90 transition cursor-pointer ${
             saved
