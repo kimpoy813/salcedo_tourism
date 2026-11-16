@@ -11,6 +11,9 @@ import {
   BadgeCheck,
   Calendar,
   Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Copy,
   Download,
@@ -193,6 +196,7 @@ function TripsPlannerInner({
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
+  const [expandedStopId, setExpandedStopId] = useState<string | null>(null);
 
   const [drafts, setDrafts] = useState<LocalItineraryDraft[]>([]);
   const [draft, setDraft] = useState<LocalItineraryDraft>(createEmptyDraft);
@@ -799,13 +803,13 @@ function TripsPlannerInner({
   return (
     <div className="space-y-4">
       {/* 4-step journey: the exact flow — browse & add, plan days, finish & review, optional details */}
-      <ol className="no-print flex items-center gap-1" aria-label="Your trip progress">
+      <ol className="no-print grid grid-cols-4 rounded-2xl bg-white border border-[#EAE7E0] px-2 py-2.5" aria-label="Your trip progress">
         {[
-          { n: 1, label: "Destinations" },
+          { n: 1, label: "Add places" },
           { n: 2, label: "Plan days" },
-          { n: 3, label: "Finish & review" },
-          { n: 4, label: "Details · optional" },
-        ].map((s, i, arr) => {
+          { n: 3, label: "Review" },
+          { n: 4, label: "Details" },
+        ].map((s) => {
           const state =
             draft.status === "completed" && s.n <= 3
               ? "done"
@@ -815,15 +819,17 @@ function TripsPlannerInner({
                   ? "current"
                   : "todo";
           return (
-            <React.Fragment key={s.n}>
-              <li className={`flex items-center gap-1.5 ${state === "todo" ? "text-[#616E69]" : "text-[#164237]"}`}>
-                <span className={`w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${state === "done" ? "bg-[#164237] text-white" : state === "current" ? "bg-[#164237] text-white ring-4 ring-[#164237]/10" : "bg-[#EFECE5] text-[#616E69]"}`}>
-                  {state === "done" ? <Check className="w-3 h-3" /> : s.n}
-                </span>
-                <span className={`text-[11px] whitespace-nowrap ${state === "current" ? "font-bold" : "font-medium"}`}>{s.label}</span>
-              </li>
-              {i < arr.length - 1 && <span className={`flex-1 h-px ${state === "done" ? "bg-[#164237]" : "bg-[#EAE7E0]"}`} />}
-            </React.Fragment>
+            <li key={s.n} className="relative flex flex-col items-center gap-1 text-center">
+              {s.n > 1 && (
+                <span className={`absolute top-[11px] right-1/2 w-full h-px ${state !== "todo" ? "bg-[#164237]/40" : "bg-[#EAE7E0]"}`} aria-hidden="true" />
+              )}
+              <span className={`relative z-10 w-[22px] h-[22px] rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${state === "done" ? "bg-[#164237] text-white" : state === "current" ? "bg-[#164237] text-white ring-4 ring-[#164237]/10" : "bg-[#EFECE5] text-[#616E69]"}`}>
+                {state === "done" ? <Check className="w-3 h-3" /> : s.n}
+              </span>
+              <span className={`text-[10px] leading-tight ${state === "current" ? "font-bold text-[#164237]" : state === "done" ? "font-semibold text-[#164237]" : "font-medium text-[#616E69]"}`}>
+                {s.label}
+              </span>
+            </li>
           );
         })}
       </ol>
@@ -1105,8 +1111,8 @@ function TripsPlannerInner({
                     action={
                       !showAllDays && tripDaysCount > 1 ? (
                         <div className="flex items-center gap-1">
-                          <button type="button" disabled={focusedDay <= 1} onClick={() => setActiveDay(focusedDay - 1)} aria-label="Previous day" className="w-9 h-9 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><ArrowUp className="w-4 h-4 -rotate-90" /></button>
-                          <button type="button" disabled={focusedDay >= tripDaysCount} onClick={() => setActiveDay(focusedDay + 1)} aria-label="Next day" className="w-9 h-9 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><ArrowDown className="w-4 h-4 -rotate-90" /></button>
+                          <button type="button" disabled={focusedDay <= 1} onClick={() => setActiveDay(focusedDay - 1)} aria-label="Previous day" className="w-10 h-10 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronLeft className="w-4 h-4" /></button>
+                          <button type="button" disabled={focusedDay >= tripDaysCount} onClick={() => setActiveDay(focusedDay + 1)} aria-label="Next day" className="w-10 h-10 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><ChevronRight className="w-4 h-4" /></button>
                         </div>
                       ) : undefined
                     }
@@ -1131,136 +1137,143 @@ function TripsPlannerInner({
                         )}
                       </div>
 
-                      {/* Stop Card */}
-                      <div className="flex-1 min-w-0 bg-white rounded-2xl border border-[#EAE7E0] p-3 space-y-2.5">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Image
-                              src={s.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
-                              alt={s.placeName}
-                              width={40}
-                              height={40}
-                              className="w-10 h-10 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                            />
-                            <div className="min-w-0">
-                              <Link
-                                href={`/app/places/${s.placeSlug}`}
-                                className="font-display font-bold text-xs text-[#1A2421] line-clamp-1 hover:text-[#164237]"
-                              >
-                                {s.placeName}
-                              </Link>
-                              <p className="text-[11px] text-[#616E69] truncate">
-                                {s.barangayName ? `Brgy. ${s.barangayName}` : s.placeType}
-                              </p>
-                              {tripDaysCount > 1 && (
-                                <label className="inline-flex items-center gap-1.5 mt-1">
-                                  <span className="text-[10px] font-semibold uppercase tracking-wide text-[#616E69]">Day</span>
-                                  <select value={day} onChange={(e) => { const d = Number(e.target.value); void setStopDay(idx, d); setActiveDay(d); }} aria-label={`Move ${s.placeName} to another day`} className="rounded-full border border-[#164237]/25 bg-[#164237]/5 px-2.5 min-h-[32px] text-[11px] font-bold text-[#164237] cursor-pointer">
-                                    {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => (
-                                      <option key={d} value={d}>Day {d}{dateForDay(d) ? ` · ${dateForDay(d)}` : ""}</option>
-                                    ))}
-                                  </select>
-                                </label>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="no-print flex items-center gap-1 shrink-0">
-                            {(() => {
-                              const dispIdx = displayStops.findIndex((x) => x.s.placeId === s.placeId);
-                              const canUp = dispIdx > 0 && displayStops[dispIdx - 1].day === day;
-                              const canDown = dispIdx >= 0 && dispIdx < displayStops.length - 1 && displayStops[dispIdx + 1].day === day;
-                              return (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={() => void moveStop(idx, dispIdx - 1)}
-                                    disabled={!canUp}
-                                    aria-label={`Move ${s.placeName} earlier in Day ${day}`}
-                                    className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"
+                      {/* Stop Card — collapsed by default: photo, name, time. Tap Edit for the rest. */}
+                      <div className="flex-1 min-w-0 bg-white rounded-2xl border border-[#EAE7E0] px-3.5 py-3">
+                        {(() => {
+                          const dispIdx = displayStops.findIndex((x) => x.s.placeId === s.placeId);
+                          const canUp = dispIdx > 0 && displayStops[dispIdx - 1].day === day;
+                          const canDown = dispIdx >= 0 && dispIdx < displayStops.length - 1 && displayStops[dispIdx + 1].day === day;
+                          const expanded = expandedStopId === s.placeId;
+                          return (
+                            <>
+                              <div className="flex items-center gap-3">
+                                <Image
+                                  src={s.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
+                                  alt={s.placeName}
+                                  width={44}
+                                  height={44}
+                                  className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <Link
+                                    href={`/app/places/${s.placeSlug}`}
+                                    className="font-display font-bold text-[13px] text-[#1A2421] line-clamp-1 hover:text-[#164237]"
                                   >
-                                    <ArrowUp className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => void moveStop(idx, dispIdx + 1)}
-                                    disabled={!canDown}
-                                    aria-label={`Move ${s.placeName} later in Day ${day}`}
-                                    className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"
-                                  >
-                                    <ArrowDown className="w-4 h-4" />
-                                  </button>
-                                </>
-                              );
-                            })()}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                void persistDraft({
-                                  ...draft,
-                                  stops: draft.stops.filter((_, i) => i !== idx),
-                                })
-                              }
-                              aria-label="Remove stop"
-                              className="p-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] text-rose-600 cursor-pointer"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Designed time planner: arrival, stay length, computed departure */}
-                        <div className="space-y-2 rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-2.5">
-                          <div className="flex items-end gap-2">
-                            <label className="flex-1 min-w-0">
-                              <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Arrive at</span>
-                              <input
-                                type="time"
-                                value={s.visitTime}
-                                onChange={(e) => void updateStopField(idx, "visitTime", e.target.value)}
-                                aria-label={`Arrival time at ${s.placeName}`}
-                                className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2 py-1.5 text-xs font-semibold tabular-nums focus:outline-none focus:border-[#164237]"
-                              />
-                            </label>
-                            <div className="text-center shrink-0 pb-0.5">
-                              <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Leave</span>
-                              <span className="text-xs font-bold text-[#164237] tabular-nums">{formatTime12h(endTimeFor(s.visitTime, s.durationMinutes))}</span>
-                            </div>
-                          </div>
-                          <div>
-                            <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Stay for</span>
-                            <div className="flex items-center gap-1">
-                              <button type="button" aria-label="Shorter stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.max(15, (s.durationMinutes || 60) - 15))}
-                                className="w-7 h-7 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3 h-3" /></button>
-                              {DURATION_PRESETS.map((mins) => (
-                                <button key={mins} type="button" onClick={() => void updateStopField(idx, "durationMinutes", mins)}
-                                  className={`flex-1 rounded-lg py-1.5 text-[10px] font-semibold border cursor-pointer ${s.durationMinutes === mins ? "bg-[#164237] text-white border-[#164237]" : "bg-white text-[#616E69] border-[#EAE7E0]"}`}>
-                                  {mins === 60 ? "1h" : mins === 90 ? "1.5h" : mins === 120 ? "2h" : "30m"}
+                                    {s.placeName}
+                                  </Link>
+                                  <p className="text-[11px] text-[#616E69] truncate">
+                                    {s.barangayName ? `Brgy. ${s.barangayName}` : s.placeType}
+                                  </p>
+                                  <p className="text-[11px] font-semibold text-[#164237] tabular-nums mt-0.5 inline-flex items-center gap-1">
+                                    <Clock className="w-3 h-3" />
+                                    {formatTime12h(s.visitTime)} – {formatTime12h(endTimeFor(s.visitTime, s.durationMinutes))}
+                                    <span className="font-normal text-[#616E69]">· {s.durationMinutes}m</span>
+                                    {tripDaysCount > 1 && <span className="font-normal text-[#616E69]">· Day {day}</span>}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedStopId(expanded ? null : s.placeId)}
+                                  aria-expanded={expanded}
+                                  aria-label={expanded ? `Close details for ${s.placeName}` : `Edit ${s.placeName}`}
+                                  className="no-print shrink-0 inline-flex items-center gap-1 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] pl-3 pr-2.5 min-h-[36px] text-[11px] font-semibold text-[#164237] active:scale-95 transition cursor-pointer"
+                                >
+                                  {expanded ? "Done" : "Edit"}
+                                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} />
                                 </button>
-                              ))}
-                              <button type="button" aria-label="Longer stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.min(480, (s.durationMinutes || 60) + 15))}
-                                className="w-7 h-7 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Plus className="w-3 h-3" /></button>
-                              <span className="text-[11px] font-bold text-[#1A2421] tabular-nums w-10 text-right">{s.durationMinutes}m</span>
-                            </div>
-                          </div>
-                          {issuesByIndex.get(idx) && (
-                            <p className={`rounded-lg px-2 py-1.5 text-[11px] ${issuesByIndex.get(idx)!.kind === "overlap" ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}>
-                              <span className="inline-flex items-start gap-1"><TriangleAlert className="w-3 h-3 mt-px shrink-0" />{issuesByIndex.get(idx)!.message}</span>
-                              {issuesByIndex.get(idx)!.suggestedTime && (
-                                <button type="button" onClick={() => void updateStopField(idx, "visitTime", issuesByIndex.get(idx)!.suggestedTime!)}
-                                  className="ml-1 font-bold underline cursor-pointer">Use {formatTime12h(issuesByIndex.get(idx)!.suggestedTime)}</button>
+                              </div>
+
+                              {expanded && (
+                                <div className="mt-3 space-y-3 rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3">
+                                  {tripDaysCount > 1 && (
+                                    <div>
+                                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1.5">Assigned to</span>
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => (
+                                          <button
+                                            key={d}
+                                            type="button"
+                                            onClick={() => { void setStopDay(idx, d); setActiveDay(d); }}
+                                            aria-pressed={day === d}
+                                            className={`rounded-full px-3 min-h-[36px] text-[11px] font-bold border cursor-pointer ${day === d ? "bg-[#164237] text-white border-[#164237]" : "bg-white text-[#1A2421] border-[#EAE7E0]"}`}
+                                          >
+                                            Day {d}{dateForDay(d) ? ` · ${dateForDay(d)}` : ""}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-end gap-2">
+                                    <label className="flex-1 min-w-0">
+                                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Arrive at</span>
+                                      <input
+                                        type="time"
+                                        value={s.visitTime}
+                                        onChange={(e) => void updateStopField(idx, "visitTime", e.target.value)}
+                                        aria-label={`Arrival time at ${s.placeName}`}
+                                        className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-2 text-xs font-semibold tabular-nums focus:outline-none focus:border-[#164237] min-h-[40px]"
+                                      />
+                                    </label>
+                                    <div className="text-center shrink-0 pb-1">
+                                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Leave</span>
+                                      <span className="text-xs font-bold text-[#164237] tabular-nums">{formatTime12h(endTimeFor(s.visitTime, s.durationMinutes))}</span>
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1.5">Stay for</span>
+                                    <div className="grid grid-cols-4 gap-1.5">
+                                      {DURATION_PRESETS.map((mins) => (
+                                        <button key={mins} type="button" onClick={() => void updateStopField(idx, "durationMinutes", mins)}
+                                          aria-pressed={s.durationMinutes === mins}
+                                          className={`rounded-lg py-2 min-h-[40px] text-[11px] font-semibold border cursor-pointer ${s.durationMinutes === mins ? "bg-[#164237] text-white border-[#164237]" : "bg-white text-[#616E69] border-[#EAE7E0]"}`}>
+                                          {mins === 60 ? "1h" : mins === 90 ? "1.5h" : mins === 120 ? "2h" : "30m"}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  {issuesByIndex.get(idx) && (
+                                    <p className={`rounded-lg px-2.5 py-2 text-[11px] ${issuesByIndex.get(idx)!.kind === "overlap" ? "bg-rose-50 text-rose-800 border border-rose-200" : "bg-amber-50 text-amber-900 border border-amber-200"}`}>
+                                      <span className="inline-flex items-start gap-1"><TriangleAlert className="w-3 h-3 mt-px shrink-0" />{issuesByIndex.get(idx)!.message}</span>
+                                      {issuesByIndex.get(idx)!.suggestedTime && (
+                                        <button type="button" onClick={() => void updateStopField(idx, "visitTime", issuesByIndex.get(idx)!.suggestedTime!)}
+                                          className="ml-1 font-bold underline cursor-pointer">Use {formatTime12h(issuesByIndex.get(idx)!.suggestedTime)}</button>
+                                      )}
+                                    </p>
+                                  )}
+
+                                  <input
+                                    type="text"
+                                    value={s.personalNotes}
+                                    onChange={(e) => void updateStopField(idx, "personalNotes", e.target.value)}
+                                    placeholder="Note for this stop (e.g. bring swimwear)…"
+                                    aria-label={`Notes for ${s.placeName}`}
+                                    className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-2 text-[11px] focus:outline-none focus:border-[#164237] min-h-[40px]"
+                                  />
+
+                                  <div className="no-print flex items-center gap-1.5 pt-0.5">
+                                    <button type="button" onClick={() => void moveStop(idx, dispIdx - 1)} disabled={!canUp}
+                                      className="inline-flex items-center gap-1 rounded-full bg-white border border-[#EAE7E0] px-3 min-h-[36px] text-[11px] font-semibold text-[#1A2421] disabled:opacity-30 cursor-pointer">
+                                      <ArrowUp className="w-3.5 h-3.5" /> Earlier
+                                    </button>
+                                    <button type="button" onClick={() => void moveStop(idx, dispIdx + 1)} disabled={!canDown}
+                                      className="inline-flex items-center gap-1 rounded-full bg-white border border-[#EAE7E0] px-3 min-h-[36px] text-[11px] font-semibold text-[#1A2421] disabled:opacity-30 cursor-pointer">
+                                      <ArrowDown className="w-3.5 h-3.5" /> Later
+                                    </button>
+                                    <span className="flex-1" />
+                                    <button type="button"
+                                      onClick={() => void persistDraft({ ...draft, stops: draft.stops.filter((_, i) => i !== idx) })}
+                                      className="inline-flex items-center gap-1 rounded-full bg-white border border-rose-200 px-3 min-h-[36px] text-[11px] font-semibold text-rose-700 cursor-pointer">
+                                      <Trash2 className="w-3.5 h-3.5" /> Remove
+                                    </button>
+                                  </div>
+                                </div>
                               )}
-                            </p>
-                          )}
-                          <input
-                            type="text"
-                            value={s.personalNotes}
-                            onChange={(e) => void updateStopField(idx, "personalNotes", e.target.value)}
-                            placeholder="Note for this stop (e.g. bring swimwear, buy tickets)…"
-                            aria-label={`Notes for ${s.placeName}`}
-                            className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2 py-1.5 text-[11px] focus:outline-none focus:border-[#164237]"
-                          />
-                        </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </div>
                     </React.Fragment>
@@ -1311,11 +1324,6 @@ function TripsPlannerInner({
                   {scheduleIssues.total > 0 && (
                     <p className="text-[11px] text-amber-200 inline-flex items-center gap-1"><TriangleAlert className="w-3 h-3" />{scheduleIssues.total} timing {scheduleIssues.total === 1 ? "issue" : "issues"} to fix — tap “Use …” on the stop, or Auto-arrange.</p>
                   )}
-                  <p className="text-[11px] text-white/70">
-                    {draft.status === "completed"
-                      ? `Completed${draft.completedAt ? ` on ${draft.completedAt.slice(0, 10)}` : ""} — this trip and its ratings now count in Salcedo's destination rankings.`
-                      : "Tip: Register below so this plan counts in Tourism Office statistics, then come back after your trip to rate each destination."}
-                  </p>
                 </div>
               )}
 
