@@ -195,6 +195,7 @@ function TripsPlannerInner({
   const [showAllDays, setShowAllDays] = useState(true);
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [view, setView] = useState<"plan" | "review">("plan");
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
   const [expandedStopId, setExpandedStopId] = useState<string | null>(null);
 
@@ -260,9 +261,17 @@ function TripsPlannerInner({
         listSavedPlaceSnapshots(),
       ]);
       setSavedSnapshots(snapshots);
-      setDrafts(loadedDrafts);
-      if (loadedDrafts.length > 0) {
-        setDraft(loadedDrafts[0]);
+      if (loadedDrafts.length > 0 && loadedDrafts[0].status === "completed") {
+        // Finished trips are archived in Local Drafts — start the next trip fresh.
+        const fresh = createEmptyDraft();
+        await saveLocalDraft(fresh);
+        setDraft(fresh);
+        setDrafts(await listLocalDrafts());
+      } else {
+        setDrafts(loadedDrafts);
+        if (loadedDrafts.length > 0) {
+          setDraft(loadedDrafts[0]);
+        }
       }
       setSavedPlaceIds(savedIds);
       setLocalReceipts(receipts);
@@ -497,6 +506,23 @@ function TripsPlannerInner({
     if (showNotice) {
       showToast("Draft saved offline", { tone: "success" });
     }
+  };
+
+  /** Clear the finished/current trip and begin a fresh one. */
+  const handleStartNewTrip = async () => {
+    const fresh = createEmptyDraft();
+    setStopRatings({});
+    setStopComments({});
+    setVisitedStops({});
+    setCommentOpen({});
+    setExpandedStopId(null);
+    setReviewOpen(false);
+    setView("plan");
+    setSubmissionResult(null);
+    setCompletionNotice(null);
+    await persistDraft(fresh);
+    setActiveTab("builder");
+    showToast("Fresh trip started — happy planning!", { tone: "success" });
   };
 
   const applyQuickPreset = async (preset: "nature" | "heritage") => {
@@ -798,7 +824,8 @@ function TripsPlannerInner({
     setDeleteSuccess(data.message);
   };
 
-  const journeyStep = submissionResult ? 4 : draft.status === "completed" ? 3 : draft.stops.length > 0 ? 2 : 1;
+  const inReview = view === "review" && draft.status !== "completed";
+  const journeyStep = submissionResult ? 4 : draft.status === "completed" ? 3 : inReview ? 3 : draft.stops.length > 0 ? 2 : 1;
 
   return (
     <div className="space-y-4">
@@ -971,7 +998,7 @@ function TripsPlannerInner({
           ) : (
             <>
               {/* Native Trip Header Card */}
-              <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+              <div className={`bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <div className="space-y-2">
                   <input
                     type="text"
@@ -1024,7 +1051,7 @@ function TripsPlannerInner({
               </div>
 
               {/* STEP 2: Plan your days — start date, how many days, what falls on each day */}
-              <section className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+              <section className={`no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <SectionHeader
                   eyebrow="Step 2 · Plan"
                   title="Plan your days"
@@ -1094,7 +1121,7 @@ function TripsPlannerInner({
               </section>
 
               {/* Native Vertical Route Timeline */}
-              {draft.stops.length > 0 && (
+              {draft.stops.length > 0 && !inReview && (
                 <div className="space-y-2.5">
                   <SectionHeader
                     eyebrow="Step 1 · Destinations"
@@ -1306,7 +1333,7 @@ function TripsPlannerInner({
               )}
 
               {/* Day summary: makes the plan (and its totals) explicit at a glance */}
-              {draft.stops.length > 0 && (
+              {draft.stops.length > 0 && !inReview && (
                 <div className="bg-[#164237] text-white rounded-2xl p-3.5 space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">{tripDaysCount > 1 ? `Your ${tripDaysCount}-day trip at a glance` : "Your day at a glance"}</p>
@@ -1327,9 +1354,14 @@ function TripsPlannerInner({
                 </div>
               )}
 
-              {/* STEP 3: Finish & review — after going, rate and/or comment on each place */}
-              {draft.stops.length > 0 && (
+              {/* STEP 3: Finish & review — its own focused mode after going */}
+              {draft.stops.length > 0 && (inReview || draft.status === "completed") && (
                 <section className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+                  {inReview && draft.status !== "completed" && (
+                    <button type="button" onClick={() => setView("plan")} className="inline-flex items-center gap-1 text-xs font-semibold text-[#164237] cursor-pointer min-h-[36px]">
+                      <ChevronLeft className="w-4 h-4" /> Back to plan
+                    </button>
+                  )}
                   <SectionHeader
                     eyebrow="Step 3 · After your trip"
                     title={draft.status === "completed" ? "Trip finished" : "Finish & review"}
@@ -1341,10 +1373,20 @@ function TripsPlannerInner({
                   />
 
                   {draft.status === "completed" ? (
-                    <p className="rounded-xl bg-[#164237]/5 border border-[#164237]/15 p-3 text-xs text-[#164237] inline-flex items-start gap-2 w-full">
-                      <Check className="w-4 h-4 shrink-0 mt-px" />
-                      <span>{completionNotice ?? "This trip is finished and counted. Agyaman kami!"}</span>
-                    </p>
+                    <div className="space-y-2.5">
+                      <p className="rounded-xl bg-[#164237]/5 border border-[#164237]/15 p-3 text-xs text-[#164237] inline-flex items-start gap-2 w-full">
+                        <Check className="w-4 h-4 shrink-0 mt-px" />
+                        <span>{completionNotice ?? "This trip is finished and counted. Agyaman kami!"}</span>
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleStartNewTrip()}
+                        className="w-full rounded-full bg-[#164237] text-white py-3.5 text-xs font-semibold active:scale-[0.98] transition cursor-pointer min-h-[44px]"
+                      >
+                        Start a New Trip
+                      </button>
+                      <p className="text-[11px] text-[#616E69] text-center">This finished trip stays saved under Saved → Local Drafts.</p>
+                    </div>
                   ) : !(reviewOpen || tripIsDue) ? (
                     <>
                       <p className="text-xs text-[#616E69] leading-relaxed">
@@ -1444,18 +1486,30 @@ function TripsPlannerInner({
                 </div>
               )}
 
-              {/* Add Destination Native Trigger */}
-              <button
-                type="button"
-                onClick={() => setStopPickerOpen(true)}
-                className="no-print w-full rounded-2xl border-2 border-dashed border-[#D8D3C8] bg-white/70 hover:bg-white py-3.5 text-xs font-semibold text-[#164237] inline-flex items-center justify-center gap-1.5 active:scale-[0.98] transition cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                {tripDaysCount > 1 ? `Add Stop to Day ${focusedDay}` : "Add Destination Stop"}
-              </button>
+              {/* One sticky action dock for plan mode: Add + the single next step */}
+              {draft.stops.length > 0 && !inReview && draft.status !== "completed" && (
+                <div className="no-print sticky bottom-3 z-30 flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] shadow-lg p-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setStopPickerOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-4 min-h-[44px] text-xs font-semibold text-[#164237] active:scale-95 transition cursor-pointer shrink-0"
+                  >
+                    <Plus className="w-4 h-4" />
+                    {tripDaysCount > 1 ? `Day ${focusedDay}` : "Add"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setReviewOpen(true); setView("review"); }}
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white px-4 min-h-[44px] text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+                  >
+                    <BadgeCheck className="w-4 h-4" />
+                    Finish &amp; Review Trip
+                  </button>
+                </div>
+              )}
 
               {/* STEP 4: Your details (optional) + trip file */}
-              {draft.stops.length > 0 && (
+              {draft.stops.length > 0 && !inReview && (
                 <div className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
                   <SectionHeader
                     eyebrow="Step 4 · Optional"
@@ -1554,6 +1608,9 @@ function TripsPlannerInner({
                       </p>
                       <p className="text-[11px] text-[#616E69] tabular-nums">
                         {d.stops.length} stops • {d.plannedVisitDate}
+                        {d.status === "completed" && (
+                          <span className="ml-1.5 rounded-full bg-[#164237]/10 text-[#164237] px-1.5 py-px text-[9px] font-bold uppercase tracking-wide">Finished</span>
+                        )}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
