@@ -124,7 +124,17 @@ const ORIGIN_QUICK_CITIES = [
   { city: "Metro Manila", province: "NCR" },
 ];
 
-const DURATION_PRESETS = [30, 60, 90, 120];
+const DURATION_PRESETS = [30, 60, 90, 120, 180, 240];
+const MAX_STAY_MINUTES = 720; // up to 12 hours at one destination
+
+/** 30 -> "30m", 60 -> "1h", 150 -> "2h 30m" */
+function formatDuration(mins: number): string {
+  const m = Math.max(0, Math.round(mins || 0));
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rest = m % 60;
+  return rest ? `${h}h ${rest}m` : `${h}h`;
+}
 
 function createEmptyDraft(): LocalItineraryDraft {
   return {
@@ -194,6 +204,7 @@ function TripsPlannerInner({
   const [activeDay, setActiveDay] = useState(1);
   const [showAllDays, setShowAllDays] = useState(true);
   const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
+  const [visitorSubmittedRef, setVisitorSubmittedRef] = useState<string | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [view, setView] = useState<"plan" | "review">("plan");
   const [commentOpen, setCommentOpen] = useState<Record<string, boolean>>({});
@@ -449,7 +460,7 @@ function TripsPlannerInner({
       void trackItineraryEvent({ eventType: "trip_completed", stopCount: completedStopsCount, placeIds: draft.stops.map((s) => s.placeId) });
       // Done means done: archive the finished trip under Saved and clear the
       // planner right away so no destinations linger for the next trip.
-      const message = `Trip finished: ${completedStopsCount} destination(s) visited, ${rated} review(s) saved. Your planner is clear for the next trip — Agyaman kami!`;
+      const message = `Trip finished: ${completedStopsCount} destination(s) visited, ${rated} review(s) saved.${visitorSubmittedRef ? ` Visitor form recorded (Ref ${visitorSubmittedRef}).` : ""} Your planner is clear for the next trip — Agyaman kami!`;
       const fresh = createEmptyDraft();
       setStopRatings({});
       setStopComments({});
@@ -458,6 +469,7 @@ function TripsPlannerInner({
       setExpandedStopId(null);
       setReviewOpen(false);
       setView("plan");
+      setVisitorSubmittedRef(null);
       await persistDraft(fresh);
       setCompletionNotice(message);
       showToast("Trip completed — planner cleared for your next trip!", { tone: "success" });
@@ -531,6 +543,7 @@ function TripsPlannerInner({
     setReviewOpen(false);
     setView("plan");
     setSubmissionResult(null);
+    setVisitorSubmittedRef(null);
     setCompletionNotice(null);
     await persistDraft(fresh);
     setActiveTab("builder");
@@ -733,14 +746,17 @@ function TripsPlannerInner({
         return;
       }
 
-      setSubmissionResult({
-        referenceNumber: data.referenceNumber,
-        privateCode: data.privateCode,
-        warning: data.warning,
-        title: draft.title,
-        plannedVisitDate: draft.plannedVisitDate,
-        totalStops: draft.stops.length,
-      });
+      setVisitorSubmittedRef(data.referenceNumber);
+      if (view !== "review") {
+        setSubmissionResult({
+          referenceNumber: data.referenceNumber,
+          privateCode: data.privateCode,
+          warning: data.warning,
+          title: draft.title,
+          plannedVisitDate: draft.plannedVisitDate,
+          totalStops: draft.stops.length,
+        });
+      }
       setRegisterSheetOpen(false);
 
       await saveLocalReceipt({
@@ -837,17 +853,16 @@ function TripsPlannerInner({
   };
 
   const inReview = view === "review" && draft.status !== "completed";
-  const journeyStep = submissionResult ? 4 : draft.status === "completed" ? 3 : inReview ? 3 : draft.stops.length > 0 ? 2 : 1;
+  const journeyStep = submissionResult ? 3 : draft.status === "completed" ? 3 : inReview ? 3 : draft.stops.length > 0 ? 2 : 1;
 
   return (
     <div className="space-y-5">
       {/* 4-step journey: the exact flow — browse & add, plan days, finish & review, optional details */}
-      <ol className="no-print grid grid-cols-4 surface-card px-2 py-3" aria-label="Your trip progress">
+      <ol className="no-print grid grid-cols-3 surface-card px-2 py-3" aria-label="Your trip progress">
         {[
           { n: 1, label: "Add places" },
           { n: 2, label: "Plan days" },
-          { n: 3, label: "Review" },
-          { n: 4, label: "Details" },
+          { n: 3, label: "Finish & review" },
         ].map((s) => {
           const state =
             draft.status === "completed" && s.n <= 3
@@ -1223,7 +1238,7 @@ function TripsPlannerInner({
                                   <p className="text-[11px] font-semibold text-[#164237] tabular-nums mt-0.5 inline-flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
                                     {formatTime12h(s.visitTime)} – {formatTime12h(endTimeFor(s.visitTime, s.durationMinutes))}
-                                    <span className="font-normal text-[#616E69]">· {s.durationMinutes}m</span>
+                                    <span className="font-normal text-[#616E69]">· {formatDuration(s.durationMinutes || 60)}</span>
                                     {tripDaysCount > 1 && <span className="font-normal text-[#616E69]">· Day {day}</span>}
                                   </p>
                                 </div>
@@ -1279,15 +1294,23 @@ function TripsPlannerInner({
 
                                   <div>
                                     <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69] mb-1.5">Stay for</span>
-                                    <div className="grid grid-cols-4 gap-1.5">
+                                    <div className="grid grid-cols-3 gap-1.5">
                                       {DURATION_PRESETS.map((mins) => (
                                         <button key={mins} type="button" onClick={() => void updateStopField(idx, "durationMinutes", mins)}
                                           aria-pressed={s.durationMinutes === mins}
                                           className={`rounded-lg py-2 min-h-[40px] text-[11px] font-semibold border cursor-pointer ${s.durationMinutes === mins ? "bg-[#164237] text-white border-[#164237]" : "bg-white text-[#616E69] border-[#EAE7E0]"}`}>
-                                          {mins === 60 ? "1h" : mins === 90 ? "1.5h" : mins === 120 ? "2h" : "30m"}
+                                          {formatDuration(mins)}
                                         </button>
                                       ))}
                                     </div>
+                                    <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-white border border-[#EAE7E0] px-1.5 py-1.5">
+                                      <button type="button" aria-label="Shorter stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.max(15, (s.durationMinutes || 60) - 15))}
+                                        className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
+                                      <span className="flex-1 text-center text-xs font-bold text-[#1A2421] tabular-nums">{formatDuration(s.durationMinutes || 60)} <span className="font-medium text-[#616E69]">stay</span></span>
+                                      <button type="button" aria-label="Longer stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.min(MAX_STAY_MINUTES, (s.durationMinutes || 60) + 15))}
+                                        className="w-9 h-9 rounded-full bg-[#164237] text-white flex items-center justify-center cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
+                                    </div>
+                                    <p className="mt-1 text-[10px] text-[#616E69]">Need longer? Keep tapping + — up to 12 hours at one destination.</p>
                                   </div>
 
                                   {issuesByIndex.get(idx) && (
@@ -1383,6 +1406,17 @@ function TripsPlannerInner({
                 </div>
               )}
 
+              {draft.stops.length > 0 && !inReview && (
+                <div className="no-print flex items-center justify-center gap-2">
+                  <button type="button" onClick={() => downloadItineraryText(draft.title, draft.plannedVisitDate, draft.stops)} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#EAE7E0] px-4 min-h-[40px] text-xs font-semibold text-[#1A2421] active:scale-95 transition cursor-pointer">
+                    <Download className="w-3.5 h-3.5" /> Save trip file
+                  </button>
+                  <button type="button" onClick={() => window.print()} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#EAE7E0] px-4 min-h-[40px] text-xs font-semibold text-[#1A2421] active:scale-95 transition cursor-pointer">
+                    <Printer className="w-3.5 h-3.5" /> Print
+                  </button>
+                </div>
+              )}
+
               {/* STEP 3: Finish & review — its own focused mode after going */}
               {draft.stops.length > 0 && (inReview || draft.status === "completed") && (
                 <section className="no-print surface-card p-5 space-y-3">
@@ -1392,12 +1426,12 @@ function TripsPlannerInner({
                     </button>
                   )}
                   <SectionHeader
-                    eyebrow="Step 3 · After your trip"
-                    title={draft.status === "completed" ? "Trip finished" : "Finish & review"}
+                    eyebrow="Step 3 · Final step"
+                    title={draft.status === "completed" ? "Trip finished" : "Finish your trip"}
                     description={
                       draft.status === "completed"
                         ? "Thank you — your reviews help the next tourists and Salcedo's rankings."
-                        : "Once you've gone, mark the places you visited and rate them, leave a comment, or both."
+                        : "Everything happens here: mark visited places, rate or comment, add your visitor details, then finish — one step, one button."
                     }
                   />
 
@@ -1493,14 +1527,32 @@ function TripsPlannerInner({
                       {completionNotice && (
                         <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">{completionNotice}</p>
                       )}
+                      <div className="inset-panel p-3.5 space-y-2">
+                        <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69]">Your details · Visitor form (optional)</p>
+                        {visitorSubmittedRef ? (
+                          <p className="text-xs text-[#164237] inline-flex items-start gap-1.5">
+                            <Check className="w-4 h-4 shrink-0 mt-px" />
+                            <span>Visitor form submitted — Reference <strong className="font-mono">{visitorSubmittedRef}</strong>. Salcedo CEDO can now count your visit.</span>
+                          </p>
+                        ) : (
+                          <>
+                            <p className="text-xs leading-relaxed text-[#616E69]">Same final step — fill this in now if you&apos;d like Salcedo to count and thank your visit. Only where you&apos;re from, how many travelers, and one privacy tick.</p>
+                            <button type="button" onClick={() => setRegisterSheetOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#164237]/30 px-4 min-h-[40px] text-xs font-semibold text-[#164237] active:scale-95 transition cursor-pointer">
+                              <Send className="w-3.5 h-3.5" /> Fill the visitor form
+                            </button>
+                          </>
+                        )}
+                      </div>
+
                       <button
                         type="button"
                         disabled={completing}
                         onClick={() => void handleCompleteLocalTrip()}
                         className="w-full rounded-full btn-primary-pro py-3.5 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer min-h-[44px]"
                       >
-                        {completing ? "Saving…" : "Finish Trip & Save Reviews"}
+                        {completing ? "Saving…" : "Finish Trip — Save Reviews & Done"}
                       </button>
+                      <p className="text-[10px] text-[#616E69] text-center">Finishing clears this trip from your planner, ready for the next one.</p>
                     </>
                   )}
                 </section>
@@ -1537,51 +1589,6 @@ function TripsPlannerInner({
                 </div>
               )}
 
-              {/* STEP 4: Your details (optional) + trip file */}
-              {draft.stops.length > 0 && !inReview && (
-                <div className="no-print surface-card p-5 space-y-3">
-                  <SectionHeader
-                    eyebrow="Step 4 · Optional"
-                    title="Your details & trip file"
-                    description="Save your trip and just go — nothing else is required. If you'd like, answer the short visitor form so Salcedo can count and thank its visitors."
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      downloadItineraryText(
-                        draft.title,
-                        draft.plannedVisitDate,
-                        draft.stops
-                      )
-                    }
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-full btn-primary-pro py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Save My Trip
-                  </button>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => window.print()}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] py-2.5 text-xs font-semibold text-[#1A2421] active:scale-95 transition cursor-pointer"
-                    >
-                      <Printer className="w-3.5 h-3.5" />
-                      Print
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setRegisterSheetOpen(true)}
-                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#164237]/30 bg-white py-2.5 text-xs font-semibold text-[#164237] active:scale-95 transition cursor-pointer"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                      Answer Visitor Form (Optional)
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-[#616E69] text-center">
-                    The visitor form is optional (2 min) — skip it freely.
-                  </p>
-                </div>
-              )}
             </>
           )}
         </div>
@@ -1782,7 +1789,7 @@ function TripsPlannerInner({
                       {s.visitedAt && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-bold text-[#164237]"><Check className="w-3 h-3" />Visited</span>}
                     </span>
                     <span className="text-[#616E69] tabular-nums">
-                      {s.visitTime ? formatTime12h(s.visitTime) : "Flexible"} ({s.durationMinutes}m)
+                      {s.visitTime ? formatTime12h(s.visitTime) : "Flexible"} ({formatDuration(s.durationMinutes || 60)})
                     </span>
                   </div>
                 ))}
@@ -2003,7 +2010,7 @@ function TripsPlannerInner({
 
             <p className="rounded-xl bg-[#B88A44]/10 border border-[#B88A44]/25 px-3 py-2 text-[11px] text-[#1A2421] inline-flex items-start gap-1.5">
               <Star className="w-3.5 h-3.5 text-[#B88A44] shrink-0 mt-px" fill="currentColor" />
-              <span><strong>Just your details:</strong> ratings and comments happen in Step 3 (Finish &amp; review) after your trip. This form is only your visitor information — always optional.</span>
+              <span><strong>Part of your final step:</strong> finish, reviews, and this visitor form all happen together in Step 3. This form is only your visitor information — always optional.</span>
             </p>
             <p className="text-[11px] text-[#616E69] leading-relaxed">
               <strong>Only 3 things needed:</strong> where you&apos;re from, how many travelers, and the privacy tick at the bottom. Everything else is optional — skip freely.
