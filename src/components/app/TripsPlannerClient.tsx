@@ -1304,11 +1304,11 @@ function TripsPlannerInner({
                                       ))}
                                     </div>
                                     <div className="mt-1.5 flex items-center gap-2 rounded-lg bg-white border border-[#EAE7E0] px-1.5 py-1.5">
-                                      <button type="button" aria-label="Shorter stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.max(15, (s.durationMinutes || 60) - 15))}
-                                        className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
+                                      <button type="button" aria-label="Shorter stay" disabled={(s.durationMinutes || 60) <= 15} onClick={() => void updateStopField(idx, "durationMinutes", Math.max(15, (s.durationMinutes || 60) - 15))}
+                                        className="w-9 h-9 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] flex items-center justify-center disabled:opacity-30 cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
                                       <span className="flex-1 text-center text-xs font-bold text-[#1A2421] tabular-nums">{formatDuration(s.durationMinutes || 60)} <span className="font-medium text-[#616E69]">stay</span></span>
-                                      <button type="button" aria-label="Longer stay" onClick={() => void updateStopField(idx, "durationMinutes", Math.min(MAX_STAY_MINUTES, (s.durationMinutes || 60) + 15))}
-                                        className="w-9 h-9 rounded-full bg-[#164237] text-white flex items-center justify-center cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
+                                      <button type="button" aria-label="Longer stay" disabled={(s.durationMinutes || 60) >= MAX_STAY_MINUTES} onClick={() => void updateStopField(idx, "durationMinutes", Math.min(MAX_STAY_MINUTES, (s.durationMinutes || 60) + 15))}
+                                        className="w-9 h-9 rounded-full bg-[#164237] text-white flex items-center justify-center disabled:opacity-30 cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
                                     </div>
                                     <p className="mt-1 text-[10px] text-[#616E69]">Need longer? Keep tapping + — up to 12 hours at one destination.</p>
                                   </div>

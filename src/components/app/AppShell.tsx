@@ -168,7 +168,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
                 ) : (
                   <Info className="w-4 h-4 text-white/75 shrink-0" />
                 )}
-                <p className="text-xs font-medium truncate">{toast.message}</p>
+                <p className="text-xs font-medium leading-snug line-clamp-2">{toast.message}</p>
               </div>
               <div className="flex items-center gap-1 shrink-0">
                 {toast.actionLabel && toast.actionHref && (
@@ -184,7 +184,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
                   type="button"
                   onClick={dismissToast}
                   aria-label="Dismiss"
-                  className="p-1 text-white/60 hover:text-white cursor-pointer"
+                  className="p-2 -m-1 text-white/60 hover:text-white cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -222,7 +222,7 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`relative flex flex-col items-center justify-center gap-0.5 py-1 transition-transform duration-100 active:scale-90 ${
+                  className={`relative flex flex-col items-center justify-center gap-0.5 min-h-[56px] py-1 transition-transform duration-100 active:scale-90 ${
                     isActive ? "text-[#164237]" : "text-[#616E69] hover:text-[#1A2421]"
                   }`}
                 >
@@ -236,13 +236,13 @@ function MobileAppShellInner({ children }: { children: React.ReactNode }) {
                       strokeWidth={isActive ? 2.2 : 1.7}
                     />
                     {showTripBadge && (
-                      <span className="absolute -top-0.5 right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#164237] text-white text-[9px] font-bold flex items-center justify-center tabular-nums ring-2 ring-white">
+                      <span className="absolute -top-0.5 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-[#164237] text-white text-[10px] font-bold flex items-center justify-center tabular-nums ring-2 ring-white">
                         {draftStopCount}
                       </span>
                     )}
                   </span>
                   <span
-                    className={`text-[10px] tracking-tight ${
+                    className={`text-[11px] tracking-tight ${
                       isActive ? "font-bold text-[#164237]" : "font-medium"
                     }`}
                   >

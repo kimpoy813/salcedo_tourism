@@ -303,7 +303,7 @@ function DiscoverDirectoryInner({
             <button
               type="button"
               onClick={() => setSortBy("most_visited")}
-              className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+              className={`rounded-full min-h-[36px] py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
                 sortBy === "most_visited"
                   ? "bg-white text-[#164237] shadow-2xs"
                   : "text-[#616E69]"
@@ -315,7 +315,7 @@ function DiscoverDirectoryInner({
             <button
               type="button"
               onClick={() => setSortBy("top_rated")}
-              className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+              className={`rounded-full min-h-[36px] py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
                 sortBy === "top_rated"
                   ? "bg-white text-[#8A6527] shadow-2xs"
                   : "text-[#616E69]"
@@ -327,7 +327,7 @@ function DiscoverDirectoryInner({
             <button
               type="button"
               onClick={() => setSortBy("by_category")}
-              className={`rounded-full py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
+              className={`rounded-full min-h-[36px] py-1.5 text-[11px] font-semibold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
                 sortBy === "by_category"
                   ? "bg-white text-[#1A2421] shadow-2xs"
                   : "text-[#616E69]"
