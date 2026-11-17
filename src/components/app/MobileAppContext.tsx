@@ -96,7 +96,8 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
         listLocalDrafts(),
         listSavedPlaceIds(),
       ]);
-      const primaryStops = drafts[0]?.stops ?? [];
+      // Finished trips are history — they must not count as the active trip.
+      const primaryStops = drafts.find((d) => d.status !== "completed")?.stops ?? [];
       setDraftStopIds(primaryStops.map((s) => s.placeId));
       setSavedPlaceIds(savedIds);
     } catch {

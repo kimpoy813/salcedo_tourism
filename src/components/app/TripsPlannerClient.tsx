@@ -261,17 +261,19 @@ function TripsPlannerInner({
         listSavedPlaceSnapshots(),
       ]);
       setSavedSnapshots(snapshots);
-      if (loadedDrafts.length > 0 && loadedDrafts[0].status === "completed") {
-        // Finished trips are archived in Local Drafts — start the next trip fresh.
+      const activeDraft = loadedDrafts.find((d) => d.status !== "completed");
+      if (activeDraft) {
+        setDrafts(loadedDrafts);
+        setDraft(activeDraft);
+      } else if (loadedDrafts.length > 0) {
+        // Every saved trip is finished — archive stays, but the planner
+        // must open empty for the next trip, never holding old destinations.
         const fresh = createEmptyDraft();
         await saveLocalDraft(fresh);
         setDraft(fresh);
         setDrafts(await listLocalDrafts());
       } else {
         setDrafts(loadedDrafts);
-        if (loadedDrafts.length > 0) {
-          setDraft(loadedDrafts[0]);
-        }
       }
       setSavedPlaceIds(savedIds);
       setLocalReceipts(receipts);
@@ -445,10 +447,20 @@ function TripsPlannerInner({
       };
       await persistDraft(completed);
       void trackItineraryEvent({ eventType: "trip_completed", stopCount: completedStopsCount, placeIds: draft.stops.map((s) => s.placeId) });
-      setCompletionNotice(
-        `Trip finished: ${completedStopsCount} destination(s) visited, ${rated} review(s) saved to the destination pages. Agyaman kami!`
-      );
-      showToast("Trip completed — thank you!", { tone: "success" });
+      // Done means done: archive the finished trip under Saved and clear the
+      // planner right away so no destinations linger for the next trip.
+      const message = `Trip finished: ${completedStopsCount} destination(s) visited, ${rated} review(s) saved. Your planner is clear for the next trip — Agyaman kami!`;
+      const fresh = createEmptyDraft();
+      setStopRatings({});
+      setStopComments({});
+      setVisitedStops({});
+      setCommentOpen({});
+      setExpandedStopId(null);
+      setReviewOpen(false);
+      setView("plan");
+      await persistDraft(fresh);
+      setCompletionNotice(message);
+      showToast("Trip completed — planner cleared for your next trip!", { tone: "success" });
     } catch {
       setCompletionNotice("Could not save completion while offline. Your ratings are kept in this draft — try again when connected.");
     } finally {
@@ -895,6 +907,23 @@ function TripsPlannerInner({
       {/* TAB 1: NATIVE TIMELINE TRIP BUILDER */}
       {activeTab === "builder" && (
         <div className="space-y-4">
+          {completionNotice && draft.stops.length === 0 && !submissionResult && (
+            <div className="surface-card p-5 space-y-3 border-[#164237]/25 bg-[#164237]/[0.04]">
+              <p className="text-xs leading-relaxed text-[#164237] inline-flex items-start gap-2">
+                <Check className="w-4 h-4 shrink-0 mt-px" />
+                <span>{completionNotice}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => setActiveTab("saved")} className="rounded-full bg-white border border-[#164237]/25 px-4 min-h-[40px] text-xs font-semibold text-[#164237] cursor-pointer">
+                  View finished trips
+                </button>
+                <button type="button" onClick={() => setCompletionNotice(null)} className="rounded-full px-4 min-h-[40px] text-xs font-semibold text-[#616E69] cursor-pointer">
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          )}
+
           {submissionResult ? (
             <div className="surface-card p-5 space-y-4">
               <div className="space-y-0.5">
@@ -1614,16 +1643,18 @@ function TripsPlannerInner({
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setDraft(d);
-                          setActiveTab("builder");
-                        }}
-                        className="rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-semibold cursor-pointer"
-                      >
-                        Resume
-                      </button>
+                      {d.status !== "completed" && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDraft(d);
+                            setActiveTab("builder");
+                          }}
+                          className="rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-semibold cursor-pointer"
+                        >
+                          Resume
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={async () => {
