@@ -532,6 +532,13 @@ function TripsPlannerInner({
     }
   };
 
+  /** Day tabs (in Step 2, below) jump back up to the Step 1 destinations they control. */
+  const jumpToDestinations = () => {
+    requestAnimationFrame(() => {
+      document.getElementById("trip-destinations")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  };
+
   /** Clear the finished/current trip and begin a fresh one. */
   const handleStartNewTrip = async () => {
     const fresh = createEmptyDraft();
@@ -1094,79 +1101,10 @@ function TripsPlannerInner({
                 )}
               </div>
 
-              {/* STEP 2: Plan your days — start date, how many days, what falls on each day */}
-              <section className={`no-print surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
-                <SectionHeader
-                  eyebrow="Step 2 · Plan"
-                  title="Plan your days"
-                  description="Pick a start date and trip length, then assign each destination to a day below."
-                />
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-3 py-1.5 cursor-pointer min-h-[40px]">
-                    <Calendar className="w-3.5 h-3.5 text-[#164237]" />
-                    <span className="text-[11px] font-semibold text-[#616E69]">Starts</span>
-                    <input
-                      type="date"
-                      value={draft.plannedVisitDate}
-                      onChange={(e) => void persistDraft({ ...draft, plannedVisitDate: e.target.value })}
-                      aria-label="Trip start date"
-                      className="bg-transparent text-xs font-semibold text-[#1A2421] focus:outline-none tabular-nums"
-                    />
-                  </label>
-                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] pl-3 pr-1 py-1 min-h-[40px]">
-                    <span className="text-[11px] font-semibold text-[#1A2421]">{tripDaysCount} {tripDaysCount === 1 ? "day" : "days"}</span>
-                    <button type="button" aria-label="One day less" onClick={() => { const n = Math.max(1, tripDaysCount - 1); void persistDraft({ ...draft, numberOfDays: n, stops: draft.stops.map((s) => ({ ...s, day: Math.min(s.day ?? 1, n) })) }); }} className="w-7 h-7 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3 h-3" /></button>
-                    <button type="button" aria-label="Add a day" onClick={() => void persistDraft({ ...draft, numberOfDays: Math.min(14, tripDaysCount + 1) })} className="w-7 h-7 rounded-full bg-[#164237] text-white flex items-center justify-center cursor-pointer"><Plus className="w-3 h-3" /></button>
-                  </span>
-                  {tripDaysCount > 1 && dateForDay(tripDaysCount) && (
-                    <span className="text-[11px] text-[#616E69] tabular-nums">Ends {dateForDay(tripDaysCount)}</span>
-                  )}
-                </div>
-                {tripDaysCount > 1 && (
-                  <>
-                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1" role="tablist" aria-label="Plan by day">
-                      <button
-                        type="button"
-                        role="tab"
-                        aria-selected={showAllDays}
-                        onClick={() => setShowAllDays(true)}
-                        className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] min-h-[48px] ${showAllDays ? "border-[#164237] bg-[#164237] text-white" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
-                      >
-                        <span className="block text-[11px] font-bold">All days</span>
-                        <span className={`block text-[10px] tabular-nums ${showAllDays ? "text-white/75" : "text-[#616E69]"}`}>{tripDaysCount} days · {draft.stops.length} stops</span>
-                      </button>
-                      {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => {
-                        const summary = daySummary(d);
-                        const isActive = !showAllDays && focusedDay === d;
-                        return (
-                          <button
-                            key={d}
-                            type="button"
-                            role="tab"
-                            aria-selected={isActive}
-                            onClick={() => { setActiveDay(d); setShowAllDays(false); }}
-                            className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] min-h-[48px] ${isActive ? "border-[#164237] bg-[#164237] text-white" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
-                          >
-                            <span className="block text-[11px] font-bold">Day {d}</span>
-                            <span className={`block text-[10px] tabular-nums ${isActive ? "text-white/75" : "text-[#616E69]"}`}>
-                              {dateForDay(d) ?? ""} · {summary ? `${summary.count} ${summary.count === 1 ? "stop" : "stops"}` : "No stops"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <p className="text-[11px] text-[#616E69]">
-                      {showAllDays
-                        ? "Overview of every day. Tap a day to focus on it."
-                        : `Planning Day ${focusedDay}${dateForDay(focusedDay) ? ` (${dateForDay(focusedDay)})` : ""} — new destinations are added to this day.`}
-                    </p>
-                  </>
-                )}
-              </section>
 
-              {/* Native Vertical Route Timeline */}
+              {/* Native Vertical Route Timeline — STEP 1 comes first, physically */}
               {draft.stops.length > 0 && !inReview && (
-                <div className="space-y-2.5">
+                <div id="trip-destinations" className="space-y-2.5 scroll-mt-3">
                   <SectionHeader
                     eyebrow="Step 1 · Destinations"
                     title={
@@ -1384,6 +1322,78 @@ function TripsPlannerInner({
                 </div>
               )}
 
+              {/* STEP 2: Plan your days — start date, how many days, what falls on each day */}
+              {draft.stops.length > 0 && (
+              <section className={`no-print surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
+                <SectionHeader
+                  eyebrow="Step 2 · Plan"
+                  title="Plan your days"
+                  description="Pick a start date and trip length. Tap a day to jump up to its destinations and arrange them."
+                />
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-3 py-1.5 cursor-pointer min-h-[40px]">
+                    <Calendar className="w-3.5 h-3.5 text-[#164237]" />
+                    <span className="text-[11px] font-semibold text-[#616E69]">Starts</span>
+                    <input
+                      type="date"
+                      value={draft.plannedVisitDate}
+                      onChange={(e) => void persistDraft({ ...draft, plannedVisitDate: e.target.value })}
+                      aria-label="Trip start date"
+                      className="bg-transparent text-xs font-semibold text-[#1A2421] focus:outline-none tabular-nums"
+                    />
+                  </label>
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] pl-3 pr-1 py-1 min-h-[40px]">
+                    <span className="text-[11px] font-semibold text-[#1A2421]">{tripDaysCount} {tripDaysCount === 1 ? "day" : "days"}</span>
+                    <button type="button" aria-label="One day less" onClick={() => { const n = Math.max(1, tripDaysCount - 1); void persistDraft({ ...draft, numberOfDays: n, stops: draft.stops.map((s) => ({ ...s, day: Math.min(s.day ?? 1, n) })) }); }} className="w-7 h-7 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3 h-3" /></button>
+                    <button type="button" aria-label="Add a day" onClick={() => void persistDraft({ ...draft, numberOfDays: Math.min(14, tripDaysCount + 1) })} className="w-7 h-7 rounded-full bg-[#164237] text-white flex items-center justify-center cursor-pointer"><Plus className="w-3 h-3" /></button>
+                  </span>
+                  {tripDaysCount > 1 && dateForDay(tripDaysCount) && (
+                    <span className="text-[11px] text-[#616E69] tabular-nums">Ends {dateForDay(tripDaysCount)}</span>
+                  )}
+                </div>
+                {tripDaysCount > 1 && (
+                  <>
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1" role="tablist" aria-label="Plan by day">
+                      <button
+                        type="button"
+                        role="tab"
+                        aria-selected={showAllDays}
+                        onClick={() => { setShowAllDays(true); jumpToDestinations(); }}
+                        className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] min-h-[48px] ${showAllDays ? "border-[#164237] bg-[#164237] text-white" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
+                      >
+                        <span className="block text-[11px] font-bold">All days</span>
+                        <span className={`block text-[10px] tabular-nums ${showAllDays ? "text-white/75" : "text-[#616E69]"}`}>{tripDaysCount} days · {draft.stops.length} stops</span>
+                      </button>
+                      {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => {
+                        const summary = daySummary(d);
+                        const isActive = !showAllDays && focusedDay === d;
+                        return (
+                          <button
+                            key={d}
+                            type="button"
+                            role="tab"
+                            aria-selected={isActive}
+                            onClick={() => { setActiveDay(d); setShowAllDays(false); jumpToDestinations(); }}
+                            className={`shrink-0 rounded-xl border px-3 py-2 text-left cursor-pointer min-w-[92px] min-h-[48px] ${isActive ? "border-[#164237] bg-[#164237] text-white" : "border-[#EAE7E0] bg-[#FAF9F6]"}`}
+                          >
+                            <span className="block text-[11px] font-bold">Day {d}</span>
+                            <span className={`block text-[10px] tabular-nums ${isActive ? "text-white/75" : "text-[#616E69]"}`}>
+                              {dateForDay(d) ?? ""} · {summary ? `${summary.count} ${summary.count === 1 ? "stop" : "stops"}` : "No stops"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[11px] text-[#616E69]">
+                      {showAllDays
+                        ? "Overview of every day. Tap a day to jump to its destinations above."
+                        : `Planning Day ${focusedDay}${dateForDay(focusedDay) ? ` (${dateForDay(focusedDay)})` : ""} — its destinations are shown above; new ones are added to this day.`}
+                    </p>
+                  </>
+                )}
+              </section>
+              )}
+
               {/* Day summary: makes the plan (and its totals) explicit at a glance */}
               {draft.stops.length > 0 && !inReview && (
                 <div className="bg-[#164237] text-white rounded-[20px] p-4 shadow-[0_16px_36px_-20px_rgba(22,66,55,0.55)] space-y-2">
@@ -1561,6 +1571,7 @@ function TripsPlannerInner({
               {draft.stops.length === 0 && (
                 <div className="surface-card p-6 text-center space-y-3">
                   <span className="mx-auto w-12 h-12 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
+                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">Step 1 · Destinations</p>
                   <p className="font-display text-base font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
                   <p className="text-xs leading-relaxed text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
                   <Link href="/app/discover" className="inline-flex items-center rounded-full btn-primary-pro px-5 min-h-[44px] text-xs font-semibold">Browse Destinations →</Link>
