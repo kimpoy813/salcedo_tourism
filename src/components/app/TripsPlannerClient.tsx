@@ -828,9 +828,9 @@ function TripsPlannerInner({
   const journeyStep = submissionResult ? 4 : draft.status === "completed" ? 3 : inReview ? 3 : draft.stops.length > 0 ? 2 : 1;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       {/* 4-step journey: the exact flow — browse & add, plan days, finish & review, optional details */}
-      <ol className="no-print grid grid-cols-4 rounded-2xl bg-white border border-[#EAE7E0] px-2 py-2.5" aria-label="Your trip progress">
+      <ol className="no-print grid grid-cols-4 surface-card px-2 py-3" aria-label="Your trip progress">
         {[
           { n: 1, label: "Add places" },
           { n: 2, label: "Plan days" },
@@ -862,12 +862,12 @@ function TripsPlannerInner({
       </ol>
 
       {/* Native Segmented Control */}
-      <div className="no-print grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0]">
+      <div className="no-print grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0] shadow-[inset_0_1px_2px_rgba(26,36,33,0.05)]">
         <button
           type="button"
           onClick={() => setActiveTab("builder")}
           className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
-            activeTab === "builder" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
+            activeTab === "builder" ? "bg-white text-[#1A2421] shadow-[0_2px_8px_rgba(26,36,33,0.10)]" : "text-[#616E69]"
           }`}
         >
           My Trip ({draft.stops.length})
@@ -876,7 +876,7 @@ function TripsPlannerInner({
           type="button"
           onClick={() => setActiveTab("saved")}
           className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
-            activeTab === "saved" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
+            activeTab === "saved" ? "bg-white text-[#1A2421] shadow-[0_2px_8px_rgba(26,36,33,0.10)]" : "text-[#616E69]"
           }`}
         >
           Saved ({savedPlaces.length + drafts.length})
@@ -885,7 +885,7 @@ function TripsPlannerInner({
           type="button"
           onClick={() => setActiveTab("retrieve")}
           className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
-            activeTab === "retrieve" ? "bg-white text-[#1A2421] shadow-2xs" : "text-[#616E69]"
+            activeTab === "retrieve" ? "bg-white text-[#1A2421] shadow-[0_2px_8px_rgba(26,36,33,0.10)]" : "text-[#616E69]"
           }`}
         >
           Find My Trip
@@ -896,7 +896,7 @@ function TripsPlannerInner({
       {activeTab === "builder" && (
         <div className="space-y-4">
           {submissionResult ? (
-            <div className="bg-white rounded-3xl border border-[#EAE7E0] p-5 space-y-4 shadow-2xs">
+            <div className="surface-card p-5 space-y-4">
               <div className="space-y-0.5">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-[#164237]">
                   Official CEDO Trip Pass
@@ -909,7 +909,7 @@ function TripsPlannerInner({
                 </p>
               </div>
 
-              <div className="rounded-2xl bg-[#FAF9F6] border border-[#EAE7E0] divide-y divide-[#EAE7E0]">
+              <div className="inset-panel divide-y divide-[#EAE7E0]">
                 <div className="p-3.5">
                   <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
                     Reference Number
@@ -965,7 +965,7 @@ function TripsPlannerInner({
                     a.click();
                     URL.revokeObjectURL(url);
                   }}
-                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+                  className="w-full inline-flex items-center justify-center gap-1.5 rounded-full btn-primary-pro py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Save Receipt (.txt)
@@ -998,7 +998,7 @@ function TripsPlannerInner({
           ) : (
             <>
               {/* Native Trip Header Card */}
-              <div className={`bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3 ${inReview ? "hidden" : ""}`}>
+              <div className={`surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <div className="space-y-2">
                   <input
                     type="text"
@@ -1028,7 +1028,7 @@ function TripsPlannerInner({
                       <button
                         type="button"
                         onClick={() => void applyQuickPreset("nature")}
-                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] p-3 text-left active:scale-[0.98] transition cursor-pointer"
+                        className="inset-panel p-3.5 text-left active:scale-[0.98] transition cursor-pointer hover:border-[#164237]/30"
                       >
                         <p className="font-display text-xs font-bold text-[#1A2421]">
                           Falls &amp; Springs
@@ -1038,7 +1038,7 @@ function TripsPlannerInner({
                       <button
                         type="button"
                         onClick={() => void applyQuickPreset("heritage")}
-                        className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] p-3 text-left active:scale-[0.98] transition cursor-pointer"
+                        className="inset-panel p-3.5 text-left active:scale-[0.98] transition cursor-pointer hover:border-[#164237]/30"
                       >
                         <p className="font-display text-xs font-bold text-[#1A2421]">
                           Heritage &amp; Dining
@@ -1051,7 +1051,7 @@ function TripsPlannerInner({
               </div>
 
               {/* STEP 2: Plan your days — start date, how many days, what falls on each day */}
-              <section className={`no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3 ${inReview ? "hidden" : ""}`}>
+              <section className={`no-print surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <SectionHeader
                   eyebrow="Step 2 · Plan"
                   title="Plan your days"
@@ -1165,7 +1165,7 @@ function TripsPlannerInner({
                       </div>
 
                       {/* Stop Card — collapsed by default: photo, name, time. Tap Edit for the rest. */}
-                      <div className="flex-1 min-w-0 bg-white rounded-2xl border border-[#EAE7E0] px-3.5 py-3">
+                      <div className="flex-1 min-w-0 surface-card px-4 py-3.5">
                         {(() => {
                           const dispIdx = displayStops.findIndex((x) => x.s.placeId === s.placeId);
                           const canUp = dispIdx > 0 && displayStops[dispIdx - 1].day === day;
@@ -1211,10 +1211,10 @@ function TripsPlannerInner({
                               </div>
 
                               {expanded && (
-                                <div className="mt-3 space-y-3 rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3">
+                                <div className="mt-3 space-y-3 inset-panel p-3">
                                   {tripDaysCount > 1 && (
                                     <div>
-                                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1.5">Assigned to</span>
+                                      <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69] mb-1.5">Assigned to</span>
                                       <div className="flex flex-wrap gap-1.5">
                                         {Array.from({ length: tripDaysCount }, (_, i) => i + 1).map((d) => (
                                           <button
@@ -1233,23 +1233,23 @@ function TripsPlannerInner({
 
                                   <div className="flex items-end gap-2">
                                     <label className="flex-1 min-w-0">
-                                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Arrive at</span>
+                                      <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69] mb-1">Arrive at</span>
                                       <input
                                         type="time"
                                         value={s.visitTime}
                                         onChange={(e) => void updateStopField(idx, "visitTime", e.target.value)}
                                         aria-label={`Arrival time at ${s.placeName}`}
-                                        className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-2 text-xs font-semibold tabular-nums focus:outline-none focus:border-[#164237] min-h-[40px]"
+                                        className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-2 text-xs font-semibold tabular-nums focus:outline-none focus:border-[#164237] focus:ring-[3px] focus:ring-[#164237]/10 min-h-[40px]"
                                       />
                                     </label>
                                     <div className="text-center shrink-0 pb-1">
-                                      <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1">Leave</span>
+                                      <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69] mb-1">Leave</span>
                                       <span className="text-xs font-bold text-[#164237] tabular-nums">{formatTime12h(endTimeFor(s.visitTime, s.durationMinutes))}</span>
                                     </div>
                                   </div>
 
                                   <div>
-                                    <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#616E69] mb-1.5">Stay for</span>
+                                    <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69] mb-1.5">Stay for</span>
                                     <div className="grid grid-cols-4 gap-1.5">
                                       {DURATION_PRESETS.map((mins) => (
                                         <button key={mins} type="button" onClick={() => void updateStopField(idx, "durationMinutes", mins)}
@@ -1277,7 +1277,7 @@ function TripsPlannerInner({
                                     onChange={(e) => void updateStopField(idx, "personalNotes", e.target.value)}
                                     placeholder="Note for this stop (e.g. bring swimwear)…"
                                     aria-label={`Notes for ${s.placeName}`}
-                                    className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-2 text-[11px] focus:outline-none focus:border-[#164237] min-h-[40px]"
+                                    className="w-full rounded-lg border border-[#EAE7E0] bg-white px-2.5 py-2 text-[11px] focus:outline-none focus:border-[#164237] focus:ring-[3px] focus:ring-[#164237]/10 min-h-[40px]"
                                   />
 
                                   <div className="no-print flex items-center gap-1.5 pt-0.5">
@@ -1311,7 +1311,7 @@ function TripsPlannerInner({
                     <div className="rounded-2xl border-2 border-dashed border-[#D8D3C8] bg-white/70 p-5 text-center space-y-2">
                       <p className="font-display text-sm font-bold text-[#1A2421]">Day {focusedDay} is still empty</p>
                       <p className="text-[11px] text-[#616E69]">Add destinations to {dateForDay(focusedDay) || `Day ${focusedDay}`}, or move a stop here from another day.</p>
-                      <button type="button" onClick={() => setStopPickerOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-4 py-2.5 text-xs font-semibold active:scale-95 transition cursor-pointer min-h-[40px]">
+                      <button type="button" onClick={() => setStopPickerOpen(true)} className="inline-flex items-center gap-1.5 rounded-full btn-primary-pro px-4 py-2.5 text-xs font-semibold active:scale-95 transition cursor-pointer min-h-[40px]">
                         <Plus className="w-3.5 h-3.5" /> Add to Day {focusedDay}
                       </button>
                     </div>
@@ -1334,7 +1334,7 @@ function TripsPlannerInner({
 
               {/* Day summary: makes the plan (and its totals) explicit at a glance */}
               {draft.stops.length > 0 && !inReview && (
-                <div className="bg-[#164237] text-white rounded-2xl p-3.5 space-y-2">
+                <div className="bg-[#164237] text-white rounded-[20px] p-4 shadow-[0_16px_36px_-20px_rgba(22,66,55,0.55)] space-y-2">
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">{tripDaysCount > 1 ? `Your ${tripDaysCount}-day trip at a glance` : "Your day at a glance"}</p>
                     <button type="button" onClick={() => void applySuggestedSchedule()}
@@ -1356,7 +1356,7 @@ function TripsPlannerInner({
 
               {/* STEP 3: Finish & review — its own focused mode after going */}
               {draft.stops.length > 0 && (inReview || draft.status === "completed") && (
-                <section className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+                <section className="no-print surface-card p-5 space-y-3">
                   {inReview && draft.status !== "completed" && (
                     <button type="button" onClick={() => setView("plan")} className="inline-flex items-center gap-1 text-xs font-semibold text-[#164237] cursor-pointer min-h-[36px]">
                       <ChevronLeft className="w-4 h-4" /> Back to plan
@@ -1381,7 +1381,7 @@ function TripsPlannerInner({
                       <button
                         type="button"
                         onClick={() => void handleStartNewTrip()}
-                        className="w-full rounded-full bg-[#164237] text-white py-3.5 text-xs font-semibold active:scale-[0.98] transition cursor-pointer min-h-[44px]"
+                        className="w-full rounded-full btn-primary-pro py-3.5 text-xs font-semibold active:scale-[0.98] transition cursor-pointer min-h-[44px]"
                       >
                         Start a New Trip
                       </button>
@@ -1409,7 +1409,7 @@ function TripsPlannerInner({
                           const comment = stopComments[s.placeId] ?? "";
                           const showComment = commentOpen[s.placeId] ?? comment.length > 0;
                           return (
-                            <div key={s.placeId} className="rounded-2xl bg-[#FAF9F6] border border-[#EAE7E0] p-3.5 space-y-2.5">
+                            <div key={s.placeId} className="inset-panel p-3.5 space-y-2.5">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="font-display text-[13px] font-bold text-[#1A2421] truncate">{s.placeName}</p>
                                 <label className="flex items-center gap-1.5 text-[11px] font-semibold text-[#164237] cursor-pointer shrink-0 min-h-[32px]">
@@ -1439,7 +1439,7 @@ function TripsPlannerInner({
                                         autoFocus={commentOpen[s.placeId] && comment.length === 0}
                                         placeholder="Leave a comment — tips, best time to visit, what to bring…"
                                         aria-label={`Comment for ${s.placeName}`}
-                                        className="w-full rounded-xl border border-[#EAE7E0] bg-white px-3 py-2 text-xs leading-relaxed resize-none focus:outline-none focus:border-[#164237]"
+                                        className="w-full rounded-xl border border-[#EAE7E0] bg-white px-3 py-2 text-xs leading-relaxed resize-none focus:outline-none focus:border-[#164237] focus:ring-[3px] focus:ring-[#164237]/10"
                                       />
                                       <p className="text-right text-[10px] text-[#616E69] tabular-nums">{comment.length}/500</p>
                                     </div>
@@ -1468,7 +1468,7 @@ function TripsPlannerInner({
                         type="button"
                         disabled={completing}
                         onClick={() => void handleCompleteLocalTrip()}
-                        className="w-full rounded-full bg-[#164237] text-white py-3.5 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer min-h-[44px]"
+                        className="w-full rounded-full btn-primary-pro py-3.5 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer min-h-[44px]"
                       >
                         {completing ? "Saving…" : "Finish Trip & Save Reviews"}
                       </button>
@@ -1478,17 +1478,17 @@ function TripsPlannerInner({
               )}
 
               {draft.stops.length === 0 && (
-                <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 text-center space-y-2.5">
-                  <span className="mx-auto w-10 h-10 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
-                  <p className="font-display text-sm font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
-                  <p className="text-[11px] text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
-                  <Link href="/app/discover" className="inline-flex rounded-full bg-[#164237] text-white px-5 py-2.5 text-xs font-semibold">Browse Destinations →</Link>
+                <div className="surface-card p-6 text-center space-y-3">
+                  <span className="mx-auto w-12 h-12 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
+                  <p className="font-display text-base font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
+                  <p className="text-xs leading-relaxed text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
+                  <Link href="/app/discover" className="inline-flex items-center rounded-full btn-primary-pro px-5 min-h-[44px] text-xs font-semibold">Browse Destinations →</Link>
                 </div>
               )}
 
               {/* One sticky action dock for plan mode: Add + the single next step */}
               {draft.stops.length > 0 && !inReview && draft.status !== "completed" && (
-                <div className="no-print sticky bottom-3 z-30 flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] shadow-lg p-1.5">
+                <div className="no-print sticky bottom-3 z-30 flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] shadow-[0_16px_40px_-16px_rgba(22,66,55,0.35)] p-1.5">
                   <button
                     type="button"
                     onClick={() => setStopPickerOpen(true)}
@@ -1500,7 +1500,7 @@ function TripsPlannerInner({
                   <button
                     type="button"
                     onClick={() => { setReviewOpen(true); setView("review"); }}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white px-4 min-h-[44px] text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 rounded-full btn-primary-pro px-4 min-h-[44px] text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
                   >
                     <BadgeCheck className="w-4 h-4" />
                     Finish &amp; Review Trip
@@ -1510,7 +1510,7 @@ function TripsPlannerInner({
 
               {/* STEP 4: Your details (optional) + trip file */}
               {draft.stops.length > 0 && !inReview && (
-                <div className="no-print bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+                <div className="no-print surface-card p-5 space-y-3">
                   <SectionHeader
                     eyebrow="Step 4 · Optional"
                     title="Your details & trip file"
@@ -1525,7 +1525,7 @@ function TripsPlannerInner({
                         draft.stops
                       )
                     }
-                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-full bg-[#164237] text-white py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+                    className="w-full inline-flex items-center justify-center gap-1.5 rounded-full btn-primary-pro py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     Save My Trip
@@ -1561,7 +1561,7 @@ function TripsPlannerInner({
       {/* TAB 2: SAVED PLACES & DRAFTS */}
       {activeTab === "saved" && (
         <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+          <div className="surface-card p-5 space-y-3">
             <SectionHeader eyebrow="Offline" title={`Bookmarked places (${savedPlaces.length})`} />
             {savedPlaces.length === 0 ? (
               <p className="text-xs text-[#616E69]">
@@ -1594,7 +1594,7 @@ function TripsPlannerInner({
             )}
           </div>
 
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+          <div className="surface-card p-5 space-y-3">
             <SectionHeader eyebrow="On this device" title={`Local drafts (${drafts.length})`} />
             {drafts.length === 0 ? (
               <p className="text-xs text-[#616E69]">No drafts saved yet.</p>
@@ -1674,7 +1674,7 @@ function TripsPlannerInner({
 
           <form
             onSubmit={handleRetrieveTrip}
-            className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3"
+            className="surface-card p-5 space-y-3"
           >
             <div className="flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-[#164237]" />
@@ -1689,7 +1689,7 @@ function TripsPlannerInner({
               value={retRef}
               onChange={(e) => setRetRef(e.target.value.toUpperCase())}
               placeholder="Reference Number (CEDO-TRIP-...)"
-              className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm font-mono uppercase"
+              className="field-pro font-mono uppercase"
             />
             <input
               type="text"
@@ -1697,7 +1697,7 @@ function TripsPlannerInner({
               value={retCode}
               onChange={(e) => setRetCode(e.target.value)}
               placeholder="Private Retrieval Code"
-              className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm font-mono"
+              className="field-pro font-mono"
             />
 
             {retError && (
@@ -1714,14 +1714,14 @@ function TripsPlannerInner({
             <button
               type="submit"
               disabled={retLoading}
-              className="w-full rounded-full bg-[#164237] text-white py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+              className="w-full rounded-full btn-primary-pro py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
             >
               {retLoading ? "Verifying..." : "Retrieve Itinerary"}
             </button>
           </form>
 
           {retrieved && (
-            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-4">
+            <div className="surface-card p-5 space-y-4">
               <div>
                 <p className="font-mono text-[11px] font-bold text-[#164237]">
                   {retrieved.referenceNumber}
@@ -1758,7 +1758,7 @@ function TripsPlannerInner({
               </div>
 
               {/* After-trip completion + per-destination ratings (counts in Tourism Office stats) */}
-              <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3 space-y-3">
+              <div className="inset-panel p-3 space-y-3">
                 {retrieved.status === "completed" ? (
                   <p className="text-xs font-semibold text-[#164237] inline-flex items-center gap-1">
                     <BadgeCheck className="w-4 h-4 shrink-0" /> Trip completed{retrieved.completedAt ? ` on ${String(retrieved.completedAt).slice(0, 10)}` : ""} — counted by the Tourism Office. You can still update your ratings below.
@@ -1892,7 +1892,7 @@ function TripsPlannerInner({
                 value={placeSearch}
                 onChange={(e) => setPlaceSearch(e.target.value)}
                 placeholder="Search waterfalls, cafés, resorts..."
-                className="w-full rounded-full border border-[#EAE7E0] bg-[#FAF9F6] pl-9 pr-4 py-2 text-xs focus:outline-none"
+                className="w-full rounded-full border border-[#EAE7E0] bg-white pl-9 pr-4 min-h-[40px] text-xs focus:outline-none focus:border-[#164237] focus:ring-[3px] focus:ring-[#164237]/10 shadow-[inset_0_1px_2px_rgba(26,36,33,0.04)]"
               />
             </div>
 
@@ -1986,7 +1986,7 @@ function TripsPlannerInner({
                 onChange={(e) => setVisitorName(e.target.value)}
                 placeholder="e.g. Maria Clara"
                 autoComplete="name"
-                className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm"
+                className="field-pro"
               />
             </label>
 
@@ -2032,7 +2032,7 @@ function TripsPlannerInner({
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Mobile number <span className="font-normal text-[#616E69]">(optional)</span></span>
                 <input type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} placeholder="09XX XXX XXXX" autoComplete="tel"
-                  className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm" />
+                  className="field-pro" />
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Email <span className="font-normal text-[#616E69]">(optional)</span></span>
@@ -2053,7 +2053,7 @@ function TripsPlannerInner({
               </div>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Purpose of visit</span>
-                <select value={purposeOfVisit} onChange={(e) => setPurposeOfVisit(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                <select value={purposeOfVisit} onChange={(e) => setPurposeOfVisit(e.target.value)} className="field-pro">
                   <option>Leisure &amp; Nature Sightseeing</option>
                   <option>Family Resort Outing</option>
                   <option>Agri-Tourism / Farm Visit</option>
@@ -2080,32 +2080,32 @@ function TripsPlannerInner({
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Transportation</span>
-                <select value={transportationType} onChange={(e) => setTransportationType(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                <select value={transportationType} onChange={(e) => setTransportationType(e.target.value)} className="field-pro">
                   <option>Private Vehicle</option><option>Public Bus / Van</option><option>Tricycle / Local Transport</option><option>Motorcycle</option><option>Organized Tour Van</option><option>Walking / Cycling</option>
                 </select>
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Length of stay</span>
-                <select value={lengthOfStay} onChange={(e) => setLengthOfStay(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                <select value={lengthOfStay} onChange={(e) => setLengthOfStay(e.target.value)} className="field-pro">
                   <option>Day Trip</option><option>Overnight (1 night)</option><option>2–3 Days</option><option>4+ Days</option>
                 </select>
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">How did you discover Salcedo?</span>
-                <select value={discoverySource} onChange={(e) => setDiscoverySource(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                <select value={discoverySource} onChange={(e) => setDiscoverySource(e.target.value)} className="field-pro">
                   <option>Social Media / Online Search</option><option>Friend / Family Recommendation</option><option>Tourism Office / LGU</option><option>School / Work</option><option>Passed By / Nearby Resident</option>
                 </select>
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Preferred experience</span>
-                <select value={preferredExperience} onChange={(e) => setPreferredExperience(e.target.value)} className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2.5 text-xs">
+                <select value={preferredExperience} onChange={(e) => setPreferredExperience(e.target.value)} className="field-pro">
                   <option>Waterfalls &amp; Resorts</option><option>Heritage &amp; Culture</option><option>Food &amp; Local Products</option><option>Farms &amp; Nature</option><option>Adventure / Hiking</option>
                 </select>
               </label>
             </div>
             </details>
 
-            <details className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3">
+            <details className="inset-panel p-3">
               <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">Read the full Privacy Notice</summary>
               <p className="text-[11px] text-[#616E69] leading-relaxed mt-2 whitespace-pre-line max-h-32 overflow-y-auto">{privacyNotice.bodyMarkdown}</p>
             </details>
@@ -2144,7 +2144,7 @@ function TripsPlannerInner({
             <button
               type="submit"
               disabled={submitLoading}
-              className="w-full rounded-full bg-[#164237] text-white py-3 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer"
+              className="w-full rounded-full btn-primary-pro py-3 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer"
             >
               {submitLoading ? "Submitting..." : "Get Official CEDO Reference"}
             </button>

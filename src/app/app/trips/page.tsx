@@ -38,19 +38,23 @@ export default async function TripsPage() {
   };
 
   return (
-    <div className="px-4 pt-[max(18px,env(safe-area-inset-top))] pb-6 space-y-4">
-      <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
-          Planner
+    <div className="px-4 pt-[max(20px,env(safe-area-inset-top))] pb-8 space-y-5">
+      <header className="space-y-1.5">
+        <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">
+          <span className="h-px w-6 bg-[#B88A44]" aria-hidden="true" />
+          Trip Planner
         </p>
-        <h1 className="font-display text-2xl font-bold text-[#1A2421]">
+        <h1 className="font-display text-[28px] leading-[1.1] font-bold text-[#1A2421]">
           My Salcedo Trip
         </h1>
-      </div>
+        <p className="text-[13px] leading-relaxed text-[#616E69]">
+          Build your day, enjoy Salcedo, then share how it went.
+        </p>
+      </header>
 
       <Suspense
         fallback={
-          <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
+          <div className="surface-card p-6 text-xs text-[#616E69]">
             Loading trip planner...
           </div>
         }
