@@ -136,7 +136,7 @@ export function PlaceCard({
             type="button"
             onClick={handleToggleSave}
             aria-label={saved ? "Remove from saved" : "Save place"}
-            className={`absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md transition active:scale-90 cursor-pointer ${
+            className={`absolute top-3 right-3 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-md transition active:scale-90 cursor-pointer ${
               saved ? "bg-white text-[#B88A44]" : "bg-black/35 text-white hover:bg-black/50"
             }`}
           >
@@ -156,7 +156,7 @@ export function PlaceCard({
             <button
               type="button"
               onClick={handleQuickAdd}
-              className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-semibold transition active:scale-95 cursor-pointer ${
+              className={`shrink-0 inline-flex items-center gap-1 rounded-full px-3 min-h-[36px] py-1.5 text-[11px] font-semibold transition active:scale-95 cursor-pointer ${
                 inDraft
                   ? "bg-white text-[#164237]"
                   : "bg-white/20 backdrop-blur-md text-white hover:bg-white hover:text-[#164237]"
@@ -242,7 +242,7 @@ export function PlaceCard({
             <button
               type="button"
               onClick={handleQuickAdd}
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold transition active:scale-95 cursor-pointer ${
+              className={`inline-flex items-center gap-1 rounded-full px-2.5 min-h-[36px] py-1 text-[11px] font-semibold transition active:scale-95 cursor-pointer ${
                 inDraft
                   ? "bg-[#164237]/10 text-[#164237]"
                   : "bg-[#F3F2EE] text-[#1A2421] hover:bg-[#164237] hover:text-white"
@@ -304,7 +304,7 @@ export function PlaceCard({
           type="button"
           onClick={handleToggleSave}
           aria-label={saved ? "Remove from saved" : "Save place"}
-          className={`absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-sm transition active:scale-90 cursor-pointer ${
+          className={`absolute top-2.5 right-2.5 w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-sm transition active:scale-90 cursor-pointer ${
             saved
               ? "bg-white text-[#8A6527] shadow-xs"
               : "bg-white/85 text-[#1A2421] hover:bg-white"
@@ -339,7 +339,7 @@ export function PlaceCard({
           <button
             type="button"
             onClick={handleQuickAdd}
-            className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-[11px] font-semibold transition active:scale-95 cursor-pointer ${
+            className={`inline-flex items-center gap-1 rounded-full px-3 min-h-[36px] py-1 text-[11px] font-semibold transition active:scale-95 cursor-pointer ${
               inDraft
                 ? "bg-[#164237]/10 text-[#164237]"
                 : "bg-[#F3F2EE] text-[#1A2421] hover:bg-[#164237] hover:text-white"
