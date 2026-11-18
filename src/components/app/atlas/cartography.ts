@@ -90,26 +90,28 @@ export function addBoundaries(
   return layer;
 }
 /** Non-interactive canvas below pins: paths never steal a tap from a place. */
-export function addFieldLines(map: L.Map, data: FieldData, detail: boolean) {
+export function addFieldLines(
+  map: L.Map,
+  data: FieldData,
+  startDetail: boolean,
+) {
   const layer = L.layerGroup().addTo(map),
     renderer = L.canvas({ pane: "atlasLines", padding: 0.35 }).addTo(map);
-  const passes: [FieldKind[], L.PathOptions][] = [
+  let detail = startDetail;
+  const passes = (d: boolean): [FieldKind[], L.PathOptions][] => [
     [
       ["water"],
       { color: "#82afb4", weight: 1, fillColor: "#acd1d2", fillOpacity: 1 },
     ],
-    [["stream"], { color: "#83adae", weight: detail ? 1.6 : 1.0 }],
-    [["river"], { color: "#6099a4", weight: detail ? 3.6 : 2.6 }],
-    [
-      ["trail"],
-      { color: "#bbad8f", weight: detail ? 1.6 : 1, dashArray: "3 3" },
-    ],
-    [["street"], { color: "#cbc9b4", weight: detail ? 4 : 2.4 }],
-    [["street"], { color: "#fffdf3", weight: detail ? 2.7 : 1.6 }],
-    [["highway"], { color: "#c1aa78", weight: detail ? 6 : 4.4 }],
-    [["highway"], { color: "#f7dfa2", weight: detail ? 4.1 : 3 }],
+    [["stream"], { color: "#83adae", weight: d ? 1.6 : 1.0 }],
+    [["river"], { color: "#6099a4", weight: d ? 3.6 : 2.6 }],
+    [["trail"], { color: "#bbad8f", weight: d ? 1.6 : 1, dashArray: "3 3" }],
+    [["street"], { color: "#cbc9b4", weight: d ? 4 : 2.4 }],
+    [["street"], { color: "#fffdf3", weight: d ? 2.7 : 1.6 }],
+    [["highway"], { color: "#c1aa78", weight: d ? 6 : 4.4 }],
+    [["highway"], { color: "#f7dfa2", weight: d ? 4.1 : 3 }],
   ];
-  for (const [kinds, style] of passes)
+  const groups = passes(detail).map(([kinds, style]) =>
     L.geoJSON(data, {
       pane: "atlasLines",
       interactive: false,
@@ -117,15 +119,30 @@ export function addFieldLines(map: L.Map, data: FieldData, detail: boolean) {
       style: () => ({
         renderer,
         interactive: false,
-        fill: false,
+        fill: kinds.includes("water"),
         opacity: 1,
         ...style,
-        ...(kinds.includes("water") ? { fill: true } : {}),
       }),
-    }).addTo(layer);
-  return () => {
-    layer.remove();
-    renderer.remove();
+    }).addTo(layer),
+  );
+  // Crossing into street detail only changes weights, so restyle the existing
+  // canvas instead of rebuilding more than a thousand features mid-zoom.
+  const setDetail = (next: boolean) => {
+    if (next === detail) return;
+    detail = next;
+    passes(detail).forEach(([kinds, style], i) =>
+      groups[i].setStyle(() => ({
+        fill: kinds.includes("water"),
+        ...style,
+      })),
+    );
+  };
+  return {
+    setDetail,
+    remove() {
+      layer.remove();
+      renderer.remove();
+    },
   };
 }
 

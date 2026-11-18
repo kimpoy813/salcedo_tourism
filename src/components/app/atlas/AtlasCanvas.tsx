@@ -159,6 +159,7 @@ export function AtlasCanvas({
     mapRef = useRef<L.Map | null>(null),
     previousExtent = useRef<string | undefined>(undefined),
     cameraRef = useRef(camera),
+    compactRef = useRef(compact),
     gpsLayer = useRef<L.LayerGroup | null>(null);
   const { showToast } = useMobileApp();
   const [zoom, setZoom] = useState(13),
@@ -169,7 +170,9 @@ export function AtlasCanvas({
     [locating, setLocating] = useState(false),
     [tileNotice, setTileNotice] = useState("");
   const layerId = online ? style : "field",
-    isField = layerId === "field";
+    isField = layerId === "field",
+    // A tile warning belongs to an online basemap, never to the offline field map.
+    layerNotice = online ? tileNotice : "";
   // Marker and boundary callbacks can change without tearing down a focused map.
   const events = useRef({ onPlace, onStack, onArea, onLocate });
   useEffect(() => {
@@ -185,8 +188,8 @@ export function AtlasCanvas({
       zoomSnap: 0.25,
       maxBounds: municipalBounds().pad(0.33),
       maxBoundsViscosity: 1,
-      scrollWheelZoom: !compact,
-      dragging: !compact || !window.matchMedia("(pointer: coarse)").matches,
+      scrollWheelZoom: true,
+      dragging: !window.matchMedia("(pointer: coarse)").matches,
       zoomControl: false,
       attributionControl: false,
       zoomAnimation: false,
@@ -217,16 +220,29 @@ export function AtlasCanvas({
       map.invalidateSize({ pan: false });
       // Reframe on orientation/breakpoint changes, not when the keyboard opens.
       if (Math.abs(width - el.clientWidth) > 80)
-        frame(map, cameraRef.current, compact);
+        frame(map, cameraRef.current, compactRef.current);
       width = el.clientWidth;
     });
     ro.observe(el);
+    // Compact is applied by the effect below: rebuilding the map on a shell
+    // change dropped every overlay and reset the visitor's view.
     return () => {
       ro.disconnect();
       map.remove();
       gpsLayer.current = null;
       mapRef.current = null;
     };
+  }, []);
+  useEffect(() => {
+    compactRef.current = compact;
+    const map = mapRef.current;
+    if (!map) return;
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    if (!compact || !coarse) map.dragging.enable();
+    else map.dragging.disable();
+    if (compact) map.scrollWheelZoom.disable();
+    else map.scrollWheelZoom.enable();
+    map.invalidateSize({ pan: false });
   }, [compact]);
   useEffect(() => {
     const m = mapRef.current;
@@ -251,6 +267,10 @@ export function AtlasCanvas({
       maxZoom: 19,
       attribution: cfg.credit,
       bounds: municipalBounds().pad(0.65),
+      keepBuffer: 3,
+      updateWhenIdle: false,
+      // Keep the previous frame while a pinch settles, then fetch the new zoom.
+      updateWhenZooming: false,
     });
     let loaded = 0,
       errors = 0,
@@ -263,11 +283,13 @@ export function AtlasCanvas({
     tiles.on("loading", () => {
       loaded = 0;
       errors = 0;
+      setTileNotice("");
       window.clearTimeout(timer);
       timer = window.setTimeout(fallback, 9000);
     });
     tiles.on("tileload", () => {
       loaded++;
+      setTileNotice("");
     });
     tiles.on("tileerror", () => {
       errors++;
@@ -283,6 +305,11 @@ export function AtlasCanvas({
       tiles.off();
     };
   }, [layerId]);
+  useEffect(() => {
+    if (!tileNotice) return;
+    const timer = window.setTimeout(() => setTileNotice(""), 12000);
+    return () => window.clearTimeout(timer);
+  }, [tileNotice]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -300,9 +327,11 @@ export function AtlasCanvas({
   // The generalized surface is useful at valley scale, not street or trail scale.
   const reliefOpacity =
     zoom <= 13.5 ? 0.88 : zoom <= 14.5 ? 0.6 : zoom < 15.5 ? 0.25 : 0;
+  const reliefRef = useRef<L.ImageOverlay | null>(null),
+    showRelief = isField && reliefOpacity > 0;
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !isField || !reliefOpacity) return;
+    if (!map || !showRelief) return;
     const relief = L.imageOverlay(
       "/app/maps/salcedo-relief.webp",
       [
@@ -318,15 +347,36 @@ export function AtlasCanvas({
           '<a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">GEBCO 2020</a>',
       },
     ).addTo(map);
+    reliefRef.current = relief;
     return () => {
+      reliefRef.current = null;
       relief.remove();
     };
-  }, [isField, reliefOpacity]);
-  const detail = zoom >= 14.5;
+    // Opacity changes are applied by the effect below, so the hillshade is not
+    // re-fetched and re-mounted at every zoom threshold. It still unmounts at
+    // street scale, when its source credit no longer applies.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showRelief]);
   useEffect(() => {
-    if (mapRef.current && isField && fieldData)
-      return addFieldLines(mapRef.current, fieldData, detail);
-  }, [isField, fieldData, detail]);
+    reliefRef.current?.setOpacity(reliefOpacity);
+  }, [reliefOpacity]);
+  const detail = zoom >= 14.5,
+    fieldLinesRef = useRef<ReturnType<typeof addFieldLines> | null>(null);
+  useEffect(() => {
+    if (!mapRef.current || !isField || !fieldData) return;
+    const drawn = addFieldLines(mapRef.current, fieldData, detail);
+    fieldLinesRef.current = drawn;
+    return () => {
+      fieldLinesRef.current = null;
+      drawn.remove();
+    };
+    // `detail` is applied by the effect below; rebuilding the canvas layer on
+    // every threshold crossing caused a visible zoom hitch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isField, fieldData]);
+  useEffect(() => {
+    fieldLinesRef.current?.setDetail(detail);
+  }, [detail]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -428,13 +478,17 @@ export function AtlasCanvas({
         ref={container}
         role="region"
         aria-label="Interactive map of Salcedo"
-        className={"atlas-surface" + (isField ? " is-field" : "")}
+        /* Leaflet adds its own classes here. Keep this prop constant so React
+           never wipes them when the base map changes. */
+        className="atlas-surface"
+        data-basemap={isField ? "field" : "online"}
       />
       <button
         className="atlas-layers-button"
         type="button"
         onClick={() => setOptions(true)}
         aria-haspopup="dialog"
+        aria-expanded={options}
       >
         <span className={"layer-swatch " + layerId} aria-hidden="true">
           <Layers size={18} />
@@ -502,7 +556,7 @@ export function AtlasCanvas({
           )}
         </div>
       )}
-      {(tileNotice || (fieldFailed && isField)) && (
+      {(layerNotice || (fieldFailed && isField)) && (
         <div className="atlas-layer-notice" role="status">
           {fieldFailed && isField ? (
             <>
@@ -511,7 +565,7 @@ export function AtlasCanvas({
             </>
           ) : (
             <>
-              {tileNotice}
+              {layerNotice}
               <button
                 aria-label="Dismiss layer message"
                 onClick={() => setTileNotice("")}

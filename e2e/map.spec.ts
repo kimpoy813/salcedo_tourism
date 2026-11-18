@@ -177,7 +177,15 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   await d.getByLabel("Map labels").uncheck();
   await d.getByRole("radio", { name: /^Street/ }).check();
   await d.getByRole("button", { name: "Done" }).click();
-  await expect(page.locator(".leaflet-tile-loaded").first()).toBeAttached();
+  // The map keeps Leaflet's container classes when the base map changes, and
+  // real tiles must occupy space: a 1x1 fixture still reports as "loaded".
+  await expect(page.locator(".atlas-surface")).toHaveClass(/leaflet-container/);
+  const tile = page.locator(".leaflet-tile-loaded").first();
+  await expect(tile).toBeAttached();
+  // Fractional zoom scales tiles below 256px, but they must never collapse.
+  await expect
+    .poll(() => tile.evaluate((el) => el.getBoundingClientRect().width))
+    .toBeGreaterThan(100);
   await expect(page.locator(".atlas-lettering")).toHaveCount(0);
   await page.getByRole("button", { name: /Map layers\s*Street/i }).click();
   await d.getByRole("radio", { name: /^Terrain/ }).click();
