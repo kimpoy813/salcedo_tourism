@@ -212,9 +212,6 @@ body { background: var(--paper); color: var(--ink); }
 .trip-workspace .surface-card { border-radius: 12px; border-color: var(--rule); box-shadow: 0 2px 5px #1a302407; }
 .trip-workspace .inset-panel { border-radius: 9px; }
 .trip-workspace .surface-card > div > input#draft-title { max-width: 100%; border-bottom: 1px dashed #c6cec0; padding: 6px 0; }
-.trip-workspace .preset-card { border-radius: 9px; background-color: var(--pine); background-size: cover; background-position: center; min-height: 125px; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start; text-align: left; padding: 17px; cursor: pointer; color: white; }
-.trip-workspace .preset-card p { color: white; }
-.trip-workspace .preset-card .font-display { font-size: clamp(18px,2.2vw,29px); line-height: 1.1; font-weight: 500; }
 .trip-action-dock { bottom: calc(var(--bottom-nav) + 9px); max-width: 620px; margin-inline: auto; }
 .saved-place-row { display: inline-flex; gap: 13px; align-items: center; font: 540 20px/1.2 var(--display); }
 .saved-place-row img { width: 66px; height: 48px; object-fit: cover; border-radius: 5px; }
@@ -225,49 +222,19 @@ body { background: var(--paper); color: var(--ink); }
 .offline-card h1 { font-size: 44px; }
 .offline-card > div { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 22px; }
 @media(max-width:780px) { .local-guide-layout { gap: 24px; } .guide-index strong { font-size: 20px; } }
-@media(max-width:600px) { .local-guide-layout, .profile-grid, .profile-overview { grid-template-columns: 1fr; } .planner-tabs { gap: 10px; justify-content: space-between; } .planner-tabs button { font-size: 12px; } .trip-workspace .preset-card { min-height: 102px; padding: 11px; } .guide-index a { padding-block: 14px; } .privacy-footnote { margin-bottom: 22px; } .profile-nav { gap: 10px; } .profile-overview > div:first-child { grid-row: auto; } }
+@media(max-width:600px) { .local-guide-layout, .profile-grid, .profile-overview { grid-template-columns: 1fr; } .planner-tabs { gap: 10px; justify-content: space-between; } .planner-tabs button { font-size: 12px; } .guide-index a { padding-block: 14px; } .privacy-footnote { margin-bottom: 22px; } .profile-nav { gap: 10px; } .profile-overview > div:first-child { grid-row: auto; } }
 @media print { .trip-workspace { max-width: none; } }
 
-/* Destination spreads */
-.breadcrumbs { display: flex; align-items: center; gap: 9px; padding-block: 15px; color: var(--quiet); font-size: 12px; }
-.breadcrumbs a:hover, .back-link:hover { text-decoration: underline; }
-.breadcrumbs span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.detail-lead { display: grid; grid-template-columns: 1.1fr 1fr; gap: clamp(24px,4vw,68px); align-items: stretch; padding-bottom: 30px; }
-.detail-gallery { position: relative; min-width: 0; min-height: 320px; border-radius: 11px; overflow: hidden; background: var(--pine); }
-.detail-gallery > div:first-child { position: absolute; inset: 0; }
-.detail-heading { align-self: center; padding-block: 18px; }
-.detail-heading h1 { font: 490 clamp(38px,4.1vw,62px)/1.04 var(--display); letter-spacing: -.046em; color: var(--pine); margin: 14px 0 5px; }
-.place-alias { font: italic 420 23px/1.3 var(--display); color: var(--quiet); }
-.detail-address { display: flex; align-items: flex-start; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--quiet); }
-.detail-address svg { flex-shrink: 0; margin-top: 1px; }
-.detail-tags { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
-.detail-tags span, .detail-tags a { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 580; background: #e8ede1; color: var(--pine); padding: 4px 8px; border-radius: 5px; }
-.detail-tags a { background: #f2e9d7; color: #74562f; }
-.short-description { margin-top: 16px; font-size: 15px; line-height: 1.65; color: #465040; }
-.detail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin-top: 18px; }
-.detail-actions button { cursor: pointer; }
-.detail-columns { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(0,.9fr); gap: clamp(30px,5vw,90px); padding-block: 32px; border-block: 1px solid var(--rule); }
-.detail-sections { min-width: 0; display: flex; flex-direction: column; gap: 28px; }
-.detail-description { font-size: 15px; line-height: 1.75; color: #465040; }
-.detail-aside { align-self: start; padding: 22px; background: #f0f1e8; border-radius: 11px; }
-.detail-aside .rounded-2xl, .detail-sections .rounded-2xl { border-radius: 9px; }
-.gallery-rail, .related-rail { display: flex; overflow-x: auto; gap: 12px; scroll-snap-type: x proximity; padding-bottom: 6px; }
-.gallery-rail > button { width: 45%; max-width: 230px; aspect-ratio: 1.6; border-radius: 8px; }
-.detail-reviews { max-width: 840px; margin-inline: auto; padding-block: 33px; }
-.detail-reviews h2 { font-size: 30px; font-weight: 500; }
-.detail-related { margin-bottom: 36px; }
-.lightbox-dialog { width: 100vw; height: 100dvh; max-height: 100dvh; border-radius: 0; }
-.lightbox-layout { background: #101812; display: flex; flex-direction: column; height: 100dvh; padding: env(safe-area-inset-top) 0 0; }
-@media(max-width:780px) { .detail-lead { grid-template-columns: 1fr; gap: 0; padding-bottom: 22px; } .detail-gallery { min-height: 0; height: clamp(220px,52vw,350px); } .detail-columns { grid-template-columns: 1fr; gap: 26px; padding-block: 24px; } .detail-heading { padding: 23px 0 0; } .detail-aside .grid-cols-2 { grid-template-columns: repeat(4,minmax(0,1fr)); } }
-@media(max-width:600px) { .detail-aside { padding: 14px; } .detail-aside .grid-cols-2 { grid-template-columns: repeat(2,minmax(0,1fr)); } .detail-reviews { padding-block: 24px; } .detail-reviews h2 { font-size: 24px; } }
+/* Shared place actions and the scrollable related-places shelf. */
+.back-link:hover { text-decoration:underline; }
+.detail-actions { display:flex; flex-wrap:wrap; gap:9px; align-items:center; margin-top:18px; }
+.related-rail { position:relative; display:flex; overflow-x:auto; gap:18px; padding-bottom:7px; }
+.detail-reviews { padding-block:28px; }
+.detail-related { margin-bottom:36px; }
+.lightbox-dialog { width:100vw; height:100dvh; max-height:100dvh; border-radius:0; }
 
 /* A distinct, task-focused edition of the same design for municipal staff. */
 .staff-login { min-height: 100dvh; display: grid; grid-template-columns: 1.05fr 1fr; }
-.staff-login-landscape { display:flex; align-items:center; padding:clamp(28px,5vw,80px); background:#f1f1e7; color:var(--pine); border-right:1px solid var(--rule); }
-.staff-login-landscape h2 { font:490 clamp(48px,5.3vw,86px)/1.02 var(--display); letter-spacing:-.045em; margin-block:18px 8px; }
-.staff-login-landscape p:not(.guide-kicker) { font-size:16px; line-height:1.6; max-width:38ch; }
-.staff-relief { margin-top:16px; } .staff-relief img { width:100%; height:auto; }
-.staff-relief figcaption { padding-top:7px; border-top:1px solid #adb9a8; font-size:11px; color:var(--quiet); } .staff-relief a { text-decoration:underline; }
 .staff-login-form { display: flex; flex-direction: column; padding: 20px clamp(25px,5vw,80px); }
 .login-inner { margin: auto; width: min(100%,390px); padding-block: 42px; }
 .login-heading { margin-top: 34px; }
@@ -319,7 +286,7 @@ body { background: var(--paper); color: var(--ink); }
  .staff-workspace .staff-nav-dialog, .guide-dialog.staff-nav-dialog { width: min(300px,90vw); margin: 0 auto 0 0; border-radius: 0; max-height: 100dvh; height: 100dvh; padding: 0; }
  .staff-mobile-sidebar { min-height: 100dvh; }
 }
-@media(max-width:650px) { .staff-login { grid-template-columns: 1fr; } .staff-login-landscape { display: none; } .staff-login-form { min-height: 100dvh; } .staff-header { padding-block: 4px; min-height: 52px; } }
+@media(max-width:650px) { .staff-login { grid-template-columns: 1fr; } .staff-login-form { min-height: 100dvh; } .staff-header { padding-block: 4px; min-height: 52px; } }
 .empty-trip-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin-left: 44px; }
 .empty-trip-actions button, .primary-button, .secondary-button { cursor: pointer; }
 @media(max-width:600px) { .empty-trip-actions { margin-left: 0; } }

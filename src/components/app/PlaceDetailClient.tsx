@@ -25,6 +25,7 @@ interface PlaceActionPayload {
   placeType: string;
   barangayName?: string | null;
   featuredImageUrl?: string | null;
+  displayIllustrationUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
 }
@@ -45,7 +46,7 @@ function getOrCreateReviewerToken(): string {
   return token;
 }
 
-export function PlaceHeroOverlayControls({ place }: { place: PlaceActionPayload }) {
+export function PlaceTools({ place }: { place: PlaceActionPayload }) {
   const router = useRouter();
   const { savedPlaceIds, toggleBookmark, showToast } = useMobileApp();
   const saved = savedPlaceIds.includes(place.id);
@@ -80,46 +81,10 @@ export function PlaceHeroOverlayControls({ place }: { place: PlaceActionPayload 
   };
 
   return (
-    <div className="no-print absolute top-[max(12px,env(safe-area-inset-top))] left-3.5 right-3.5 z-20 flex items-center justify-between pointer-events-none">
-      <button
-        type="button"
-        onClick={handleBack}
-        aria-label="Go back"
-        className="pointer-events-auto w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-white/60 shadow-sm flex items-center justify-center text-[#1A2421] active:scale-90 transition cursor-pointer"
-      >
-        <ArrowLeft className="w-4 h-4" />
-      </button>
-
-      <div className="pointer-events-auto flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => void handleShare()}
-          aria-label="Share destination"
-          className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-white/60 shadow-sm flex items-center justify-center text-[#1A2421] active:scale-90 transition cursor-pointer"
-        >
-          <Share2 className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={() => void toggleBookmark(place.id, place.name, {
-            id: place.id,
-            name: place.name,
-            slug: place.slug,
-            placeType: place.placeType,
-            barangayName: place.barangayName ?? null,
-            featuredImageUrl: place.featuredImageUrl ?? null,
-            latitude: place.latitude ?? null,
-            longitude: place.longitude ?? null,
-          })}
-          aria-pressed={saved}
-          aria-label={saved ? "Remove from saved" : "Save offline"}
-          className={`w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-white/60 shadow-sm flex items-center justify-center active:scale-90 transition cursor-pointer ${
-            saved ? "text-[#B88A44]" : "text-[#1A2421]"
-          }`}
-        >
-          <Bookmark className="w-4 h-4" fill={saved ? "currentColor" : "none"} />
-        </button>
-      </div>
+    <div className="sheet-tools no-print">
+      <button type="button" onClick={handleBack}><ArrowLeft size={15}/>Back</button>
+      <button type="button" onClick={()=>void handleShare()}><Share2 size={15}/>Share</button>
+      <button type="button" aria-pressed={saved} onClick={()=>void toggleBookmark(place.id,place.name,place)}><Bookmark size={15} fill={saved?'currentColor':'none'}/>{saved?'Saved':'Save'}</button>
     </div>
   );
 }
@@ -218,9 +183,6 @@ export function PlaceRatingsSection({
     <section className="space-y-4">
       <div className="flex items-end justify-between gap-2">
         <div className="space-y-0.5">
-          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">
-            Community
-          </p>
           <h2 className="font-display text-lg font-bold leading-tight text-[#1A2421]">
             Ratings &amp; reviews
           </h2>

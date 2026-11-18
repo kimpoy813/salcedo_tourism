@@ -169,6 +169,20 @@ export const placeMutationSchema = z.object({
     .optional(),
 });
 
+/**
+ * Partial edits. `.partial()` alone would keep the creation defaults, so a PATCH
+ * that only changed a cover or coordinate would reset the publication status and
+ * featured flags. Omitted fields must stay untouched.
+ */
+export const placePatchSchema = placeMutationSchema
+  .extend({
+    isFeatured: z.boolean().optional(),
+    isHiddenGem: z.boolean().optional(),
+    isPlaceholder: z.boolean().optional(),
+    status: z.enum(["draft", "pending_review", "published", "archived"]).optional(),
+  })
+  .partial();
+
 export const createCheckinSchema = z.object({
   placeId: z.string().uuid(),
   verificationMethodCode: z.enum([

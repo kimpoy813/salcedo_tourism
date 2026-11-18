@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { isInsideSalcedo } from "@/lib/geo/salcedo-boundary";
+import { isInsideSalcedo, SALCEDO_MUNICIPAL_POLYGON } from "@/lib/geo/salcedo-boundary";
 import { RELIEF, locatorPoint } from "@/lib/geo/relief";
 
 /** A north-up orientation figure, not a substitute photograph or a route. */
@@ -25,8 +25,8 @@ export function PlaceLocator({
   return (
     <div className="place-locator">
       <svg
-        viewBox={`${x - 260} ${y - 160} 520 320`}
-        preserveAspectRatio="xMidYMid slice"
+        viewBox={point ? `${x - 260} ${y - 160} 520 320` : `0 0 ${RELIEF.width} ${RELIEF.height}`}
+        preserveAspectRatio={point?"xMidYMid slice":"xMidYMid meet"}
         role="img"
         aria-label={
           point
@@ -35,6 +35,7 @@ export function PlaceLocator({
         }
       >
         <image href="/app/maps/salcedo-locator.webp" width={RELIEF.width} height={RELIEF.height} />
+        {!point && <polygon points={SALCEDO_MUNICIPAL_POLYGON.map(([lat,lng])=>{const p=locatorPoint(lat,lng);return `${p.x},${p.y}`}).join(" ")} fill="none" stroke="#345844" strokeWidth="2" vectorEffect="non-scaling-stroke"/>}
         {point && (
           <g transform={`translate(${x} ${y})`}>
             <circle r="10" fill="#263e35" stroke="#fffdf4" strokeWidth="2.5" />

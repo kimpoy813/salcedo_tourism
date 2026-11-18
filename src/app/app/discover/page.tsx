@@ -19,7 +19,6 @@ export default async function DiscoverPage() {
   return (
     <div className="guide-wrap directory-page">
       <PageIntro
-        eyebrow="Salcedo, Ilocos Sur"
         title="Place directory"
         description="Look up a destination by name, interest, or barangay."
       />

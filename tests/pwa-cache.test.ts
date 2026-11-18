@@ -12,6 +12,7 @@ function offlineWorker() {
   };
   let onFetch: (event: FetchEvent) => void;
   const match = vi.fn(async (key: unknown) => {
+    if (key === "/app/art/plaza-heritage-thumb.webp") return new Response("Cached thumbnail");
     if (key === "/app/trips") return new Response("Trip notebook");
     if (key === "/app/offline") return new Response("Offline guide");
     return undefined;
@@ -51,6 +52,10 @@ describe("public guide offline routing", () => {
     expect(request("/app/trips", "POST")).toBeUndefined();
     expect(request("https://other.test/app/")).toBeUndefined();
     expect(request("/app/discover?_rsc=1", "GET", "cors")).toBeUndefined();
+  });
+  it("uses a bundled thumbnail if its larger cover was never downloaded", async () => {
+    const response = await offlineWorker()("/app/art/plaza-heritage-cover.webp", "GET", "no-cors");
+    expect(await response?.text()).toBe("Cached thumbnail");
   });
   it("opens local drafts from a bookmarked planner tab while offline", async () => {
     const response = await offlineWorker()("/app/trips?tab=saved");

@@ -5,6 +5,7 @@ export interface LocalItineraryStop {
   placeType: string;
   barangayName?: string | null;
   featuredImageUrl?: string | null;
+  displayIllustrationUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   visitTime: string;
@@ -241,6 +242,7 @@ export interface SavedPlaceSnapshot {
   placeType: string;
   barangayName?: string | null;
   featuredImageUrl?: string | null;
+  displayIllustrationUrl?: string | null;
   latitude?: number | null;
   longitude?: number | null;
   savedAt: string;

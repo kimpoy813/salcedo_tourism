@@ -40,15 +40,14 @@ export default async function TripsPage() {
   };
 
   return (
-    <>
-      <div className="guide-wrap inner-mast">
+    <div className="guide-wrap notebook-layout">
+      <div className="inner-mast">
         <PageIntro
-          eyebrow="Trip planner"
           title="My Salcedo trip"
           description="Choose your stops, put them in order, and keep a copy of your itinerary."
         />
       </div>
-      <div className="guide-wrap trip-workspace">
+      <div className="trip-workspace">
         <Suspense
           fallback={
             <div className="surface-card p-6 text-xs text-[#616E69]">Loading trip planner...</div>
@@ -57,6 +56,6 @@ export default async function TripsPage() {
           <TripsPlannerClient availablePlaces={places} privacyNotice={privacyNotice} />
         </Suspense>
       </div>
-    </>
+    </div>
   );
 }

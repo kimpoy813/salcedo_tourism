@@ -1,18 +1,7 @@
 "use client";
-
-import React from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Legend,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import { Activity, CalendarCheck2, Coffee, FileEdit, Home, MapPin, Route, Star, UtensilsCrossed, Waves } from "lucide-react";
-import { PALETTE, SectionHeader, StatTile } from "@/components/ui/design";
+import {useState, type ReactNode} from "react";
+import {Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis} from "recharts";
+import {FactList} from "@/components/ui/FactList";
 
 export interface DashboardMetrics {
   inventory: {
@@ -79,359 +68,39 @@ export interface DashboardMetrics {
   };
 }
 
-function rankBadgeClass(rank: number) {
-  if (rank === 1) return "bg-[#8A6527] text-white";
-  if (rank === 2) return "bg-[#164237] text-white";
-  if (rank === 3) return "bg-[#1D7874] text-white";
-  return "bg-[#F3F2EE] text-[#1A2421]";
+const count = (n:number)=>n.toLocaleString('en-PH');
+const dates = new Intl.DateTimeFormat('en-PH',{month:'short',day:'numeric',timeZone:'UTC'});
+function dateLabel(iso:string){return dates.format(new Date(iso+'T00:00:00Z'));}
+
+type TableRow={key:string;cells:ReactNode[]};
+function ReportTable({title,description,columns,rows}:{title:string;description?:string;columns:string[];rows:TableRow[]}) {
+  return <section className="report-block"><h2>{title}</h2>{description && <p className="report-note">{description}</p>}{rows.length ? <div className="report-scroll" role="region" aria-label={`${title} table`} tabIndex={0}><table className="report-table"><caption className="sr-only">{title}</caption><thead><tr>{columns.map(c=><th scope="col" key={c}>{c}</th>)}</tr></thead><tbody>{rows.map(r=><tr key={r.key}>{r.cells.map((cell,i)=>i===0?<th scope="row" key={i}>{cell}</th>:<td key={i}>{cell}</td>)}</tr>)}</tbody></table></div>:<p className="report-empty">No records yet.</p>}</section>;
 }
-
-export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
-  return (
-    <div className="space-y-6">
-      {/* Metric Integrity Note */}
-      <div className="rounded-2xl bg-[#F3F2EE] p-3.5 text-xs text-[#1A2421]">
-        <strong>Metric Separation:</strong> Digital App Sessions, Planned Travelers (from
-        itineraries), and Verified Physical Arrivals (on-site check-ins) are tracked strictly
-        separately.
-      </div>
-
-      {/* Inventory KPI Strip */}
-      <section className="space-y-2.5">
-        <SectionHeader eyebrow="Inventory" title="Published inventory" />
-        <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {[
-            { label: "Attractions", val: data.inventory.totalAttractions, icon: MapPin, tint: PALETTE.green },
-            { label: "Resorts", val: data.inventory.totalResorts, icon: Waves, tint: PALETTE.teal },
-            { label: "Cafés", val: data.inventory.totalCafes, icon: Coffee, tint: PALETTE.gold },
-            { label: "Restaurants", val: data.inventory.totalRestaurants, icon: UtensilsCrossed, tint: PALETTE.green },
-            { label: "Barangays", val: data.inventory.totalBarangays, icon: Home, tint: PALETTE.teal },
-            { label: "Draft / Review", val: data.inventory.draftOrPendingPlaces, icon: FileEdit, tint: PALETTE.gold },
-          ].map((k) => (
-            <StatTile key={k.label} icon={k.icon} tint={k.tint} value={`${k.val}`} label={k.label} />
-          ))}
-        </div>
-      </section>
-
-      {/* Three Measurement Pillars */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#1D7874]">
-                Digital Traffic
-              </p>
-              <h3 className="font-display text-base font-bold text-[#1A2421]">
-                App Visit Sessions
-              </h3>
-            </div>
-            <Activity className="w-4 h-4 text-[#1D7874]" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">Today</p>
-              <p className="font-display text-lg font-bold text-[#164237] tabular-nums">
-                {data.digitalVisits.appVisitSessionsToday}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">This Month</p>
-              <p className="font-display text-lg font-bold text-[#164237] tabular-nums">
-                {data.digitalVisits.appVisitSessionsThisMonth}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">Place Views</p>
-              <p className="font-display text-base font-bold text-[#1A2421] tabular-nums">
-                {data.digitalVisits.placeDetailViews}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">Page Views</p>
-              <p className="font-display text-base font-bold text-[#1A2421] tabular-nums">
-                {data.digitalVisits.monthlyPageViews}
-              </p>
-            </div>
-          </div>
-
-          <p className="text-[11px] text-[#616E69] leading-relaxed">
-            {data.digitalVisits.metricDefinition}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8A6527]">
-                Planned Demand
-              </p>
-              <h3 className="font-display text-base font-bold text-[#1A2421]">
-                Submitted Itineraries
-              </h3>
-            </div>
-            <Route className="w-4 h-4 text-[#B88A44]" />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">Trips</p>
-              <p className="font-display text-lg font-bold text-[#1A2421] tabular-nums">
-                {data.plannedTourism.totalSubmittedItineraries}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">Today</p>
-              <p className="font-display text-lg font-bold text-[#1A2421] tabular-nums">
-                {data.plannedTourism.itinerariesSubmittedToday}
-              </p>
-            </div>
-            <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-              <p className="text-[11px] text-[#616E69]">Guests</p>
-              <p className="font-display text-lg font-bold text-[#164237] tabular-nums">
-                {data.plannedTourism.plannedTravelerCount}
-              </p>
-            </div>
-          </div>
-
-          <p className="text-[11px] text-[#616E69] leading-relaxed">
-            {data.plannedTourism.metricDefinition}
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#164237]">
-                On-Site Verification
-              </p>
-              <h3 className="font-display text-base font-bold text-[#1A2421]">
-                Actual Tourist Visits
-              </h3>
-            </div>
-            <CalendarCheck2 className="w-4 h-4 text-[#164237]" />
-          </div>
-
-          {data.physicalArrivals.hasVerifiedDataSource ? (
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-                <p className="text-[11px] text-[#616E69]">Verified Total</p>
-                <p className="font-display text-lg font-bold text-[#164237] tabular-nums">
-                  {data.physicalArrivals.verifiedArrivalsTotal}
-                </p>
-              </div>
-              <div className="rounded-xl bg-[#FAF9F6] p-2.5">
-                <p className="text-[11px] text-[#616E69]">Today</p>
-                <p className="font-display text-lg font-bold text-[#164237] tabular-nums">
-                  {data.physicalArrivals.verifiedArrivalsToday}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3 text-xs text-[#616E69] space-y-0.5">
-              <p className="font-semibold text-[#1A2421]">
-                0 Verified Arrivals Yet
-              </p>
-              <p className="text-[11px]">
-                Counts remain zero until verified on-site check-ins are logged.
-              </p>
-            </div>
-          )}
-
-          <p className="text-[11px] text-[#616E69] leading-relaxed">
-            {data.physicalArrivals.metricDefinition}
-          </p>
-        </div>
-      </section>
-
-      {/* 14-Day Trend */}
-      <section className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
-        <div>
-          <h3 className="font-display text-sm font-bold text-[#1A2421]">
-            14-Day Activity Comparison
-          </h3>
-          <p className="text-xs text-[#616E69]">
-            App sessions vs. submitted itineraries vs. verified check-ins
-          </p>
-        </div>
-        <div className="w-full h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.dailyTrends}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#EAE7E0" />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: "#616E69" }} />
-              <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: "#616E69" }} />
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 11 }} />
-              <Bar
-                dataKey="appSessions"
-                name="App Sessions"
-                fill="#1D7874"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="itineraries"
-                name="Itineraries"
-                fill="#B88A44"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="verifiedArrivals"
-                name="Verified Arrivals"
-                fill="#164237"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
-
-      {/* Official Spot Rankings — same rankings tourists see in the app */}
-      {data.spotRankings && (
-        <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-            <SectionHeader eyebrow="Spot Rankings" title="Most Visited" description="Views + verified arrivals, same order as the tourist app." />
-            {data.spotRankings.mostVisited.length === 0 ? (
-              <p className="text-xs text-[#616E69]">No published spots yet.</p>
-            ) : (
-              <ol className="divide-y divide-[#EAE7E0] text-xs">
-                {data.spotRankings.mostVisited.map((r) => (
-                  <li key={r.placeId} className="flex items-center gap-2.5 py-2">
-                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums ${rankBadgeClass(r.rank)}`}>{r.rank}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block font-semibold text-[#1A2421] truncate">{r.name}</span>
-                      <span className="block text-[10px] text-[#616E69] capitalize">{r.placeType} • {r.plannedStops} planned stops</span>
-                    </span>
-                    <span className="text-right shrink-0">
-                      <span className="block font-bold text-[#164237] tabular-nums">{r.visitCount} visits</span>
-                      <span className="block text-[10px] text-[#616E69] tabular-nums">{r.views} views • {r.arrivals} arrivals</span>
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-            <SectionHeader eyebrow="Spot Rankings" title="Top Rated" description="Tourist star ratings submitted in the app (including after-trip ratings)." />
-            {data.spotRankings.topRated.length === 0 ? (
-              <p className="text-xs text-[#616E69]">No tourist ratings yet.</p>
-            ) : (
-              <ol className="divide-y divide-[#EAE7E0] text-xs">
-                {data.spotRankings.topRated.map((r) => (
-                  <li key={r.placeId} className="flex items-center gap-2.5 py-2">
-                    <span className={`w-6 h-6 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums ${rankBadgeClass(r.rank)}`}>{r.rank}</span>
-                    <span className="flex-1 min-w-0">
-                      <span className="block font-semibold text-[#1A2421] truncate">{r.name}</span>
-                      <span className="block text-[10px] text-[#616E69] capitalize">{r.placeType} • {r.visitCount} visits</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#FAF9F6] border border-[#EAE7E0] px-2 py-0.5 font-bold text-[#1A2421] tabular-nums shrink-0">
-                      <Star className="w-3 h-3 text-[#8A6527]" fill="currentColor" />
-                      {r.averageRating.toFixed(1)} ({r.ratingCount})
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
-        </section>
-      )}
-
-      {/* Detailed Rankings */}
-      <section className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <h3 className="font-display text-sm font-bold text-[#1A2421]">
-            Most Viewed Spots
-          </h3>
-          {data.digitalVisits.mostViewedPlaces.length === 0 ? (
-            <p className="text-xs text-[#616E69]">No public place views recorded yet.</p>
-          ) : (
-            <ul className="divide-y divide-[#EAE7E0] text-xs">
-              {data.digitalVisits.mostViewedPlaces.map((p) => (
-                <li key={p.placeId} className="flex justify-between py-2 gap-2">
-                  <span className="font-medium text-[#1A2421] truncate">{p.name}</span>
-                  <span className="font-semibold text-[#1D7874] tabular-nums">
-                    {p.views}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <h3 className="font-display text-sm font-bold text-[#1A2421]">
-            Top Planned Destinations
-          </h3>
-          {data.plannedTourism.popularPlannedDestinations.length === 0 ? (
-            <p className="text-xs text-[#616E69]">No submitted stops yet.</p>
-          ) : (
-            <ul className="divide-y divide-[#EAE7E0] text-xs">
-              {data.plannedTourism.popularPlannedDestinations.map((p) => (
-                <li key={p.placeId} className="flex justify-between py-2 gap-2">
-                  <span className="font-medium text-[#1A2421] truncate">{p.name}</span>
-                  <span className="font-semibold text-[#164237] tabular-nums">
-                    {p.stops} stops
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <div className="flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-[#1D7874]" />
-            <h3 className="font-display text-sm font-bold text-[#1A2421]">
-              Visitor Origins (De-Identified)
-            </h3>
-          </div>
-          {data.plannedTourism.visitorOriginsByProvince.length === 0 ? (
-            <p className="text-xs text-[#616E69]">No submitted trips yet.</p>
-          ) : (
-            <ul className="divide-y divide-[#EAE7E0] text-xs">
-              {data.plannedTourism.visitorOriginsByProvince.map((o) => (
-                <li key={o.province} className="flex justify-between py-2 gap-2">
-                  <span className="font-medium text-[#1A2421]">{o.province}</span>
-                  <span className="text-[#616E69] tabular-nums">
-                    {o.submissions} trips • <strong className="text-[#1A2421]">{o.travelers}</strong> guests
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
-          <h3 className="font-display text-sm font-bold text-[#1A2421]">
-            Search Trends &amp; Group Sizes
-          </h3>
-          <div className="space-y-3">
-            {data.digitalVisits.searchTrends.length === 0 ? (
-              <p className="text-xs text-[#616E69]">No search events yet.</p>
-            ) : (
-              <div className="flex flex-wrap gap-1.5">
-                {data.digitalVisits.searchTrends.map((st) => (
-                  <span
-                    key={st.query}
-                    className="rounded-full bg-[#F3F2EE] px-2.5 py-1 text-[11px] font-medium text-[#1A2421]"
-                  >
-                    {st.query} ({st.count})
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <div className="pt-2 border-t border-[#EAE7E0] grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {data.plannedTourism.groupSizes.map((g) => (
-                <div key={g.bucket} className="rounded-xl bg-[#FAF9F6] p-2 text-center">
-                  <p className="text-[10px] text-[#616E69]">{g.bucket}</p>
-                  <p className="font-bold text-sm text-[#164237] tabular-nums">{g.count}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
-  );
+function ActivityChart({days}:{days:DashboardMetrics['dailyTrends']}) {
+ return <section className="report-block activity-chart"><h2>Daily activity</h2><p className="report-note">{days.length ? `${dateLabel(days[0].date)} – ${dateLabel(days[days.length-1].date)}`:'No activity recorded yet.'}</p>
+ {days.length>0 && <><div className="chart-frame"><ResponsiveContainer width="100%" height="100%"><BarChart data={days} margin={{left:-20,right:6,top:10,bottom:0}}>
+ <CartesianGrid vertical={false} stroke="#e1e5e0"/><XAxis dataKey="date" tickFormatter={dateLabel} axisLine={false} tickLine={false} minTickGap={25} tick={{fontSize:11,fill:'#566059'}}/><YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{fontSize:11,fill:'#566059'}}/><Tooltip labelFormatter={label=>dateLabel(String(label))}/><Legend iconType="square" iconSize={9} wrapperStyle={{fontSize:12}}/>
+ <Bar dataKey="appSessions" name="App sessions" fill="#477a69" isAnimationActive={false}/><Bar dataKey="itineraries" name="Itineraries" fill="#92622d" isAnimationActive={false}/><Bar dataKey="verifiedArrivals" name="Verified arrivals" fill="#344957" isAnimationActive={false}/></BarChart></ResponsiveContainer></div>
+ <details className="chart-values"><summary>View daily figures</summary><ReportTable title="Activity by date" columns={['Date','Sessions','Itineraries','Arrivals']} rows={days.map(d=>({key:d.date,cells:[dateLabel(d.date),count(d.appSessions),count(d.itineraries),count(d.verifiedArrivals)]}))}/></details></>}
+ </section>;
+}
+const modes=['Activity','Destinations','Trip planning'] as const;
+export function AdminAnalyticsPanel({data}:{data:DashboardMetrics}) {
+ const [mode,setMode]=useState<typeof modes[number]>('Activity');
+ const {digitalVisits:d,physicalArrivals:a,plannedTourism:p,inventory:i,spotRankings:rank}=data;
+ return <div className="office-report">
+   <nav className="report-modes" aria-label="Overview reports">{modes.map(m=><button key={m} aria-pressed={m===mode} onClick={()=>setMode(m)}>{m}</button>)}</nav>
+   {mode==='Activity' && <>
+     <section className="report-today"><h2>Today <small>(UTC)</small></h2><dl>{[['App sessions',d.appVisitSessionsToday,'Anonymous visits to the app'],['Itineraries submitted',p.itinerariesSubmittedToday,'Plans shared with the office'],['Verified arrivals',a.verifiedArrivalsToday,'Recorded at on-site check-in']].map(([label,n,note])=><div key={label}><dt>{label}</dt><dd>{count(Number(n))}</dd><dd className="measure-note">{note}</dd></div>)}</dl></section>
+     <div className="report-overview-grid"><ActivityChart days={data.dailyTrends}/><section className="report-block"><h2>Directory inventory</h2><FactList numeric rows={[["Attractions",i.totalAttractions],["Resorts",i.totalResorts],["Cafés",i.totalCafes],["Restaurants",i.totalRestaurants],["Accommodations",i.totalAccommodations],["Local businesses",i.totalBusinesses],["Barangays",i.totalBarangays],["Upcoming events",i.upcomingEvents],["Draft or pending places",i.draftOrPendingPlaces]]}/></section></div>
+     <div className="report-pair"><section className="report-block"><h2>App traffic</h2><FactList numeric rows={[["Sessions this month",d.appVisitSessionsThisMonth],["Page views this month",d.monthlyPageViews],["Total app sessions",d.totalAppVisitSessions],["Total place views",d.placeDetailViews]]}/></section><section className="report-block"><h2>Recorded arrivals</h2><FactList numeric rows={[["Verified arrivals today",a.verifiedArrivalsToday],["Verified arrivals to date",a.verifiedArrivalsTotal]]}/><p className="report-note">{a.hasVerifiedDataSource?'Only verified check-ins count as physical arrivals.':'No verified on-site arrivals have been recorded.'}</p></section></div>
+     <details className="directory-record"><summary>How these measures differ</summary><FactList rows={[["App sessions",d.metricDefinition],["Travel plans",p.metricDefinition],["Physical arrivals",a.metricDefinition]]}/></details>
+   </>}
+   {mode==='Destinations' && <>
+     {rank && <><ReportTable title="Most visited" description="Ranked by place views plus verified arrivals. Views alone do not indicate an on-site visit." columns={['Destination','Rank','Views','Arrivals','Combined','Planned stops']} rows={rank.mostVisited.map(r=>({key:r.placeId,cells:[r.name,r.rank,r.views,r.arrivals,r.visitCount,r.plannedStops]}))}/><ReportTable title="Top rated" columns={['Destination','Rank','Average rating','Ratings']} rows={rank.topRated.map(r=>({key:r.placeId,cells:[r.name,r.rank,r.ratingCount?r.averageRating.toFixed(1):'—',r.ratingCount]}))}/></>}
+     <div className="report-pair"><ReportTable title="Place views" columns={['Destination','Views']} rows={d.mostViewedPlaces.map(x=>({key:x.placeId,cells:[x.name,count(x.views)]}))}/><ReportTable title="Search terms" columns={['Query','Searches']} rows={d.searchTrends.map(x=>({key:x.query,cells:[x.query,count(x.count)]}))}/></div>
+   </>}
+   {mode==='Trip planning' && <><section className="report-block"><h2>Submitted plans</h2><p className="report-note">Group sizes are reported by visitors. They are not verified arrivals.</p><FactList numeric rows={[["Itineraries submitted",p.totalSubmittedItineraries],["Planned travelers",p.plannedTravelerCount],["Completed trips",p.tripsCompleted],["Stops marked visited",p.stopsVisited],["Trip ratings submitted",p.tripRatingsSubmitted]]}/></section>
+     <div className="report-pair"><ReportTable title="Planned destinations" columns={['Destination','Planned stops']} rows={p.popularPlannedDestinations.map(x=>({key:x.placeId,cells:[x.name,count(x.stops)]}))}/><ReportTable title="Origins by province" columns={['Province','Trips','Travelers']} rows={p.visitorOriginsByProvince.map(x=>({key:x.province,cells:[x.province,count(x.submissions),count(x.travelers)]}))}/><ReportTable title="Group sizes" columns={['Group','Trips']} rows={p.groupSizes.map(x=>({key:x.bucket,cells:[x.bucket,count(x.count)]}))}/><ReportTable title="Upcoming visit dates" columns={['Planned date','Travelers']} rows={p.upcomingPlannedDates.map(x=>({key:x.date,cells:[x.date,count(x.plannedTravelers)]}))}/></div></>}
+ </div>;
 }

@@ -18,8 +18,7 @@ import {
 } from "lucide-react";
 import { interests, typeLabels, selectDirectoryPlaces } from "@/lib/guide-interests";
 import { Modal } from "@/components/ui/Modal";
-import { Kicker } from "@/components/ui/FieldGuide";
-import { PlaceCard, type PlaceCardData } from "./PlaceCard";
+import { PlaceDirectoryTable, type PlaceCardData } from "./PlaceCard";
 import type { MapBarangayItem } from "@/lib/geo/atlas";
 import { trackSearchEvent } from "@/lib/client/analytics-tracker";
 
@@ -100,6 +99,7 @@ export function DiscoverDirectoryClient({
     groups.set(name, group);
   }
   const chips = [
+    ["interest", interest?.label || ""],
     [
       "category",
       category === "all" ? "" : categories.find((c) => c.slug === category)?.name || category,
@@ -240,11 +240,7 @@ export function DiscoverDirectoryClient({
         Array.from(groups, ([name, group]) => (
           <section key={name} className="directory-group">
             {name && <h2>{name}</h2>}
-            <div className="directory-entries">
-              {group.map((p,i) => (
-                <PlaceCard key={p.id} place={p} number={i+1} />
-              ))}
-            </div>
+            <PlaceDirectoryTable places={group} label={name || "Published destinations"} />
           </section>
         ))
       )}
@@ -256,6 +252,7 @@ export function DiscoverDirectoryClient({
               e.preventDefault();
               const form = new FormData(e.currentTarget);
               changeView({
+                interest: String(form.get("interest") || ""),
                 barangay: String(form.get("barangay")),
                 category: String(form.get("category")),
                 type: String(form.get("type")),
@@ -265,8 +262,7 @@ export function DiscoverDirectoryClient({
           >
             <div className="dialog-heading">
               <div>
-                <Kicker>Place directory</Kicker>
-                <h2>Refine your search</h2>
+                <h2>Filter destinations</h2>
               </div>
               <button
                 type="button"
@@ -277,6 +273,11 @@ export function DiscoverDirectoryClient({
                 <X size={18} />
               </button>
             </div>
+            <label className="filter-field" htmlFor="filter-interest">Interest
+              <select name="interest" className="guide-field" id="filter-interest" defaultValue={interest?.key ?? ""}>
+                <option value="">All interests</option>{interests.map(i=><option key={i.key} value={i.key}>{i.label}</option>)}
+              </select>
+            </label>
             <div className="filter-field">
               <label htmlFor="filter-barangay">Barangay</label>
               <select

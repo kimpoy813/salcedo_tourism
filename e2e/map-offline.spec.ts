@@ -23,6 +23,9 @@ test("the installed atlas and Discover map open from a cold offline navigation",
   await context.setOffline(true);
   await page.goto("/app/");
   for (const [path, width] of [
+    ["/images/salcedo/guide-valley.webp", 1408],
+    ["/app/art/baluarte-falls-thumb.webp", 240],
+    ["/app/art/baluarte-falls-cover.webp", 1024],
     ["/app/maps/valley-plate.webp", 1440],
     ["/app/maps/salcedo-relief.webp", 1024],
     ["/app/maps/salcedo-locator.webp", 1024],

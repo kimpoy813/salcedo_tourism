@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { hasPermission, recordAuditLog, requireAdminApiAuth } from "@/lib/admin-auth";
-import { placeMutationSchema } from "@/lib/validators";
+import { placePatchSchema } from "@/lib/validators";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +30,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Place not found." }, { status: 404 });
     }
 
-    const partialSchema = placeMutationSchema.partial();
+    const partialSchema = placePatchSchema;
     const parsed = partialSchema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(

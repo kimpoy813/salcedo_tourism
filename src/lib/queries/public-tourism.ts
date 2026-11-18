@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
-import { placePhotos } from "@/lib/visitor-media";
+import { placeMedia } from "@/lib/visitor-media";
 
 export interface PlaceFilterOptions {
   type?: string | null;
@@ -350,6 +350,7 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
     mediaByPlace.set(row.placeId, group);
   }
   const enriched = rows.map((place) => {
+    const media = placeMedia(place.featuredImageUrl, null, mediaByPlace.get(place.id) ?? []);
     const stats = rankingsMap.get(place.id) ?? {
       averageRating: 0,
       ratingCount: 0,
@@ -364,7 +365,8 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
 
     return {
       ...place,
-      displayPhotoUrl: placePhotos(place.featuredImageUrl, null, mediaByPlace.get(place.id) ?? [])[0]?.url ?? null,
+      displayPhotoUrl: media.find(i => i.kind === "photo")?.url ?? null,
+      displayIllustrationUrl: media.find(i => i.kind === "illustration")?.url ?? null,
       ...stats,
       barangay: place.barangayId ? brgyMap.get(place.barangayId) ?? null : null,
       primaryCategory: place.primaryCategoryId

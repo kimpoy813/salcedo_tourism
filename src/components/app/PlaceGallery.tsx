@@ -1,236 +1,28 @@
 "use client";
+import {useState} from "react";
+import {ChevronLeft, ChevronRight, Expand, X} from "lucide-react";
+import {Modal} from "@/components/ui/Modal";
+import {GuideImage} from "./GuideImage";
+import type {GuideImage as MediaItem} from "@/lib/visitor-media";
 
-import React, { useState } from "react";
-import Image from "next/image";
-import { Modal } from "@/components/ui/Modal";
-import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
-
-import type { VisitorPhoto } from "@/lib/visitor-media";
-
-type GalleryImage = VisitorPhoto;
-
-function Lightbox({
-  name,
-  images,
-  index,
-  setIndex,
-  onClose,
-}: {
-  name: string;
-  images: GalleryImage[];
-  index: number;
-  setIndex: (i: number) => void;
-  onClose: () => void;
-}) {
-  const total = images.length;
-  const current = images[Math.min(index, total - 1)];
-  const go = (dir: 1 | -1) => setIndex((index + dir + total) % total);
-
-  return (
-    <Modal className="lightbox-dialog" label={`Photos of ${name}`} onClose={onClose}>
-      <div
-        className="lightbox-layout"
-        onKeyDown={(e) => {
-          if (e.key === "ArrowRight") go(1);
-          if (e.key === "ArrowLeft") go(-1);
-        }}
-      >
-        <div className="flex items-center justify-between px-4 py-3">
-          <span className="text-white text-xs font-semibold tabular-nums">
-            {index + 1} / {total} · {name}
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close photos"
-            className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="relative flex-1">
-          <Image
-            key={current.url}
-            src={current.url}
-            alt={current.caption || name}
-            fill
-            sizes="100vw"
-            className="object-contain"
-          />
-          {total > 1 && (
-            <>
-              <button
-                type="button"
-                onClick={() => go(-1)}
-                aria-label="Previous photo"
-                className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
-              >
-                <ChevronLeft className="w-6 h-6" />
-              </button>
-              <button
-                type="button"
-                onClick={() => go(1)}
-                aria-label="Next photo"
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
-              >
-                <ChevronRight className="w-6 h-6" />
-              </button>
-            </>
-          )}
-        </div>
-        {(current.caption || current.attribution) && (
-          <p className="px-4 pb-3 text-center text-xs text-white/80">
-            {[current.caption, current.attribution].filter(Boolean).join(" · ")}
-          </p>
-        )}
-        <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-          {images.map((img, i) => (
-            <button
-              key={`${img.url}-${i}`}
-              type="button"
-              onClick={() => setIndex(i)}
-              aria-label={`Photo ${i + 1}`}
-              aria-current={i === index}
-              className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 cursor-pointer ${
-                i === index ? "ring-2 ring-[#1D7874]" : "opacity-60"
-              }`}
-            >
-              <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
-            </button>
-          ))}
-        </div>
+export function PlaceGallery({name, images}:{name:string;images:MediaItem[]}) {
+  const [open,setOpen]=useState(false),[index,setIndex]=useState(0);
+  const cover=images[0], image=images[Math.min(index,images.length-1)];
+  if(!cover) return null;
+  const change=(n:number)=>setIndex(i=>(i+n+images.length)%images.length);
+  const kind=(i:MediaItem)=>i.kind==='illustration'?'Illustration':'Photo';
+  return <>
+    <figure className="place-artwork">
+      <GuideImage src={cover.url} size="cover" width={1024} height={576} sizes="(max-width:780px) 100vw, 52vw" priority alt={cover.caption || `${kind(cover)} for ${name}`}/>
+      <figcaption><span>{kind(cover)}{cover.kind==='photo' && cover.attribution && ` · ${cover.attribution}`}</span><button type="button" onClick={()=>{setIndex(0);setOpen(true)}}><Expand size={14}/>{images.length>1?`View gallery (${images.length})`:'View image'}</button></figcaption>
+    </figure>
+    {open && <Modal label={`Image gallery: ${name}`} className="lightbox-dialog" onClose={()=>setOpen(false)}>
+      <div className="gallery-viewer" onKeyDown={e=>{if(e.key==='ArrowLeft'){e.preventDefault();change(-1)}if(e.key==='ArrowRight'){e.preventDefault();change(1)}}}>
+        <div className="viewer-toolbar"><span>{name}</span><button type="button" onClick={()=>setOpen(false)} aria-label="Close gallery"><X size={21}/></button></div>
+        <div className="viewer-stage"><GuideImage src={image.url} size="cover" fill sizes="100vw" alt={image.caption || `${kind(image)} for ${name}`}/></div>
+        <div className="viewer-caption" aria-live="polite"><strong>{kind(image)} {index+1} of {images.length}</strong>{image.caption && <p>{image.caption}</p>}{image.attribution && <small>{image.attribution}</small>}</div>
+        {images.length>1 && <div className="viewer-controls"><button aria-label="Previous image" onClick={()=>change(-1)}><ChevronLeft/></button><div className="viewer-thumbs">{images.map((v,i)=><button key={v.url} aria-label={`Show ${kind(v).toLowerCase()} ${i+1}`} aria-pressed={i===index} onClick={()=>setIndex(i)}><GuideImage src={v.url} size="thumb" width={72} height={45} alt=""/></button>)}</div><button aria-label="Next image" onClick={()=>change(1)}><ChevronRight/></button></div>}
       </div>
-    </Modal>
-  );
-}
-
-/**
- * Hero gallery: arrows, counter, caption, expand-to-lightbox.
- * Fills its (relative) parent.
- */
-export function PlaceGallery({ name, images }: { name: string; images: GalleryImage[] }) {
-  const [index, setIndex] = useState(0);
-  const [lightbox, setLightbox] = useState(false);
-  const total = images.length;
-  if (total === 0) return null;
-  const current = images[Math.min(index, total - 1)];
-  const go = (dir: 1 | -1) => setIndex((index + dir + total) % total);
-
-  return (
-    <>
-      <div className="relative w-full h-full">
-        <Image
-          key={current.url}
-          src={current.url}
-          alt={current.caption || name}
-          fill
-          priority={index === 0}
-          sizes="(max-width: 780px) 100vw, 52vw"
-          className="object-cover animate-in fade-in duration-300"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/30 pointer-events-none" />
-
-        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
-          <span className="rounded-full bg-black/55 backdrop-blur-md text-white px-2.5 py-1 text-[11px] font-semibold tabular-nums">
-            {index + 1} / {total}
-          </span>
-          <button
-            type="button"
-            onClick={() => setLightbox(true)}
-            aria-label="View photos fullscreen"
-            className="w-9 h-9 rounded-full bg-black/55 backdrop-blur-md text-white flex items-center justify-center active:scale-90 transition cursor-pointer"
-          >
-            <Expand className="w-4 h-4" />
-          </button>
-        </div>
-
-        {total > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => go(-1)}
-              aria-label="Previous photo"
-              className="absolute left-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md text-white flex items-center justify-center active:scale-90 transition cursor-pointer z-10"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => go(1)}
-              aria-label="Next photo"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-black/45 backdrop-blur-md text-white flex items-center justify-center active:scale-90 transition cursor-pointer z-10"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </>
-        )}
-
-        {(current.caption || current.attribution) && (
-          <p className="absolute bottom-3 left-3 z-10 max-w-[62%] rounded-full bg-black/55 backdrop-blur-md text-white px-3 py-1 text-[11px] font-medium truncate">
-            {[current.caption, current.attribution].filter(Boolean).join(" · ")}
-          </p>
-        )}
-      </div>
-
-      {lightbox && (
-        <Lightbox
-          name={name}
-          images={images}
-          index={index}
-          setIndex={setIndex}
-          onClose={() => setLightbox(false)}
-        />
-      )}
-    </>
-  );
-}
-
-/** "Photos" strip in the page body — tap any photo to open the lightbox there. */
-export function PlacePhotosSection({ name, images }: { name: string; images: GalleryImage[] }) {
-  const [index, setIndex] = useState(0);
-  const [lightbox, setLightbox] = useState(false);
-  if (images.length === 0) return null;
-
-  const openAt = (i: number) => {
-    setIndex(i);
-    setLightbox(true);
-  };
-
-  return (
-    <>
-      <div className="gallery-rail">
-        {images.map((img, i) => (
-          <button
-            key={`${img.url}-${i}`}
-            type="button"
-            onClick={() => openAt(i)}
-            aria-label={`View photo ${i + 1} of ${name}${img.caption ? `: ${img.caption}` : ""}`}
-            className="relative w-[68%] max-w-[260px] aspect-[4/3] rounded-2xl overflow-hidden shrink-0 active:scale-[0.99] transition cursor-pointer bg-[#F3F2EE]"
-          >
-            <Image
-              src={img.url}
-              alt={img.caption || name}
-              fill
-              sizes="(max-width: 430px) 68vw, 260px"
-              className="object-cover"
-            />
-            {img.caption && (
-              <span className="absolute bottom-2 left-2 max-w-[85%] rounded-full bg-black/55 backdrop-blur-md text-white px-2.5 py-0.5 text-[10px] font-medium truncate">
-                {img.caption}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-      {lightbox && (
-        <Lightbox
-          name={name}
-          images={images}
-          index={index}
-          setIndex={setIndex}
-          onClose={() => setLightbox(false)}
-        />
-      )}
-    </>
-  );
+    </Modal>}
+  </>;
 }

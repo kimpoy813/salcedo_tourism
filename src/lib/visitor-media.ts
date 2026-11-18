@@ -1,60 +1,51 @@
-/** Shared representative art from the original seed. An uploaded photo with a
- * similar filename is not the same asset. Keep the stored media intact. */
-const seedArt = new Set(
-  [
-    "guide-valley.webp",
-    "hero-salcedo-valley.png",
-    "baluarte-falls.png",
-    "spring-water-resort.png",
-    "plaza-heritage.png",
-    "local-eatery-table.png",
-    "rambutan-cacao-harvest.png",
-    "gallery-cafe-tablea.jpg",
-    "gallery-heritage-church.jpg",
-    "gallery-ilocano-grill.jpg",
-    "gallery-mountain-viewpoint.jpg",
-    "gallery-resort-cottages.jpg",
-    "gallery-waterfall-pool.jpg",
-  ].map((file) => `/images/salcedo/${file}`),
-);
+import artFiles from "../../public/app/art/sources.json";
 
+// Match exact bundled assets, not uploads with a similar filename.
+const originals = new Map(artFiles.map(file => [`/images/salcedo/${file}`, file.replace(/\.[^.]+$/, "")]));
+originals.set("/images/salcedo/guide-valley.webp", "hero-salcedo-valley");
+export function guideArtSrc(url: string, size: "thumb" | "cover") {
+  const stem = originals.get(url.split(/[?#]/, 1)[0]);
+  return stem ? `/app/art/${stem}-${size}.webp` : null;
+}
 export function photoUrl(url?: string | null) {
-  return url && !seedArt.has(url.split(/[?#]/, 1)[0]) ? url : null;
+  return url && !guideArtSrc(url, "thumb") ? url : null;
 }
-
-export interface VisitorPhoto {
-  url: string;
-  caption?: string | null;
-  attribution?: string | null;
-}
+export interface VisitorPhoto { url: string; caption?: string | null; attribution?: string | null }
+export type GuideImage = VisitorPhoto & { kind: "photo" | "illustration" };
 type MediaRow = VisitorPhoto & { isIllustrative?: boolean };
 
-/** Cover first, then editorial order. An explicit illustration flag also applies
- * when that same URL is set as the cover. Don't lose a gallery credit on dedup. */
-export function placePhotos(
-  cover: string | null,
-  caption: string | null,
-  images: MediaRow[],
-): VisitorPhoto[] {
-  const excluded = new Set(images.filter((i) => i.isIllustrative).map((i) => i.url));
-  const photos = new Map<string, VisitorPhoto>();
-  for (const image of [...(cover ? [{ url: cover, caption, attribution: null }] : []), ...images]) {
-    if (!photoUrl(image.url) || excluded.has(image.url)) continue;
-    const prior = photos.get(image.url);
-    photos.set(image.url, {
-      url: image.url,
-      caption: prior?.caption || image.caption,
-      attribution: prior?.attribution || image.attribution,
+/** Retain assigned illustrations, but lead with real photos. Within each group
+ * keep cover/gallery order and merge credits from duplicate gallery rows. */
+export function placeMedia(cover: string | null, caption: string | null, images: MediaRow[]): GuideImage[] {
+  const illustrated = new Set(images.filter(i => i.isIllustrative).map(i => i.url));
+  const unique = new Map<string, GuideImage>();
+  for (const row of [...(cover ? [{url: cover, caption, attribution:null}] : []), ...images]) {
+    if (!row.url) continue;
+    const prior = unique.get(row.url);
+    unique.set(row.url, {
+      url:row.url, kind: illustrated.has(row.url) || !photoUrl(row.url) ? "illustration" : "photo",
+      caption: prior?.caption || row.caption, attribution:prior?.attribution || row.attribution,
     });
   }
-  return [...photos.values()];
+  return [...unique.values()].sort((a,b) => Number(a.kind === "illustration") - Number(b.kind === "illustration"));
 }
-
-/** Older on-device bookmarks have only featuredImageUrl. A resolved null is
- * meaningful: don't reintroduce an explicitly illustrative cover. */
-export function listingPhoto(p: {
-  displayPhotoUrl?: string | null;
+export interface ListingMedia {
   featuredImageUrl?: string | null;
-}) {
+  displayPhotoUrl?: string | null;
+  displayIllustrationUrl?: string | null;
+}
+export function listingPhoto(p: ListingMedia) {
   return p.displayPhotoUrl !== undefined ? p.displayPhotoUrl : photoUrl(p.featuredImageUrl);
+}
+export function listingImage(p: ListingMedia): GuideImage | null {
+  const photo = listingPhoto(p);
+  if (photo) return {url:photo, kind:"photo"};
+  // Older saved records may only carry the original bundled URL.
+  const art = p.displayIllustrationUrl !== undefined ? p.displayIllustrationUrl :
+    (p.featuredImageUrl && guideArtSrc(p.featuredImageUrl,"thumb") ? p.featuredImageUrl : null);
+  return art ? {url:art, kind:"illustration"} : null;
+}
+export function snapshotMedia(p: ListingMedia) {
+  const image = listingImage(p);
+  return { featuredImageUrl: image?.kind === "photo" ? image.url : null, displayIllustrationUrl: image?.kind === "illustration" ? image.url : null };
 }

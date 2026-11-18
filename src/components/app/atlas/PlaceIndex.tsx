@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
+import { PlaceThumbnail } from "../GuideImage";
 import Link from "next/link";
 import {
   ArrowUpRight,
@@ -22,23 +22,12 @@ import {
   type MappedPlace,
   type MapHit,
 } from "@/lib/geo/atlas";
-import { listingPhoto } from "@/lib/visitor-media";
+import { snapshotMedia } from "@/lib/visitor-media";
 import { typeLabels } from "@/lib/guide-interests";
 import { useMobileApp } from "../MobileAppContext";
 
 function Photo({ p, size }: { p: MappedPlace; size: number }) {
-  const photo = listingPhoto(p);
-  if (!photo) return null;
-  return (
-    <Image
-      className="atlas-photo"
-      alt=""
-      src={photo}
-      width={size}
-      height={size}
-      sizes={`${size}px`}
-    />
-  );
+  return <PlaceThumbnail place={p} className="atlas-photo" width={size} height={size} />;
 }
 function TypeFlag({ p }: { p: MappedPlace }) {
   return (
@@ -59,16 +48,13 @@ export function PlaceIndex({
 }) {
   return (
     <ol className="atlas-index">
-      {pins.map((p, i) => (
+      {pins.map((p) => (
         <li key={p.id}>
           <button
             type="button"
             aria-pressed={selectedId === p.id}
             onClick={() => onPlace(p)}
           >
-            <span className="atlas-ordinal" aria-hidden="true">
-              {String(i + 1).padStart(2, "0")}
-            </span>
             <Photo p={p} size={52} />
             <span className="atlas-index-text">
               <TypeFlag p={p} />
@@ -139,7 +125,7 @@ export function PlacePreview({
     slug: place.slug,
     placeType: place.placeType,
     barangayName: place.barangay?.name ?? null,
-    featuredImageUrl: listingPhoto(place),
+    ...snapshotMedia(place),
     latitude: place.latitude,
     longitude: place.longitude,
   };

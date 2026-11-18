@@ -4,6 +4,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import "./field-guide.css";
 import "./visitor-guide.css";
+import "./office.css";
 
 const sans = localFont({
   src: "./fonts/dm-sans-latin-wght-normal.woff2",
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FCFBF7",
+  themeColor: "#FFFFFF",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

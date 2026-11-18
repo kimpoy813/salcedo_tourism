@@ -247,11 +247,8 @@ export function StepHeader({
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="flex items-start gap-3 min-w-0">
-        <span className="w-8 h-8 rounded-full bg-[#164237] text-white font-display text-sm font-bold flex items-center justify-center shrink-0 shadow-[0_6px_16px_-6px_rgba(22,66,55,0.6)]">
-          {step}
-        </span>
-        <div className="space-y-0.5 min-w-0 pt-0.5">
-          <Eyebrow>{eyebrow}</Eyebrow>
+        <div className="space-y-1 min-w-0">
+          <p className="step-context">Step {step} · {eyebrow}</p>
           <h2 className="font-display text-[24px] font-medium tracking-tight leading-tight text-[#1A2421]">{title}</h2>
           {description && <p className="text-xs leading-relaxed text-[#616E69]">{description}</p>}
         </div>
