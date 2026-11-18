@@ -90,9 +90,7 @@ export function AdminPlacesPanel({
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
   const [phone, setPhone] = useState("");
-  const [featuredImageUrl, setFeaturedImageUrl] = useState(
-    "/images/salcedo/hero-salcedo-valley.png"
-  );
+  const [featuredImageUrl, setFeaturedImageUrl] = useState("");
   const [status, setStatus] = useState<"draft" | "pending_review" | "published" | "archived">(
     "draft"
   );
@@ -164,7 +162,7 @@ export function AdminPlacesPanel({
     setLatitude("");
     setLongitude("");
     setPhone("");
-    setFeaturedImageUrl("/images/salcedo/hero-salcedo-valley.png");
+    setFeaturedImageUrl("");
     setStatus("draft");
     setIsFeatured(false);
     setIsPlaceholder(false);
@@ -193,7 +191,7 @@ export function AdminPlacesPanel({
     setLatitude(p.latitude ? String(p.latitude) : "");
     setLongitude(p.longitude ? String(p.longitude) : "");
     setPhone(p.phone || "");
-    setFeaturedImageUrl(p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png");
+    setFeaturedImageUrl(p.featuredImageUrl || "");
     setStatus(p.status);
     setIsFeatured(p.isFeatured);
     setIsPlaceholder(p.isPlaceholder);
@@ -547,13 +545,14 @@ export function AdminPlacesPanel({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label htmlFor="place-featured-image-url" className="font-medium text-[#616E69]">Featured Image URL</label>
-              <input id="place-featured-image-url"
+              <label htmlFor="place-featured-image-url" className="font-medium text-[#616E69]">Cover photo URL (optional)</label>
+              <input id="place-featured-image-url" aria-describedby="cover-photo-help"
                 type="text"
                 value={featuredImageUrl}
                 onChange={(e) => setFeaturedImageUrl(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
               />
+              <p id="cover-photo-help" className="mt-1 text-[#616E69]">Use a photo of this place. Without a photo, its page shows a location map.</p>
             </div>
             <div>
               <label htmlFor="place-source-attribution" className="font-medium text-[#616E69]">Source Attribution *</label>

@@ -11,8 +11,8 @@ export async function GET() {
     scope: "/app/",
     display: "standalone",
     orientation: "any",
-    background_color: "#FAF9F6",
-    theme_color: "#164237",
+    background_color: "#FCFBF7",
+    theme_color: "#243D33",
     lang: "en-PH",
     categories: ["travel", "navigation", "lifestyle"],
     icons: [
@@ -41,14 +41,14 @@ export async function GET() {
         sizes: "540x960",
         type: "image/png",
         form_factor: "narrow",
-        label: "Project CEDO: Turi App — Salcedo Mobile Discovery",
+        label: "Salcedo visitor guide — Buaya River valley",
       },
       {
         src: "/app/screenshots/desktop-discover.png",
         sizes: "1280x720",
         type: "image/png",
         form_factor: "wide",
-        label: "Project CEDO: Turi App — Salcedo Place Directory",
+        label: "Salcedo visitor guide — Place directory",
       },
     ],
     shortcuts: [

@@ -22,15 +22,18 @@ import {
   type MappedPlace,
   type MapHit,
 } from "@/lib/geo/atlas";
+import { listingPhoto } from "@/lib/visitor-media";
 import { typeLabels } from "@/lib/guide-interests";
 import { useMobileApp } from "../MobileAppContext";
 
 function Photo({ p, size }: { p: MappedPlace; size: number }) {
+  const photo = listingPhoto(p);
+  if (!photo) return null;
   return (
     <Image
       className="atlas-photo"
       alt=""
-      src={p.featuredImageUrl || "/images/salcedo/guide-valley.webp"}
+      src={photo}
       width={size}
       height={size}
       sizes={`${size}px`}
@@ -61,13 +64,12 @@ export function PlaceIndex({
           <button
             type="button"
             aria-pressed={selectedId === p.id}
-            aria-label={`Show ${p.name}`}
             onClick={() => onPlace(p)}
           >
-            <span className="atlas-photo-frame">
-              <Photo p={p} size={66} />
-              <small>{String(i + 1).padStart(2, "0")}</small>
+            <span className="atlas-ordinal" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
             </span>
+            <Photo p={p} size={52} />
             <span className="atlas-index-text">
               <TypeFlag p={p} />
               <strong>{shortName(p.name)}</strong>
@@ -137,7 +139,7 @@ export function PlacePreview({
     slug: place.slug,
     placeType: place.placeType,
     barangayName: place.barangay?.name ?? null,
-    featuredImageUrl: place.featuredImageUrl ?? null,
+    featuredImageUrl: listingPhoto(place),
     latitude: place.latitude,
     longitude: place.longitude,
   };

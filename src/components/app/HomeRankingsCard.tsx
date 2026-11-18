@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, ChevronRight, Star } from "lucide-react";
-import { Kicker } from "@/components/ui/FieldGuide";
+import { listingPhoto } from "@/lib/visitor-media";
 import type { PlaceCardData } from "./PlaceCard";
 
 const modes = [
@@ -36,8 +36,7 @@ export function HomeRankingsCard({
     <section className="favorites">
       <div className="section-heading">
         <div>
-          <Kicker>From the directory</Kicker>
-          <h2>Visitor favorites</h2>
+          <h2>Visitor rankings</h2>
         </div>
         <Link
           className="round-link"
@@ -73,12 +72,9 @@ export function HomeRankingsCard({
           <li key={place.id}>
             <Link href={`/app/places/${place.slug}`}>
               <span className="rank-number">{String(place[key] ?? i + 1).padStart(2, "0")}</span>
-              <Image
-                alt=""
-                src={place.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
-                width={68}
-                height={52}
-              />
+              {listingPhoto(place) && (
+                <Image alt="" src={listingPhoto(place)!} width={68} height={52} />
+              )}
               <span className="rank-name">
                 <strong>{place.name.split(" (")[0]}</strong>
                 <small>{place.barangay?.name || "Salcedo"}</small>

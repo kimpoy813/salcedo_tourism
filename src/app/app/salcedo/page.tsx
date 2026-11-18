@@ -31,7 +31,7 @@ export default async function SalcedoInfoPage() {
       <PageIntro
         eyebrow="Municipality profile"
         title="Salcedo, Ilocos Sur"
-        description="A closer look at the communities, culture, and visitor services of Salcedo."
+        description="Local history, barangay profiles, products, and emergency contacts."
         aside={
           <img
             src="/images/salcedo/seal-of-salcedo.png"

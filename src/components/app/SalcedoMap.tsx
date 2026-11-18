@@ -5,7 +5,6 @@ import "./atlas/atlas.css";
 import {
   ArrowUpRight,
   Bookmark,
-  BookOpen,
   Check,
   Compass,
   List,
@@ -223,7 +222,7 @@ export function SalcedoMap({
     <div className="atlas-filter-tags">
       {scope !== "all" && (
         <button
-          aria-label="Remove collection filter"
+          aria-label={`Remove collection filter: ${scope === "trip" ? "My trip" : "Saved"}`}
           onClick={() => {
             setScope("all");
             setFocus(EMPTY);
@@ -235,7 +234,7 @@ export function SalcedoMap({
       )}
       {filters.area && (
         <button
-          aria-label="Remove barangay filter"
+          aria-label={`Remove barangay filter: ${areaName}`}
           onClick={() => changeArea("")}
         >
           {areaName}
@@ -244,7 +243,7 @@ export function SalcedoMap({
       )}
       {filters.type && (
         <button
-          aria-label="Remove type filter"
+          aria-label={`Remove type filter: ${filterTypeName(filters.type)}`}
           onClick={() => {
             setFilters((f) => ({ ...f, type: "" }));
             setFocus(EMPTY);
@@ -350,16 +349,7 @@ export function SalcedoMap({
         <div className="atlas-workbench">
           <section className="atlas-panel" aria-label="Map explorer controls">
             <header className="atlas-intro">
-              <div className="atlas-intro-meta">
-                <span>
-                  <i />
-                  Municipal field atlas
-                </span>
-                <b>NO. 01</b>
-              </div>
-              <h1>
-                Map explorer<span>.</span>
-              </h1>
+              <h1>Map explorer</h1>
               <p>
                 Salcedo, Ilocos Sur <i /> {barangays.length} barangays
               </p>
@@ -420,10 +410,9 @@ export function SalcedoMap({
               )}
             </div>
             <div className="atlas-index-foot">
-              <BookOpen size={14} />
-              <span>Salcedo Tourism Guide</span>
-              <i />
-              Field edition
+              <Link href="/app/more#sources">
+                Map sources <ArrowUpRight size={12} />
+              </Link>
             </div>
           </section>
           {canvas}

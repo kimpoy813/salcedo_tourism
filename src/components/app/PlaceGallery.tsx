@@ -5,10 +5,9 @@ import Image from "next/image";
 import { Modal } from "@/components/ui/Modal";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 
-export interface GalleryImage {
-  url: string;
-  caption?: string | null;
-}
+import type { VisitorPhoto } from "@/lib/visitor-media";
+
+type GalleryImage = VisitorPhoto;
 
 function Lightbox({
   name,
@@ -29,69 +28,77 @@ function Lightbox({
 
   return (
     <Modal className="lightbox-dialog" label={`Photos of ${name}`} onClose={onClose}>
-      <div className="lightbox-layout" onKeyDown={e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); }}>
-      <div className="flex items-center justify-between px-4 py-3">
-        <span className="text-white text-xs font-semibold tabular-nums">
-          {index + 1} / {total} · {name}
-        </span>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label="Close photos"
-          className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition cursor-pointer"
-        >
-          <X className="w-5 h-5" />
-        </button>
-      </div>
-      <div className="relative flex-1">
-        <Image
-          key={current.url}
-          src={current.url}
-          alt={current.caption || name}
-          fill
-          sizes="100vw"
-          className="object-contain"
-        />
-        {total > 1 && (
-          <>
-            <button
-              type="button"
-              onClick={() => go(-1)}
-              aria-label="Previous photo"
-              className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
-            <button
-              type="button"
-              onClick={() => go(1)}
-              aria-label="Next photo"
-              className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </>
-        )}
-      </div>
-      {current.caption && (
-        <p className="px-4 pb-3 text-center text-xs text-white/80">{current.caption}</p>
-      )}
-      <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-        {images.map((img, i) => (
+      <div
+        className="lightbox-layout"
+        onKeyDown={(e) => {
+          if (e.key === "ArrowRight") go(1);
+          if (e.key === "ArrowLeft") go(-1);
+        }}
+      >
+        <div className="flex items-center justify-between px-4 py-3">
+          <span className="text-white text-xs font-semibold tabular-nums">
+            {index + 1} / {total} · {name}
+          </span>
           <button
-            key={`${img.url}-${i}`}
             type="button"
-            onClick={() => setIndex(i)}
-            aria-label={`Photo ${i + 1}`}
-            aria-current={i === index}
-            className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 cursor-pointer ${
-              i === index ? "ring-2 ring-[#1D7874]" : "opacity-60"
-            }`}
+            onClick={onClose}
+            aria-label="Close photos"
+            className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center active:scale-90 transition cursor-pointer"
           >
-            <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
+            <X className="w-5 h-5" />
           </button>
-        ))}
-      </div>
+        </div>
+        <div className="relative flex-1">
+          <Image
+            key={current.url}
+            src={current.url}
+            alt={current.caption || name}
+            fill
+            sizes="100vw"
+            className="object-contain"
+          />
+          {total > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() => go(-1)}
+                aria-label="Previous photo"
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                type="button"
+                onClick={() => go(1)}
+                aria-label="Next photo"
+                className="absolute right-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white/10 text-white flex items-center justify-center cursor-pointer"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+        </div>
+        {(current.caption || current.attribution) && (
+          <p className="px-4 pb-3 text-center text-xs text-white/80">
+            {[current.caption, current.attribution].filter(Boolean).join(" · ")}
+          </p>
+        )}
+        <div className="flex gap-2 overflow-x-auto no-scrollbar px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
+          {images.map((img, i) => (
+            <button
+              key={`${img.url}-${i}`}
+              type="button"
+              onClick={() => setIndex(i)}
+              aria-label={`Photo ${i + 1}`}
+              aria-current={i === index}
+              className={`relative w-16 h-12 rounded-lg overflow-hidden shrink-0 cursor-pointer ${
+                i === index ? "ring-2 ring-[#1D7874]" : "opacity-60"
+              }`}
+            >
+              <Image src={img.url} alt="" fill sizes="64px" className="object-cover" />
+            </button>
+          ))}
+        </div>
       </div>
     </Modal>
   );
@@ -101,13 +108,7 @@ function Lightbox({
  * Hero gallery: arrows, counter, caption, expand-to-lightbox.
  * Fills its (relative) parent.
  */
-export function PlaceGallery({
-  name,
-  images,
-}: {
-  name: string;
-  images: GalleryImage[];
-}) {
+export function PlaceGallery({ name, images }: { name: string; images: GalleryImage[] }) {
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   const total = images.length;
@@ -164,9 +165,9 @@ export function PlaceGallery({
           </>
         )}
 
-        {current.caption && (
+        {(current.caption || current.attribution) && (
           <p className="absolute bottom-3 left-3 z-10 max-w-[62%] rounded-full bg-black/55 backdrop-blur-md text-white px-3 py-1 text-[11px] font-medium truncate">
-            {current.caption}
+            {[current.caption, current.attribution].filter(Boolean).join(" · ")}
           </p>
         )}
       </div>
@@ -185,13 +186,7 @@ export function PlaceGallery({
 }
 
 /** "Photos" strip in the page body — tap any photo to open the lightbox there. */
-export function PlacePhotosSection({
-  name,
-  images,
-}: {
-  name: string;
-  images: GalleryImage[];
-}) {
+export function PlacePhotosSection({ name, images }: { name: string; images: GalleryImage[] }) {
   const [index, setIndex] = useState(0);
   const [lightbox, setLightbox] = useState(false);
   if (images.length === 0) return null;

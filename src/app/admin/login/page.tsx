@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Kicker, Wordmark } from "@/components/ui/FieldGuide";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
@@ -42,18 +41,22 @@ export default function AdminLoginPage() {
   return (
     <main className="staff-login">
       <aside className="staff-login-landscape">
-        <Image src="/images/salcedo/hero-salcedo-valley.png" fill sizes="55vw" priority alt="" />
-        <div className="login-shade" />
         <div>
           <Kicker>Municipality of Salcedo</Kicker>
-          <h2>
-            Behind the
-            <br />
-            <em>field guide.</em>
-          </h2>
-          <p>
-            The tourism office workspace for local places, visitor information, and travel planning.
-          </p>
+          <h2>Tourism office</h2>
+          <p>Manage the place directory, visitor information, and submitted itineraries.</p>
+          <figure className="staff-relief">
+            <img
+              src="/app/maps/valley-plate.webp"
+              width="640"
+              height="394"
+              alt="Relief model of the Buaya River valley"
+            />
+            <figcaption>
+              Buaya River valley · <Link href="/app/more#sources">GEBCO</Link> ·{" "}
+              <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap</a>
+            </figcaption>
+          </figure>
         </div>
       </aside>
       <section className="staff-login-form">

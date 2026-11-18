@@ -1,5 +1,5 @@
 /* Only public guide content is cached. Submissions and all admin/API routes bypass this worker. */
-const CACHE = "turi-salcedo-v5";
+const CACHE = "turi-salcedo-v6";
 const SHELL = ["/app/", "/app/trips", "/app/offline", "/app/discover", "/app/map", "/app/more"];
 
 // Collect only this build's public static resources; never store API payloads.
@@ -20,7 +20,11 @@ self.addEventListener("install", (event) => {
       const assets = new Set([
         "/app/icons/icon-192x192.png",
         "/app/icons/icon-512x512.png",
-        "/images/salcedo/guide-valley.webp",
+        "/images/salcedo/municipal-seal.webp",
+        "/images/salcedo/cacao-plate.webp",
+        "/app/maps/valley-plate.webp",
+        "/app/maps/salcedo-locator.webp",
+        "/app/maps/salcedo-relief.webp",
         "/app/maps/salcedo-field.geojson",
       ]);
       await Promise.all(SHELL.map((path) => cachePage(cache, path, assets)));
@@ -72,7 +76,7 @@ self.addEventListener("fetch", (event) => {
     path.startsWith("/_next/static/") ||
     path.startsWith("/images/salcedo/") ||
     path.startsWith("/app/icons/") ||
-    path === "/app/maps/salcedo-field.geojson" ||
+    path.startsWith("/app/maps/") ||
     path === "/_next/image";
   if (asset) {
     event.respondWith(

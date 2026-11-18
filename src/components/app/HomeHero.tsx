@@ -1,98 +1,78 @@
-"use client";
+import Form from "next/form";
+import Link from "next/link";
+import { ArrowRight, ArrowUpRight, Search } from "lucide-react";
 
-import { useState } from "react";
-import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronLeft, ChevronRight, MapPin, Search } from "lucide-react";
-import { FieldStamp, Kicker } from "@/components/ui/FieldGuide";
-
-const scenes = [
-  {
-    file: "guide-valley.webp",
-    title: "Buaya River Valley",
-    alt: "An illustrated river winding through rice fields and the green foothills of Salcedo",
-  },
-  {
-    file: "baluarte-falls.png",
-    title: "Baluarte Falls",
-    alt: "A forest cascade above an emerald pool, an illustration of Baluarte Falls",
-  },
-  {
-    file: "plaza-heritage.png",
-    title: "Salcedo Town Plaza",
-    alt: "A view of the church and the tree-lined town plaza",
-  },
-];
-
+/** A local relief plate, not a photograph. Projection and annotation anchors
+ * are reproduced by scripts/build-visitor-relief.py. */
 export function HomeHero() {
-  const [index, setIndex] = useState(0);
-  const router = useRouter();
-  const scene = scenes[index];
   return (
-    <section className="home-hero" aria-label="Welcome to Salcedo">
-      <div className="hero-image" key={scene.file}>
-        <Image
-          src={`/images/salcedo/${scene.file}`}
-          alt={scene.alt}
-          fill
-          unoptimized={index === 0}
-          priority={index === 0}
-          sizes="100vw"
-        />
-      </div>
-      <div className="hero-shade" />
-      <div className="guide-wrap hero-layout">
-        <div className="hero-copy">
-          <Kicker>Ilocos Sur, Philippines</Kicker>
-          <h1>
-            Salcedo, <em>naturally.</em>
-          </h1>
-          <p className="hero-deck">
-            Your local guide to hidden waterfalls, mountain escapes, and the flavors of Ilocos Sur.
+    <section className="visitor-cover" aria-labelledby="cover-title">
+      <div className="guide-wrap cover-spread">
+        <div className="cover-intro">
+          <p className="cover-location">
+            Philippines <span>/</span> Ilocos Sur
           </p>
-          <form
-            className="hero-search"
-            action="/app/discover"
-            role="search"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const query = String(new FormData(event.currentTarget).get("q") || "").trim();
-              router.push(query ? `/app/discover?q=${encodeURIComponent(query)}` : "/app/discover");
-            }}
-          >
-            <Search size={18} strokeWidth={1.7} />
+          <h1 id="cover-title">Salcedo</h1>
+          <p className="cover-deck">
+            A visitor’s guide to the Buaya River valley, from the town plaza to the springs of Ubbog
+            and the falls of Baluarte.
+          </p>
+          <Form className="cover-search" action="/app/discover" role="search">
+            <Search size={18} aria-hidden="true" />
             <input
-              name="q"
               type="search"
+              name="q"
               aria-label="Search the place directory"
-              placeholder="Search places, cafés, waterfalls…"
+              placeholder="Place or barangay"
             />
-            <button aria-label="Search destinations" type="submit">
-              <ArrowRight size={19} />
+            <button type="submit" aria-label="Search destinations">
+              Search
             </button>
-          </form>
+          </Form>
+          <Link className="cover-browse" href="/app/discover">
+            Browse the directory <ArrowRight size={15} />
+          </Link>
         </div>
-        <FieldStamp />
-        <div className="scene-controls">
-          <div className="scene-caption" aria-live="polite">
-            <span className="scene-label">
-              Landscape <b>{String(index + 1).padStart(2, "0")}</b> / 03
-            </span>
-            <span>
-              <MapPin size={13} />
-              {scene.title}
-            </span>
+        <figure className="valley-figure">
+          <div className="valley-plate">
+            <svg
+              viewBox="0 0 640 394"
+              role="img"
+              aria-label="Relief of Salcedo from the southwest: the town plaza in the valley, Baluarte Falls to the south, and Madarang in the eastern foothills"
+            >
+              <image href="/app/maps/valley-plate.webp" width="640" height="394" />
+              <g className="plate-annotation">
+                <path d="M250 200 215 153H140" />
+                <circle cx="250" cy="200" r="3.5" />
+                <text x="139" y="146">
+                  Town plaza
+                </text>
+                <path d="M432 83 461 34H539" />
+                <circle cx="432" cy="83" r="3.5" />
+                <text x="465" y="27">
+                  Madarang
+                </text>
+                <path d="M285 288 316 344H385" />
+                <circle cx="285" cy="288" r="3.5" />
+                <text x="322" y="365">
+                  Baluarte
+                </text>
+              </g>
+            </svg>
           </div>
-          <button
-            aria-label="Previous landscape"
-            onClick={() => setIndex((index + scenes.length - 1) % scenes.length)}
-          >
-            <ChevronLeft size={17} />
-          </button>
-          <button aria-label="Next landscape" onClick={() => setIndex((index + 1) % scenes.length)}>
-            <ChevronRight size={17} />
-          </button>
-        </div>
+          <figcaption>
+            <div>
+              <strong>Buaya River valley</strong>
+              <small>
+                Relief: <Link href="/app/more#sources">GEBCO</Link> ·{" "}
+                <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap</a>
+              </small>
+            </div>
+            <Link href="/app/map">
+              Open map <ArrowUpRight size={16} />
+            </Link>
+          </figcaption>
+        </figure>
       </div>
     </section>
   );

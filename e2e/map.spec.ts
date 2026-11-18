@@ -171,7 +171,7 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   );
   await page.goto("/app/map");
   await settle(page);
-  await page.getByLabel("Map layers: Field map").click();
+  await page.getByRole("button", { name: /Map layers\s*Field map/i }).click();
   const d = page.getByRole("dialog", { name: "Map layers" });
   await d.getByLabel("Barangay boundaries").uncheck();
   await d.getByLabel("Map labels").uncheck();
@@ -179,10 +179,12 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   await d.getByRole("button", { name: "Done" }).click();
   await expect(page.locator(".leaflet-tile-loaded").first()).toBeAttached();
   await expect(page.locator(".atlas-lettering")).toHaveCount(0);
-  await page.getByLabel("Map layers: Street").click();
+  await page.getByRole("button", { name: /Map layers\s*Street/i }).click();
   await d.getByRole("radio", { name: /^Terrain/ }).click();
   await d.getByRole("button", { name: "Done" }).click();
-  await expect(page.getByLabel("Map layers: Field map")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Map layers\s*Field map/i }),
+  ).toBeVisible();
   await expect(page.getByText(/Terrain tiles couldn’t load/)).toBeVisible();
   await page.getByLabel("Dismiss layer message").click();
   const s = page.getByRole("combobox", { name: "Search the Salcedo map" });
@@ -195,7 +197,7 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
     "Online landmark",
   );
   await context.setOffline(true);
-  await page.getByLabel("Map layers: Field map").click();
+  await page.getByRole("button", { name: /Map layers\s*Field map/i }).click();
   await expect(d.getByRole("radio", { name: /^Satellite/ })).toBeDisabled();
   await page.keyboard.press("Escape");
   await s.fill("Buaya River");
@@ -274,7 +276,7 @@ test("Discover shares its search results and preview actions with the embedded m
   await page.getByRole("button", { name: "Show all places" }).click();
   await page.getByRole("button", { name: /Place index/ }).click();
   const list = page.getByRole("dialog", { name: "Place index" });
-  await list.getByRole("button", { name: /^Show Baluarte Falls/ }).click();
+  await list.getByRole("button", { name: /Baluarte Falls/ }).click();
   await page.getByRole("link", { name: "Full explorer" }).click();
   await expect(page).toHaveURL(/\/app\/map\?place=baluarte-falls/);
   await expect(preview(page).getByRole("heading")).toHaveText("Baluarte Falls");

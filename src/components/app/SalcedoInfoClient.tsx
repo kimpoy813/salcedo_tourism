@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { photoUrl } from "@/lib/visitor-media";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Phone, ShieldAlert } from "lucide-react";
@@ -321,11 +322,11 @@ function SalcedoInfoInner({
               key={pr.id}
               className="bg-white rounded-2xl border border-[#EAE7E0] overflow-hidden flex gap-3 p-3"
             >
-              <img
-                src={pr.imageUrl || "/images/salcedo/rambutan-cacao-harvest.png"}
+              {photoUrl(pr.imageUrl) && <img
+                src={pr.imageUrl!}
                 alt={pr.name}
-                className="w-20 h-20 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-              />
+                className="w-20 h-20 object-cover shrink-0"
+              />}
               <div className="flex-1 min-w-0 space-y-1">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
                   {pr.category}

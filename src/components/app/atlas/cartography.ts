@@ -62,7 +62,7 @@ export function addBoundaries(
 ) {
   const layer = L.layerGroup().addTo(map);
   const b = SALCEDO_BARANGAY_POLYGONS;
-  b.forEach((p, i) => {
+  b.forEach((p) => {
     const chosen = p.slug === area;
     const poly = L.polygon(p.coordinates, {
       pane: "atlasAreas",
@@ -72,10 +72,8 @@ export function addBoundaries(
       dashArray: chosen ? undefined : "4 4",
       opacity: chosen ? 0.86 : 0.64,
       fill: true,
-      fillColor: chosen
-        ? "#9fbd93"
-        : ["#cddbb8", "#dee3c5", "#ccd9c0", "#e4e3c7", "#d4e1cd"][i % 5],
-      fillOpacity: field ? (chosen ? 0.8 : 0.72) : chosen ? 0.18 : 0.015,
+      fillColor: chosen ? "#7b9b68" : "#d4ddbb",
+      fillOpacity: field ? (chosen ? 0.43 : 0.12) : chosen ? 0.18 : 0.015,
       interactive: !!onArea,
     });
     if (onArea) poly.on("click", () => onArea(chosen ? "" : p.slug));
@@ -100,8 +98,8 @@ export function addFieldLines(map: L.Map, data: FieldData, detail: boolean) {
       ["water"],
       { color: "#82afb4", weight: 1, fillColor: "#acd1d2", fillOpacity: 1 },
     ],
-    [["stream"], { color: "#a4c6c8", weight: detail ? 1.6 : 1.0 }],
-    [["river"], { color: "#87b7c1", weight: detail ? 3.6 : 2.6 }],
+    [["stream"], { color: "#83adae", weight: detail ? 1.6 : 1.0 }],
+    [["river"], { color: "#6099a4", weight: detail ? 3.6 : 2.6 }],
     [
       ["trail"],
       { color: "#bbad8f", weight: detail ? 1.6 : 1, dashArray: "3 3" },

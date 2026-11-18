@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
+import { placePhotos } from "@/lib/visitor-media";
 
 export interface PlaceFilterOptions {
   type?: string | null;
@@ -292,6 +293,7 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
     restaurantRows,
     attractionRows,
     accommRows,
+    mediaRows,
   ] = await Promise.all([
     brgyIds.length
       ? db.select().from(schema.barangays).where(inArray(schema.barangays.id, brgyIds))
@@ -322,6 +324,15 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
       .select()
       .from(schema.accommodationDetails)
       .where(inArray(schema.accommodationDetails.placeId, placeIds)),
+    db
+      .select({
+        placeId: schema.placeImages.placeId,
+        url: schema.placeImages.url,
+        isIllustrative: schema.placeImages.isIllustrative,
+      })
+      .from(schema.placeImages)
+      .where(inArray(schema.placeImages.placeId, placeIds))
+      .orderBy(asc(schema.placeImages.displayOrder)),
   ]);
 
   const brgyMap = new Map(brgyRows.map((b) => [b.id, b]));
@@ -332,6 +343,12 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
   const attractionMap = new Map(attractionRows.map((c) => [c.placeId, c]));
   const accommMap = new Map(accommRows.map((c) => [c.placeId, c]));
 
+  const mediaByPlace = new Map<string, typeof mediaRows>();
+  for (const row of mediaRows) {
+    const group = mediaByPlace.get(row.placeId) ?? [];
+    group.push(row);
+    mediaByPlace.set(row.placeId, group);
+  }
   const enriched = rows.map((place) => {
     const stats = rankingsMap.get(place.id) ?? {
       averageRating: 0,
@@ -347,6 +364,7 @@ export async function getPublishedPlaces(filters: PlaceFilterOptions = {}) {
 
     return {
       ...place,
+      displayPhotoUrl: placePhotos(place.featuredImageUrl, null, mediaByPlace.get(place.id) ?? [])[0]?.url ?? null,
       ...stats,
       barangay: place.barangayId ? brgyMap.get(place.barangayId) ?? null : null,
       primaryCategory: place.primaryCategoryId

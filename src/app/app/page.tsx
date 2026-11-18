@@ -1,15 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import {
-  ArrowRight,
-  ArrowUpRight,
-  ChevronRight,
-  Coffee,
-  Landmark,
-  Mountain,
-  Route,
-  Waves,
-} from "lucide-react";
+import { ArrowRight, ArrowUpRight } from "lucide-react";
 import {
   getCategoriesWithCounts,
   getPublishedEvents,
@@ -18,12 +9,11 @@ import {
 } from "@/lib/queries/public-tourism";
 import { interests } from "@/lib/guide-interests";
 import { HomeHero } from "@/components/app/HomeHero";
-import { PlaceCard } from "@/components/app/PlaceCard";
 import { HomeRankingsCard } from "@/components/app/HomeRankingsCard";
+import { PlaceCard } from "@/components/app/PlaceCard";
 import { Kicker } from "@/components/ui/FieldGuide";
 
 export const dynamic = "force-dynamic";
-const interestIcons = [Mountain, Waves, Coffee, Landmark];
 const shortlist = [
   "baluarte-falls-agila-falls",
   "bago-resort-spring-water",
@@ -38,131 +28,109 @@ export default async function TouristHomePage() {
     getPublishedProducts(),
   ]);
   const featured = places.filter((p) => p.isFeatured);
-  const picks = [...featured]
-    .sort(
-      (a, b) =>
-        (shortlist.includes(a.slug) ? shortlist.indexOf(a.slug) : 99) -
-        (shortlist.includes(b.slug) ? shortlist.indexOf(b.slug) : 99),
-    )
+  const priority = (slug: string) =>
+    shortlist.includes(slug) ? shortlist.indexOf(slug) : shortlist.length;
+  const picks = (featured.length ? featured : [...places])
+    .sort((a, b) => priority(a.slug) - priority(b.slug))
     .slice(0, 3);
-  const event = events[0];
-  const product = products[0];
   return (
     <>
       <HomeHero />
-      <nav className="interest-bar" aria-label="Browse by interest">
-        <div className="guide-wrap interest-layout">
-          {interests.map((interest, i) => {
-            const Icon = interestIcons[i];
-            return (
-              <Link
-                key={interest.key}
-                href={`/app/discover?interest=${interest.key}`}
-                className={`interest-link interest-${interest.key}`}
-              >
-                <span className="interest-icon">
-                  <Icon size={24} strokeWidth={1.5} />
-                </span>
-                <span>
-                  <strong>{interest.label}</strong>
-                  <small>{interest.note}</small>
-                </span>
-                <ChevronRight className="interest-arrow" size={14} />
-              </Link>
-            );
-          })}
+      <nav className="subject-nav" aria-label="Browse by interest">
+        <div className="guide-wrap subject-row">
+          <span>Browse by interest</span>
+          {interests.map((i) => (
+            <Link key={i.key} href={`/app/discover?interest=${i.key}`}>
+              {i.label}
+              <ArrowRight size={14} />
+            </Link>
+          ))}
         </div>
       </nav>
-      <div className="guide-wrap home-sections">
-        <section aria-labelledby="featured-title">
-          <div className="section-heading">
-            <div>
-              <Kicker>The local shortlist</Kicker>
-              <h2 id="featured-title">Featured destinations</h2>
-            </div>
-            <Link className="text-link" href="/app/discover">
-              Explore all places <ArrowRight size={16} />
-            </Link>
-          </div>
-          {picks.length || places.length ? (
-            <div className="places-grid">
-              {(picks.length ? picks : places.slice(0, 3)).map((place) => (
-                <PlaceCard key={place.id} place={place} variant="spotlight" />
-              ))}
-            </div>
-          ) : (
-            <p className="empty-note">
-              New destinations will appear here as the local directory grows.
-            </p>
-          )}
-        </section>
-        <div className="home-secondary">
-          {places.length > 0 && <HomeRankingsCard places={places} categories={categories} />}
-          <aside className="notebook-callout">
-            <Image
-              src="/images/salcedo/gallery-mountain-viewpoint.jpg"
-              alt=""
-              fill
-              sizes="(max-width: 780px) 100vw, 40vw"
-            />
-            <div className="notebook-shade" />
-            <div className="notebook-content">
-              <Kicker>Your trip notebook</Kicker>
-              <h2>
-                Make a day
-                <br />
-                of <em>Salcedo.</em>
-              </h2>
-              <p>
-                Pick your stops, plan your days, and take your itinerary with you. No account
-                needed.
-              </p>
-              <Link className="cream-button" href="/app/trips">
-                <Route size={16} /> Plan my trip <ArrowRight size={15} />
+      <div className="guide-wrap publication">
+        <div className="editorial-spread">
+          <section aria-labelledby="featured-title">
+            <div className="section-heading">
+              <h2 id="featured-title">Places to visit</h2>
+              <Link className="text-link" href="/app/discover">
+                All places <ArrowRight size={15} />
               </Link>
             </div>
+            {picks.length ? (
+              <div className="shortlist">
+                {picks.map((place, i) => (
+                  <PlaceCard key={place.id} place={place} number={i + 1} variant="spotlight" />
+                ))}
+              </div>
+            ) : (
+              <p className="empty-note">There are no published destinations yet.</p>
+            )}
+          </section>
+          <aside className="crop-story">
+            <Kicker>Local produce</Kicker>
+            <div className="crop-spread">
+              <div>
+                <h2>
+                  Cacao <br />
+                  &amp; tablea
+                </h2>
+                <p>
+                  Cacao grows in Sorioan. In Poblacion, local makers roast and grind the beans into
+                  tablea for hot chocolate.
+                </p>
+                <Link className="text-link" href="/app/salcedo?tab=products">
+                  Meet the producers <ArrowRight size={15} />
+                </Link>
+              </div>
+              <Image
+                src="/images/salcedo/cacao-plate.webp"
+                alt="Botanical plate of a cacao branch, pod and flower"
+                width={500}
+                height={731}
+                sizes="(max-width: 600px) 33vw, 190px"
+                unoptimized
+              />
+            </div>
+            <p className="plate-source">
+              <em>Theobroma cacao</em> · <a href="/app/more#sources">Flora de Filipinas, pl. 275</a>
+            </p>
           </aside>
         </div>
-        {(event || product) && (
-          <section>
-            <div className="section-heading">
+        <div className="editorial-spread below-fold">
+          {places.length > 0 && <HomeRankingsCard places={places} categories={categories} />}
+          <section className="further-reading">
+            <h2>Visitor information</h2>
+            <Link href="/app/trips">
               <div>
-                <Kicker>Local life</Kicker>
-                <h2>From the community</h2>
+                <small>Trip planner</small>
+                <h3>Plan your stops</h3>
+                <p>Save places and arrange them by day on this device.</p>
               </div>
-              <Link className="text-link" href="/app/more">
-                Local guide <ArrowRight size={16} />
+              <ArrowUpRight size={19} />
+            </Link>
+            {events[0] && (
+              <Link href="/app/salcedo?tab=events">
+                <div>
+                  <small>Festivals &amp; events</small>
+                  <h3>{events[0].title}</h3>
+                </div>
+                <ArrowUpRight size={19} />
               </Link>
-            </div>
-            <div className="local-notes">
-              {event && (
-                <Link href="/app/salcedo?tab=events">
-                  <Image src="/images/salcedo/plaza-heritage.png" alt="" width={112} height={96} />
-                  <div>
-                    <small>Festivals & events</small>
-                    <h3>{event.title}</h3>
-                  </div>
-                  <ArrowUpRight size={17} />
-                </Link>
-              )}
-              {product && (
-                <Link href="/app/salcedo?tab=products">
-                  <Image
-                    src={product.imageUrl || "/images/salcedo/rambutan-cacao-harvest.png"}
-                    alt=""
-                    width={112}
-                    height={96}
-                  />
-                  <div>
-                    <small>Local harvest</small>
-                    <h3>{product.name}</h3>
-                  </div>
-                  <ArrowUpRight size={17} />
-                </Link>
-              )}
-            </div>
+            )}
+            {products[0] && (
+              <Link href="/app/salcedo?tab=products">
+                <div>
+                  <small>Local products</small>
+                  <h3>{products[0].name}</h3>
+                </div>
+                <ArrowUpRight size={19} />
+              </Link>
+            )}
+            <Link className="text-link" href="/app/more">
+              Local guide <ArrowRight size={15} />
+            </Link>
           </section>
-        )}
+        </div>
       </div>
     </>
   );

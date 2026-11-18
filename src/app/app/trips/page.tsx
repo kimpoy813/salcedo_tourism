@@ -4,7 +4,7 @@ import { getDb, schema } from "@/db";
 import { getPublishedPlaces } from "@/lib/queries/public-tourism";
 import { TripsPlannerClient } from "@/components/app/TripsPlannerClient";
 
-import { GuideBanner } from "@/components/ui/GuideBanner";
+import { PageIntro } from "@/components/ui/FieldGuide";
 
 export const metadata = { title: "My trip notebook" };
 export const dynamic = "force-dynamic";
@@ -41,13 +41,13 @@ export default async function TripsPage() {
 
   return (
     <>
-      <GuideBanner
-        eyebrow="Your travel notebook"
-        title="My Salcedo trip"
-        description="Save the places you love and build an itinerary at your own pace."
-        image="/images/salcedo/gallery-mountain-viewpoint.jpg"
-        note="Mount Madarang · Ilocos Sur"
-      />
+      <div className="guide-wrap inner-mast">
+        <PageIntro
+          eyebrow="Trip planner"
+          title="My Salcedo trip"
+          description="Choose your stops, put them in order, and keep a copy of your itinerary."
+        />
+      </div>
       <div className="guide-wrap trip-workspace">
         <Suspense
           fallback={
