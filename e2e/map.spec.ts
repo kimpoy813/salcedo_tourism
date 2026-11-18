@@ -176,6 +176,7 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   // Only key-free basemaps are offered: the CARTO "Light" style was removed.
   await expect(d.getByRole("radio")).toHaveCount(4);
   await expect(d.getByRole("radio", { name: /^Light/ })).toHaveCount(0);
+  await expect(d.getByLabel("3D relief")).toBeChecked();
   await d.getByLabel("Barangay boundaries").uncheck();
   await d.getByLabel("Map labels").uncheck();
   await d.getByRole("radio", { name: /^Street/ }).check();
@@ -189,6 +190,14 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   await expect
     .poll(() => tile.evaluate((el) => el.getBoundingClientRect().width))
     .toBeGreaterThan(100);
+  await expect(page.locator(".atlas-hillshade")).toBeAttached();
+  const edge = page.locator(".atlas-municipal-edge").first();
+  await expect(edge).toBeAttached();
+  await expect
+    .poll(() =>
+      edge.evaluate((el) => parseFloat(getComputedStyle(el).strokeWidth)),
+    )
+    .toBeGreaterThan(2.4);
   await expect(page.locator(".atlas-lettering")).toHaveCount(0);
   await page.getByRole("button", { name: /Map layers\s*Street/i }).click();
   await d.getByRole("radio", { name: /^Terrain/ }).click();

@@ -1,5 +1,5 @@
 /* Only public guide content is cached. Submissions and all admin/API routes bypass this worker. */
-const CACHE = "turi-salcedo-v7";
+const CACHE = "turi-salcedo-v8";
 const SHELL = ["/app/", "/app/trips", "/app/offline", "/app/discover", "/app/map", "/app/more"];
 
 // Collect only this build's public static resources; never store API payloads.
@@ -28,6 +28,7 @@ self.addEventListener("install", (event) => {
         "/app/maps/valley-plate.webp",
         "/app/maps/salcedo-locator.webp",
         "/app/maps/salcedo-relief.webp",
+        "/app/maps/salcedo-hillshade.webp",
         "/app/maps/salcedo-field.geojson",
       ]);
       // Keep every directory thumbnail, but only the full covers used by the shell.
