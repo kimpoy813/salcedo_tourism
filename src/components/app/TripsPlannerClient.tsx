@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { SectionHeader } from "@/components/ui/design";
+import { SectionHeader, StepHeader } from "@/components/ui/design";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -1104,8 +1104,9 @@ function TripsPlannerInner({
 
               {/* Native Vertical Route Timeline — STEP 1 comes first, physically */}
               {draft.stops.length > 0 && !inReview && (
-                <div id="trip-destinations" className="space-y-2.5 scroll-mt-3">
-                  <SectionHeader
+                <section id="trip-destinations" className="surface-card p-5 space-y-3 scroll-mt-3">
+                  <StepHeader
+                    step={1}
                     eyebrow="Step 1 · Destinations"
                     title={
                       showAllDays || tripDaysCount <= 1
@@ -1147,7 +1148,7 @@ function TripsPlannerInner({
                       </div>
 
                       {/* Stop Card — collapsed by default: photo, name, time. Tap Edit for the rest. */}
-                      <div className="flex-1 min-w-0 surface-card px-4 py-3.5">
+                      <div className="flex-1 min-w-0 inset-panel px-4 py-3.5">
                         {(() => {
                           const dispIdx = displayStops.findIndex((x) => x.s.placeId === s.placeId);
                           const canUp = dispIdx > 0 && displayStops[dispIdx - 1].day === day;
@@ -1193,7 +1194,7 @@ function TripsPlannerInner({
                               </div>
 
                               {expanded && (
-                                <div className="mt-3 space-y-3 inset-panel p-3">
+                                <div className="mt-3 space-y-3 rounded-2xl bg-white border border-[#EAE7E0] p-3">
                                   {tripDaysCount > 1 && (
                                     <div>
                                       <span className="block text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69] mb-1.5">Assigned to</span>
@@ -1319,13 +1320,14 @@ function TripsPlannerInner({
                           <span className="text-[11px] font-semibold text-[#164237]">Plan →</span>
                         </button>
                       ))}
-                </div>
+                </section>
               )}
 
               {/* STEP 2: Plan your days — start date, how many days, what falls on each day */}
               {draft.stops.length > 0 && (
               <section className={`no-print surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
-                <SectionHeader
+                <StepHeader
+                  step={2}
                   eyebrow="Step 2 · Plan"
                   title="Plan your days"
                   description="Pick a start date and trip length. Tap a day to jump up to its destinations and arrange them."
@@ -1435,7 +1437,8 @@ function TripsPlannerInner({
                       <ChevronLeft className="w-4 h-4" /> Back to plan
                     </button>
                   )}
-                  <SectionHeader
+                  <StepHeader
+                    step={3}
                     eyebrow="Step 3 · Final step"
                     title={draft.status === "completed" ? "Trip finished" : "Finish your trip"}
                     description={
@@ -1569,12 +1572,14 @@ function TripsPlannerInner({
               )}
 
               {draft.stops.length === 0 && (
-                <div className="surface-card p-6 text-center space-y-3">
-                  <span className="mx-auto w-12 h-12 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
-                  <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">Step 1 · Destinations</p>
-                  <p className="font-display text-base font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
-                  <p className="text-xs leading-relaxed text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
-                  <Link href="/app/discover" className="inline-flex items-center rounded-full btn-primary-pro px-5 min-h-[44px] text-xs font-semibold">Browse Destinations →</Link>
+                <div className="surface-card p-5 space-y-3">
+                  <StepHeader step={1} eyebrow="Step 1 · Destinations" title="Your destinations" description="Add places from Discover, then plan your days." />
+                  <div className="text-center space-y-3 pt-1">
+                    <span className="mx-auto w-12 h-12 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
+                    <p className="font-display text-base font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
+                    <p className="text-xs leading-relaxed text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
+                    <Link href="/app/discover" className="inline-flex items-center rounded-full btn-primary-pro px-5 min-h-[44px] text-xs font-semibold">Browse Destinations →</Link>
+                  </div>
                 </div>
               )}
 
