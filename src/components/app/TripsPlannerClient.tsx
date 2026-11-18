@@ -860,41 +860,9 @@ function TripsPlannerInner({
   };
 
   const inReview = view === "review" && draft.status !== "completed";
-  const journeyStep = submissionResult ? 3 : draft.status === "completed" ? 3 : inReview ? 3 : draft.stops.length > 0 ? 2 : 1;
 
   return (
     <div className="space-y-5">
-      {/* 4-step journey: the exact flow — browse & add, plan days, finish & review, optional details */}
-      <ol className="no-print grid grid-cols-3 surface-card px-2 py-3" aria-label="Your trip progress">
-        {[
-          { n: 1, label: "Add places" },
-          { n: 2, label: "Plan days" },
-          { n: 3, label: "Finish & review" },
-        ].map((s) => {
-          const state =
-            draft.status === "completed" && s.n <= 3
-              ? "done"
-              : journeyStep > s.n
-                ? "done"
-                : journeyStep === s.n
-                  ? "current"
-                  : "todo";
-          return (
-            <li key={s.n} className="relative flex flex-col items-center gap-1 text-center">
-              {s.n > 1 && (
-                <span className={`absolute top-[11px] right-1/2 w-full h-px ${state !== "todo" ? "bg-[#164237]/40" : "bg-[#EAE7E0]"}`} aria-hidden="true" />
-              )}
-              <span className={`relative z-10 w-[22px] h-[22px] rounded-full text-[10px] font-bold flex items-center justify-center shrink-0 ${state === "done" ? "bg-[#164237] text-white" : state === "current" ? "bg-[#164237] text-white ring-4 ring-[#164237]/10" : "bg-[#EFECE5] text-[#616E69]"}`}>
-                {state === "done" ? <Check className="w-3 h-3" /> : s.n}
-              </span>
-              <span className={`text-[10px] leading-tight ${state === "current" ? "font-bold text-[#164237]" : state === "done" ? "font-semibold text-[#164237]" : "font-medium text-[#616E69]"}`}>
-                {s.label}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
       {/* Native Segmented Control */}
       <div className="no-print grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0] shadow-[inset_0_1px_2px_rgba(26,36,33,0.05)]">
         <button
@@ -1107,7 +1075,7 @@ function TripsPlannerInner({
                 <section id="trip-destinations" className="surface-card p-5 space-y-3 scroll-mt-3">
                   <StepHeader
                     step={1}
-                    eyebrow="Step 1 · Destinations"
+                    eyebrow="Destinations"
                     title={
                       showAllDays || tripDaysCount <= 1
                         ? `Your destinations (${draft.stops.length})`
@@ -1328,7 +1296,7 @@ function TripsPlannerInner({
               <section className={`no-print surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <StepHeader
                   step={2}
-                  eyebrow="Step 2 · Plan"
+                  eyebrow="Plan"
                   title="Plan your days"
                   description="Pick a start date and trip length. Tap a day to jump up to its destinations and arrange them."
                 />
@@ -1393,29 +1361,18 @@ function TripsPlannerInner({
                     </p>
                   </>
                 )}
-              </section>
-              )}
-
-              {/* Day summary: makes the plan (and its totals) explicit at a glance */}
-              {draft.stops.length > 0 && !inReview && (
-                <div className="bg-[#164237] text-white rounded-[20px] p-4 shadow-[0_16px_36px_-20px_rgba(22,66,55,0.55)] space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">{tripDaysCount > 1 ? `Your ${tripDaysCount}-day trip at a glance` : "Your day at a glance"}</p>
-                    <button type="button" onClick={() => void applySuggestedSchedule()}
-                      className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-semibold cursor-pointer active:scale-95 transition">
-                      <Wand2 className="w-3 h-3" /> Auto-arrange times
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    <div><p className="font-display text-base font-bold tabular-nums">{draft.stops.length}</p><p className="text-[10px] text-white/70">Stops</p></div>
-                    <div><p className="font-display text-base font-bold tabular-nums">{formatTime12h(draft.stops.find((s) => s.visitTime)?.visitTime)}</p><p className="text-[10px] text-white/70">Starts</p></div>
-                    <div><p className="font-display text-base font-bold tabular-nums">{formatTime12h(endTimeFor(draft.stops[draft.stops.length - 1]?.visitTime, draft.stops[draft.stops.length - 1]?.durationMinutes))}</p><p className="text-[10px] text-white/70">Ends</p></div>
-                    <div><p className="font-display text-base font-bold tabular-nums">{totalDistanceKm > 0 ? `${totalDistanceKm}km` : "—"}</p><p className="text-[10px] text-white/70">Travel</p></div>
-                  </div>
-                  {scheduleIssues.total > 0 && (
-                    <p className="text-[11px] text-amber-200 inline-flex items-center gap-1"><TriangleAlert className="w-3 h-3" />{scheduleIssues.total} timing {scheduleIssues.total === 1 ? "issue" : "issues"} to fix — tap “Use …” on the stop, or Auto-arrange.</p>
+                <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[#EAE7E0]">
+                  {scheduleIssues.total > 0 ? (
+                    <p className="flex-1 min-w-[180px] text-[11px] text-amber-900 inline-flex items-start gap-1"><TriangleAlert className="w-3.5 h-3.5 mt-px shrink-0" />{scheduleIssues.total} timing {scheduleIssues.total === 1 ? "issue" : "issues"} — fix on the stop, or auto-arrange.</p>
+                  ) : (
+                    <p className="flex-1 min-w-[180px] text-[11px] text-[#616E69]">Times look good. You can also let us arrange them for you.</p>
                   )}
+                  <button type="button" onClick={() => void applySuggestedSchedule()}
+                    className="inline-flex items-center gap-1 rounded-full bg-[#164237]/5 border border-[#164237]/20 px-3 min-h-[36px] text-[11px] font-semibold text-[#164237] cursor-pointer active:scale-95 transition">
+                    <Wand2 className="w-3.5 h-3.5" /> Auto-arrange times
+                  </button>
                 </div>
+              </section>
               )}
 
               {draft.stops.length > 0 && !inReview && (
@@ -1439,7 +1396,7 @@ function TripsPlannerInner({
                   )}
                   <StepHeader
                     step={3}
-                    eyebrow="Step 3 · Final step"
+                    eyebrow="Final step"
                     title={draft.status === "completed" ? "Trip finished" : "Finish your trip"}
                     description={
                       draft.status === "completed"
@@ -1573,7 +1530,7 @@ function TripsPlannerInner({
 
               {draft.stops.length === 0 && (
                 <div className="surface-card p-5 space-y-3">
-                  <StepHeader step={1} eyebrow="Step 1 · Destinations" title="Your destinations" description="Add places from Discover, then plan your days." />
+                  <StepHeader step={1} eyebrow="Destinations" title="Your destinations" description="Add places from Discover, then plan your days." />
                   <div className="text-center space-y-3 pt-1">
                     <span className="mx-auto w-12 h-12 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
                     <p className="font-display text-base font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
