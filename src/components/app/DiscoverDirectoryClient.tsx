@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import dynamic from "next/dynamic";
+import { BrowserAtlas } from "./BrowserAtlas";
 import {
   Check,
   Coffee,
@@ -20,17 +20,9 @@ import { interests, typeLabels, selectDirectoryPlaces } from "@/lib/guide-intere
 import { Modal } from "@/components/ui/Modal";
 import { Kicker } from "@/components/ui/FieldGuide";
 import { PlaceCard, type PlaceCardData } from "./PlaceCard";
-import type { MapBarangayItem } from "./SalcedoMap";
+import type { MapBarangayItem } from "@/lib/geo/atlas";
 import { trackSearchEvent } from "@/lib/client/analytics-tracker";
 
-const SalcedoMap = dynamic(() => import("./SalcedoMap").then((m) => m.SalcedoMap), {
-  ssr: false,
-  loading: () => (
-    <div className="empty-note" role="status">
-      Loading the local map…
-    </div>
-  ),
-});
 const sortModes = [
   ["most_visited", "Most visited"],
   ["top_rated", "Top rated"],
@@ -238,11 +230,11 @@ export function DiscoverDirectoryClient({
           </button>
         </div>
       ) : isMap ? (
-        <SalcedoMap
+        <BrowserAtlas
           places={places}
           barangays={barangays}
           mode="embedded"
-          heightClass="h-[56vh] min-h-[340px]"
+          key={places.map((p) => p.id).sort().join(",")}
         />
       ) : (
         Array.from(groups, ([name, group]) => (
