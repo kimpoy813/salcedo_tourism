@@ -173,6 +173,9 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   await settle(page);
   await page.getByRole("button", { name: /Map layers\s*Field map/i }).click();
   const d = page.getByRole("dialog", { name: "Map layers" });
+  // Only key-free basemaps are offered: the CARTO "Light" style was removed.
+  await expect(d.getByRole("radio")).toHaveCount(4);
+  await expect(d.getByRole("radio", { name: /^Light/ })).toHaveCount(0);
   await d.getByLabel("Barangay boundaries").uncheck();
   await d.getByLabel("Map labels").uncheck();
   await d.getByRole("radio", { name: /^Street/ }).check();
