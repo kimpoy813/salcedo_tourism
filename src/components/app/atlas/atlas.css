@@ -48,7 +48,7 @@
 .atlas-index-foot span { font-weight:650; }
 .atlas-stage { position:relative; isolation:isolate; overflow:hidden; min-height:0; background:#e9ebdf; }
 .atlas-stage>.atlas-surface { position:absolute; inset:0; z-index:0; font-family:var(--font-sans); }
-.atlas-stage>.atlas-surface.is-field { background:#f1f0e7; }
+.atlas-stage>.atlas-surface[data-basemap="field"] { background:#f1f0e7; }
 .atlas-surface .leaflet-control-attribution { font:500 9px/1.5 var(--font-sans); color:#425443; background:#fffef3e6; border-top-left-radius:5px; }
 .atlas-surface .leaflet-control-attribution a { color:#295850; text-decoration:underline; }
 .atlas-surface .leaflet-control-scale { margin:0 0 5px 12px; }
