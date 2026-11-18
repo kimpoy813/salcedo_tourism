@@ -1,5 +1,6 @@
 "use client";
 
+import { keepPlaceOffline } from "@/lib/client/offline-place";
 import React, {
   createContext,
   useCallback,
@@ -127,7 +128,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       longitude?: number | null;
     }) => {
       const drafts = await listLocalDrafts();
-      const activeDraft: LocalItineraryDraft = drafts[0] ?? {
+      const activeDraft: LocalItineraryDraft = drafts.find((draft) => draft.status !== "completed") ?? {
         id: `draft-${Date.now()}`,
         title: "My Salcedo Day Trip",
         plannedVisitDate: new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10),
@@ -182,6 +183,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       // Keep a full offline snapshot of saved places (drafts already live in IndexedDB)
       if (isNowSaved && snapshot) {
         await putSavedPlaceSnapshot(snapshot).catch(() => undefined);
+        keepPlaceOffline(`/app/places/${encodeURIComponent(snapshot.slug)}`);
       } else if (!isNowSaved) {
         await removeSavedPlaceSnapshot(placeId).catch(() => undefined);
       }

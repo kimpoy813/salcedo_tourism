@@ -80,7 +80,7 @@ export interface DashboardMetrics {
 }
 
 function rankBadgeClass(rank: number) {
-  if (rank === 1) return "bg-[#B88A44] text-white";
+  if (rank === 1) return "bg-[#8A6527] text-white";
   if (rank === 2) return "bg-[#164237] text-white";
   if (rank === 3) return "bg-[#1D7874] text-white";
   return "bg-[#F3F2EE] text-[#1A2421]";
@@ -163,7 +163,7 @@ export function AdminAnalyticsPanel({ data }: { data: DashboardMetrics }) {
         <div className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#B88A44]">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#8A6527]">
                 Planned Demand
               </p>
               <h3 className="font-display text-base font-bold text-[#1A2421]">

@@ -68,14 +68,15 @@ export function PlaceHeroOverlayControls({ place }: { place: PlaceActionPayload 
           url: shareUrl,
         });
         return;
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
         // Fallback to clipboard
       }
     }
-    if (navigator.clipboard) {
+    try {
       await navigator.clipboard.writeText(shareUrl);
-      showToast("Link copied", { tone: "info" });
-    }
+      showToast("Place link copied", { tone: "info" });
+    } catch { showToast("Copy the address from your browser to share this place.", { tone: "info" }); }
   };
 
   return (
@@ -110,6 +111,7 @@ export function PlaceHeroOverlayControls({ place }: { place: PlaceActionPayload 
             latitude: place.latitude ?? null,
             longitude: place.longitude ?? null,
           })}
+          aria-pressed={saved}
           aria-label={saved ? "Remove from saved" : "Save offline"}
           className={`w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-white/60 shadow-sm flex items-center justify-center active:scale-90 transition cursor-pointer ${
             saved ? "text-[#B88A44]" : "text-[#1A2421]"
@@ -169,6 +171,7 @@ export function PlaceRatingsSection({
       }
       setSummary(data.summary);
       setFormOpen(false);
+      setQuickRating(stars);
       setSubmittedNotice(true);
       showToast(`Rated ${placeName}: ${stars} of 5 stars`, { tone: "success" });
     } catch {
@@ -181,8 +184,8 @@ export function PlaceRatingsSection({
   /** One-tap rating: tap a star, it's saved. Everything else stays optional. */
   const [quickRating, setQuickRating] = useState(0);
   const quickRate = async (value: number) => {
-    setQuickRating(value);
-    setStars(value);
+    if (submitting) return;
+    setSubmitting(true);
     setError(null);
     try {
       const res = await fetch(`/api/places/${placeId}/ratings`, {
@@ -200,11 +203,13 @@ export function PlaceRatingsSection({
         return;
       }
       setSummary(data.summary);
+      setQuickRating(value);
+      setStars(value);
       setSubmittedNotice(true);
       showToast(`You rated ${placeName}: ${value} of 5 stars — thank you!`, { tone: "success" });
     } catch {
-      setError("You're offline — rating not saved yet.");
-    }
+      setError("Your rating wasn’t saved. Check your connection and try again.");
+    } finally { setSubmitting(false); }
   };
 
   const total = summary.ratingCount;
@@ -224,6 +229,7 @@ export function PlaceRatingsSection({
 
         <button
           type="button"
+          aria-expanded={formOpen}
           onClick={() => setFormOpen((v) => !v)}
           className="no-print inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-3.5 py-1.5 text-xs font-semibold active:scale-95 transition cursor-pointer shrink-0"
         >
@@ -285,9 +291,9 @@ export function PlaceRatingsSection({
           <p className="text-xs font-bold text-[#1A2421]">{submittedNotice ? "Your rating" : "Been here? Rate it in 1 tap"}</p>
           <p className="text-[10px] text-[#616E69]">Optional — helps other tourists choose.</p>
         </div>
-        <div className="flex items-center gap-0.5 shrink-0" role="radiogroup" aria-label={`Quick rate ${placeName}`}>
+        <div className="flex items-center gap-0.5 shrink-0" role="group" aria-label={`Quick rate ${placeName}`}>
           {[1, 2, 3, 4, 5].map((n) => (
-            <button key={n} type="button" onClick={() => void quickRate(n)} aria-label={`${n} stars`} className="p-1 active:scale-90 transition cursor-pointer">
+            <button key={n} type="button" onClick={() => void quickRate(n)} disabled={submitting} aria-pressed={quickRating === n} aria-label={`${n} stars`} className="p-1 active:scale-90 transition cursor-pointer">
               <Star className={`w-6 h-6 ${n <= quickRating ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= quickRating ? "currentColor" : "none"} />
             </button>
           ))}
@@ -352,7 +358,8 @@ export function PlaceRatingsSection({
               type="text"
               value={reviewerName}
               onChange={(e) => setReviewerName(e.target.value)}
-              placeholder="Name (Optional)"
+              aria-label="Your name (optional)"
+              placeholder="Name (optional)"
               maxLength={60}
               className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2 text-xs"
             />
@@ -360,13 +367,15 @@ export function PlaceRatingsSection({
               type="text"
               value={originLabel}
               onChange={(e) => setOriginLabel(e.target.value)}
-              placeholder="From City (Optional)"
+              aria-label="Home city (optional)"
+              placeholder="Home city (optional)"
               maxLength={80}
               className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2 text-xs"
             />
           </div>
 
           <textarea
+            aria-label="Review or tips for other travelers"
             value={comment}
             onChange={(e) => setComment(e.target.value)}
             rows={3}
@@ -454,89 +463,14 @@ export function PlaceRatingsSection({
 }
 
 export function PlaceDetailActions({ place }: { place: PlaceActionPayload }) {
-  const { draftStopIds, savedPlaceIds, addPlaceToActiveDraft, toggleBookmark } =
-    useMobileApp();
-
-  const saved = savedPlaceIds.includes(place.id);
+  const { draftStopIds, addPlaceToActiveDraft } = useMobileApp();
   const inDraft = draftStopIds.includes(place.id);
-
-  useEffect(() => {
-    void trackPlaceView(place.id);
-  }, [place.id]);
-
-  // Directions live in Google Maps (no in-app routing)
-  const googleMapsUrl =
-    place.latitude && place.longitude
-      ? `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`
-      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, Salcedo, Ilocos Sur`)}`;
-
-  return (
-    <>
-      <div className="px-4 pt-5">
-        <a
-          href={googleMapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 rounded-2xl bg-white border border-[#EAE7E0] p-3.5 active:scale-[0.99] transition"
-        >
-          <span className="w-10 h-10 rounded-full bg-[#164237] text-white flex items-center justify-center shrink-0">
-            <Navigation className="w-4 h-4" />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[13px] font-bold text-[#1A2421]">
-              Get directions
-            </span>
-            <span className="block text-[11px] text-[#616E69]">
-              Opens in Google Maps — fastest route to {place.name}
-            </span>
-          </span>
-          <ExternalLink className="w-4 h-4 text-[#616E69] shrink-0" />
-        </a>
-      </div>
-
-      {/* Native Sticky Action Dock at Bottom of Place Sheet */}
-      <div className="no-print sticky bottom-0 left-0 right-0 z-30 px-4 py-3 mt-4 bg-white/95 backdrop-blur-md border-t border-[#EAE7E0] flex items-center gap-2.5">
-        <button
-          type="button"
-          onClick={() => void toggleBookmark(place.id, place.name, {
-            id: place.id,
-            name: place.name,
-            slug: place.slug,
-            placeType: place.placeType,
-            barangayName: place.barangayName ?? null,
-            featuredImageUrl: place.featuredImageUrl ?? null,
-            latitude: place.latitude ?? null,
-            longitude: place.longitude ?? null,
-          })}
-          aria-label={saved ? "Remove from saved" : "Save offline"}
-          className={`w-11 h-11 rounded-full border flex items-center justify-center shrink-0 active:scale-90 transition cursor-pointer ${
-            saved
-              ? "bg-[#FAF9F6] border-[#B88A44] text-[#B88A44]"
-              : "bg-white border-[#EAE7E0] text-[#1A2421]"
-          }`}
-        >
-          <Bookmark className="w-4 h-4" fill={saved ? "currentColor" : "none"} />
-        </button>
-
-        {inDraft ? (
-          <Link
-            href="/app/trips"
-            className="flex-1 h-11 rounded-full bg-[#F3F2EE] text-[#164237] font-semibold text-xs flex items-center justify-center gap-1.5 active:scale-[0.98] transition"
-          >
-            <Check className="w-4 h-4" />
-            In My Trip • Open Planner
-          </Link>
-        ) : (
-          <button
-            type="button"
-            onClick={() => void addPlaceToActiveDraft(place)}
-            className="flex-1 h-11 rounded-full bg-[#164237] text-white font-semibold text-xs flex items-center justify-center gap-1.5 hover:bg-[#10322A] active:scale-[0.98] transition cursor-pointer"
-          >
-            <Plus className="w-4 h-4" />
-            Add to Itinerary
-          </button>
-        )}
-      </div>
-    </>
-  );
+  useEffect(() => { void trackPlaceView(place.id); }, [place.id]);
+  const mapsUrl = place.latitude != null && place.longitude != null
+    ? `https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name}, Salcedo, Ilocos Sur`)}`;
+  return <div className="detail-actions no-print">
+    {inDraft ? <Link href="/app/trips" className="primary-button"><Check size={16}/>Open my trip</Link> : <button className="primary-button" onClick={() => void addPlaceToActiveDraft(place)}><Plus size={16}/>Add to my trip</button>}
+    <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="secondary-button" aria-label="Get directions in Google Maps (opens in a new tab)"><Navigation size={15}/>Directions<ExternalLink size={12}/></a>
+  </div>;
 }

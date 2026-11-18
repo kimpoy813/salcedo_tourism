@@ -1,11 +1,13 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import type { PlaceCardData } from "./PlaceCard";
 import type { MapBarangayItem } from "./SalcedoMap";
 
 const SalcedoMap = dynamic(
-  () => import("./SalcedoMap").then((m) => m.SalcedoMap),
+  // Keep Leaflet browser-only but include the atlas in the precached map route.
+  () => import(/* webpackMode: "eager" */ "./SalcedoMap").then((m) => m.SalcedoMap),
   {
     ssr: false,
     loading: () => (
@@ -13,24 +15,24 @@ const SalcedoMap = dynamic(
         Loading Salcedo map...
       </div>
     ),
-  }
+  },
 );
 
 export function MapPageClient({
   places,
   barangays,
-  initialPlaceSlug,
 }: {
   places: PlaceCardData[];
   barangays: MapBarangayItem[];
-  initialPlaceSlug?: string;
 }) {
+  const place = useSearchParams().get("place") || undefined;
   return (
     <SalcedoMap
+      key={place}
       places={places}
       barangays={barangays}
       mode="fullscreen"
-      initialPlaceSlug={initialPlaceSlug}
+      initialPlaceSlug={place}
     />
   );
 }

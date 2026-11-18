@@ -1,5 +1,7 @@
 "use client";
 
+import { StaffEditorForm } from "./StaffEditorForm";
+import { StaffNotice } from "./StaffNotice";
 import React, { useState } from "react";
 import { CheckCircle2, Edit3, MapPin, Plus, Search, X } from "lucide-react";
 import {
@@ -136,7 +138,7 @@ export function AdminPlacesPanel({
         setLatitude(String(Number(first.latitude).toFixed(5)));
         setLongitude(String(Number(first.longitude).toFixed(5)));
         setNotice({
-          text: `Matched "${first.label}" (${first.subtitle}). Verify pin placement cleanly before saving.`,
+          text: `Matched “${first.label}” (${first.subtitle}). Check the coordinates before saving.`,
           tone: "ok",
         });
       } else {
@@ -323,24 +325,7 @@ export function AdminPlacesPanel({
 
   return (
     <div className="space-y-4">
-      {notice && !showForm && (
-        <div
-          className={`rounded-xl border px-3.5 py-2 text-xs flex items-center justify-between ${
-            notice.tone === "err"
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-white border-[#EAE7E0] text-[#164237]"
-          }`}
-        >
-          <span>{notice.text}</span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            className="text-[#616E69] hover:text-[#1A2421] cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      {!showForm && <StaffNotice notice={notice} dismiss={() => setNotice(null)} />}
 
       {/* Toolbar */}
       <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3 flex flex-wrap items-center justify-between gap-2.5">
@@ -349,6 +334,7 @@ export function AdminPlacesPanel({
             <Search className="w-4 h-4 text-[#616E69] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="search"
+              aria-label="Search destinations"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search destinations..."
@@ -356,6 +342,7 @@ export function AdminPlacesPanel({
             />
           </div>
           <select
+            aria-label="Filter by publication status"
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-1.5 text-xs font-medium"
@@ -380,9 +367,11 @@ export function AdminPlacesPanel({
 
       {/* Create / Edit Form */}
       {showForm && (
-        <form
+        <StaffEditorForm
+          label={editingId ? "Edit destination" : "Create destination"}
+          onClose={() => setShowForm(false)}
           onSubmit={handleSave}
-          className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-4"
+          busy={saving}
         >
           <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
             <h3 className="font-display text-base font-bold text-[#1A2421]">
@@ -390,6 +379,8 @@ export function AdminPlacesPanel({
             </h3>
             <button
               type="button"
+              aria-label="Close destination editor"
+              disabled={saving}
               onClick={() => setShowForm(false)}
               className="p-1 text-[#616E69] hover:text-[#1A2421] cursor-pointer"
             >
@@ -397,16 +388,12 @@ export function AdminPlacesPanel({
             </button>
           </div>
 
-          {notice && (
-            <p className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
-              {notice.text}
-            </p>
-          )}
+          <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
             <div>
-              <label className="font-medium text-[#616E69]">Name *</label>
-              <input
+              <label htmlFor="place-name" className="font-medium text-[#616E69]">Name *</label>
+              <input id="place-name"
                 required
                 type="text"
                 value={name}
@@ -415,8 +402,8 @@ export function AdminPlacesPanel({
               />
             </div>
             <div>
-              <label className="font-medium text-[#616E69]">Slug</label>
-              <input
+              <label htmlFor="place-slug" className="font-medium text-[#616E69]">Slug</label>
+              <input id="place-slug"
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value)}
@@ -425,8 +412,8 @@ export function AdminPlacesPanel({
               />
             </div>
             <div>
-              <label className="font-medium text-[#616E69]">Type *</label>
-              <select
+              <label htmlFor="place-type" className="font-medium text-[#616E69]">Type *</label>
+              <select id="place-type"
                 value={placeType}
                 onChange={(e) => setPlaceType(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -444,8 +431,8 @@ export function AdminPlacesPanel({
             </div>
 
             <div>
-              <label className="font-medium text-[#616E69]">Barangay</label>
-              <select
+              <label htmlFor="place-barangay" className="font-medium text-[#616E69]">Barangay</label>
+              <select id="place-barangay"
                 value={barangayId}
                 onChange={(e) => setBarangayId(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -460,8 +447,8 @@ export function AdminPlacesPanel({
             </div>
 
             <div>
-              <label className="font-medium text-[#616E69]">Primary Category</label>
-              <select
+              <label htmlFor="place-primary-category" className="font-medium text-[#616E69]">Primary Category</label>
+              <select id="place-primary-category"
                 value={primaryCategoryId}
                 onChange={(e) => setPrimaryCategoryId(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -476,8 +463,8 @@ export function AdminPlacesPanel({
             </div>
 
             <div>
-              <label className="font-medium text-[#616E69]">Status</label>
-              <select
+              <label htmlFor="place-status" className="font-medium text-[#616E69]">Status</label>
+              <select id="place-status"
                 value={status}
                 onChange={(e) =>
                   setStatus(
@@ -500,8 +487,8 @@ export function AdminPlacesPanel({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div>
-              <label className="font-medium text-[#616E69]">Address *</label>
-              <input
+              <label htmlFor="place-address" className="font-medium text-[#616E69]">Address *</label>
+              <input id="place-address"
                 required
                 type="text"
                 value={address}
@@ -510,8 +497,8 @@ export function AdminPlacesPanel({
               />
             </div>
             <div>
-              <label className="font-medium text-[#616E69]">Latitude</label>
-              <input
+              <label htmlFor="place-latitude" className="font-medium text-[#616E69]">Latitude</label>
+              <input id="place-latitude"
                 type="number"
                 step="any"
                 value={latitude}
@@ -521,8 +508,8 @@ export function AdminPlacesPanel({
               />
             </div>
             <div>
-              <label className="font-medium text-[#616E69]">Longitude</label>
-              <input
+              <label htmlFor="place-longitude" className="font-medium text-[#616E69]">Longitude</label>
+              <input id="place-longitude"
                 type="number"
                 step="any"
                 value={longitude}
@@ -560,8 +547,8 @@ export function AdminPlacesPanel({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label className="font-medium text-[#616E69]">Featured Image URL</label>
-              <input
+              <label htmlFor="place-featured-image-url" className="font-medium text-[#616E69]">Featured Image URL</label>
+              <input id="place-featured-image-url"
                 type="text"
                 value={featuredImageUrl}
                 onChange={(e) => setFeaturedImageUrl(e.target.value)}
@@ -569,8 +556,8 @@ export function AdminPlacesPanel({
               />
             </div>
             <div>
-              <label className="font-medium text-[#616E69]">Source Attribution *</label>
-              <input
+              <label htmlFor="place-source-attribution" className="font-medium text-[#616E69]">Source Attribution *</label>
+              <input id="place-source-attribution"
                 required
                 type="text"
                 value={sourceReference}
@@ -582,8 +569,8 @@ export function AdminPlacesPanel({
 
           <div className="space-y-2 text-xs">
             <div>
-              <label className="font-medium text-[#616E69]">Short Summary *</label>
-              <input
+              <label htmlFor="place-short-summary" className="font-medium text-[#616E69]">Short Summary *</label>
+              <input id="place-short-summary"
                 required
                 type="text"
                 value={shortDescription}
@@ -593,8 +580,8 @@ export function AdminPlacesPanel({
             </div>
 
             <div>
-              <label className="font-medium text-[#616E69]">Full Description *</label>
-              <textarea
+              <label htmlFor="place-full-description" className="font-medium text-[#616E69]">Full Description *</label>
+              <textarea id="place-full-description"
                 required
                 rows={3}
                 value={description}
@@ -607,10 +594,10 @@ export function AdminPlacesPanel({
           {placeType === "cafe" && (
             <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="font-medium text-[#616E69]">
+                <label htmlFor="place-featured-drinks-comma-separated" className="font-medium text-[#616E69]">
                   Featured Drinks (comma separated)
                 </label>
-                <input
+                <input id="place-featured-drinks-comma-separated"
                   type="text"
                   value={cafeDrinks}
                   onChange={(e) => setCafeDrinks(e.target.value)}
@@ -632,8 +619,8 @@ export function AdminPlacesPanel({
           {placeType === "resort" && (
             <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
-                <label className="font-medium text-[#616E69]">Pools</label>
-                <input
+                <label htmlFor="place-pools" className="font-medium text-[#616E69]">Pools</label>
+                <input id="place-pools"
                   type="text"
                   value={resortPools}
                   onChange={(e) => setResortPools(e.target.value)}
@@ -641,8 +628,8 @@ export function AdminPlacesPanel({
                 />
               </div>
               <div>
-                <label className="font-medium text-[#616E69]">Cottages</label>
-                <input
+                <label htmlFor="place-cottages" className="font-medium text-[#616E69]">Cottages</label>
+                <input id="place-cottages"
                   type="text"
                   value={resortCottages}
                   onChange={(e) => setResortCottages(e.target.value)}
@@ -650,8 +637,8 @@ export function AdminPlacesPanel({
                 />
               </div>
               <div>
-                <label className="font-medium text-[#616E69]">Entrance Fee</label>
-                <input
+                <label htmlFor="place-entrance-fee" className="font-medium text-[#616E69]">Entrance Fee</label>
+                <input id="place-entrance-fee"
                   type="text"
                   value={resortRates}
                   onChange={(e) => setResortRates(e.target.value)}
@@ -664,8 +651,8 @@ export function AdminPlacesPanel({
           {placeType === "restaurant" && (
             <div className="rounded-xl bg-[#FAF9F6] border border-[#EAE7E0] p-3.5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
-                <label className="font-medium text-[#616E69]">Cuisine Type</label>
-                <input
+                <label htmlFor="place-cuisine-type" className="font-medium text-[#616E69]">Cuisine Type</label>
+                <input id="place-cuisine-type"
                   type="text"
                   value={restaurantCuisine}
                   onChange={(e) => setRestaurantCuisine(e.target.value)}
@@ -673,8 +660,8 @@ export function AdminPlacesPanel({
                 />
               </div>
               <div>
-                <label className="font-medium text-[#616E69]">Featured Dishes</label>
-                <input
+                <label htmlFor="place-featured-dishes" className="font-medium text-[#616E69]">Featured Dishes</label>
+                <input id="place-featured-dishes"
                   type="text"
                   value={restaurantDishes}
                   onChange={(e) => setRestaurantDishes(e.target.value)}
@@ -714,11 +701,11 @@ export function AdminPlacesPanel({
               {saving ? "Saving..." : "Save Destination"}
             </button>
           </div>
-        </form>
+        </StaffEditorForm>
       )}
 
       {/* Places Table */}
-      <div className="bg-white rounded-2xl border border-[#EAE7E0] overflow-x-auto">
+      <div className="staff-places-table bg-white rounded-2xl border border-[#EAE7E0] overflow-x-auto">
         <table className="w-full text-left border-collapse text-xs">
           <thead className="bg-[#FAF9F6] border-b border-[#EAE7E0] text-[#616E69]">
             <tr>
@@ -730,6 +717,7 @@ export function AdminPlacesPanel({
             </tr>
           </thead>
           <tbody className="divide-y divide-[#EAE7E0]">
+            {filtered.length === 0 && <tr><td colSpan={5} className="px-4 py-6 text-center">No destinations match. <button type="button" className="font-semibold underline" onClick={() => { setSearch(""); setStatusFilter("all"); }}>Clear filters</button></td></tr>}
             {filtered.map((p) => (
               <tr key={p.id} className="hover:bg-[#FAF9F6]">
                 <td className="px-4 py-3">
@@ -754,6 +742,7 @@ export function AdminPlacesPanel({
                 <td className="px-4 py-3 text-right space-x-1.5 whitespace-nowrap">
                   <button
                     type="button"
+                    aria-label={`Edit ${p.name}`}
                     onClick={() => openEdit(p)}
                     className="inline-flex items-center gap-1 rounded-full border border-[#EAE7E0] bg-white px-2.5 py-1 text-[11px] font-medium hover:bg-[#F3F2EE] cursor-pointer"
                   >

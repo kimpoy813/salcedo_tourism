@@ -1,5 +1,7 @@
 "use client";
 
+import { StaffEditorForm } from "./StaffEditorForm";
+import { StaffNotice } from "./StaffNotice";
 import React, { useMemo, useState } from "react";
 import {
   BookOpen,
@@ -282,7 +284,7 @@ export function AdminContentPanel({
 
       closeEditor();
       setNotice({
-        text: isCreate ? "New municipal content created." : "Municipal content updated and published cleanly.",
+        text: isCreate ? "New municipal content created." : "Municipal content updated.",
         tone: "ok",
       });
       await onReload();
@@ -401,24 +403,7 @@ export function AdminContentPanel({
 
   return (
     <div className="space-y-4">
-      {notice && (
-        <div
-          className={`rounded-xl border px-3.5 py-2.5 text-xs flex items-center justify-between ${
-            notice.tone === "err"
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-emerald-50 border-emerald-200 text-emerald-900"
-          }`}
-        >
-          <span>{notice.text}</span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            className="opacity-70 hover:opacity-100 cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      {!editor && <StaffNotice notice={notice} dismiss={() => setNotice(null)} />}
 
       {/* Horizontal Section Switcher */}
       <div className="bg-white rounded-2xl border border-[#EAE7E0] p-2 flex flex-wrap gap-1.5">
@@ -429,6 +414,7 @@ export function AdminContentPanel({
             <button
               key={t.id}
               type="button"
+              aria-pressed={active}
               onClick={() => {
                 setTab(t.id);
                 setSearch("");
@@ -454,11 +440,13 @@ export function AdminContentPanel({
         })}
       </div>
 
-      {/* Inline Editor Modal / Card */}
+      {/* Content editor */}
       {editor && (
-        <form
+        <StaffEditorForm
+          label={`${editor.mode === "create" ? "Create" : "Edit"} ${editor.kind.replaceAll("_", " ")}`}
+          onClose={closeEditor}
           onSubmit={handleSaveEditor}
-          className="bg-white rounded-2xl border-2 border-[#164237]/25 p-5 space-y-3 text-xs shadow-sm"
+          busy={saving}
         >
           <div className="flex items-center justify-between border-b border-[#EAE7E0] pb-3">
             <h3 className="font-display text-sm font-bold text-[#1A2421]">
@@ -467,19 +455,22 @@ export function AdminContentPanel({
             </h3>
             <button
               type="button"
+              disabled={saving}
               onClick={closeEditor}
+              aria-label="Close content editor"
               className="text-[#616E69] hover:text-[#1A2421] p-1 rounded-lg cursor-pointer"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
+          <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {editor.kind === "municipal_info" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Section Title</label>
-                  <input
+                  <label htmlFor="content-section-title" className="block font-semibold text-[#1A2421] mb-1">Section Title</label>
+                  <input id="content-section-title"
                     required
                     type="text"
                     value={String(form.title || "")}
@@ -488,8 +479,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Category</label>
-                  <select
+                  <label htmlFor="content-category" className="block font-semibold text-[#1A2421] mb-1">Category</label>
+                  <select id="content-category"
                     value={String(form.category || "overview")}
                     onChange={(e) => updateField("category", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -504,10 +495,10 @@ export function AdminContentPanel({
                 </div>
                 {editor.mode === "create" && (
                   <div className="sm:col-span-2">
-                    <label className="block font-semibold text-[#1A2421] mb-1">
+                    <label htmlFor="content-unique-key-optional-auto-generated-from-title" className="block font-semibold text-[#1A2421] mb-1">
                       Unique Key (optional, auto-generated from title)
                     </label>
-                    <input
+                    <input id="content-unique-key-optional-auto-generated-from-title"
                       type="text"
                       value={String(form.key || "")}
                       onChange={(e) => updateField("key", e.target.value)}
@@ -517,8 +508,8 @@ export function AdminContentPanel({
                   </div>
                 )}
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Content</label>
-                  <textarea
+                  <label htmlFor="content-content" className="block font-semibold text-[#1A2421] mb-1">Content</label>
+                  <textarea id="content-content"
                     required
                     rows={5}
                     value={String(form.content || "")}
@@ -527,8 +518,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Source Reference</label>
-                  <input
+                  <label htmlFor="content-source-reference" className="block font-semibold text-[#1A2421] mb-1">Source Reference</label>
+                  <input id="content-source-reference"
                     type="text"
                     value={String(form.sourceReference || "")}
                     onChange={(e) => updateField("sourceReference", e.target.value)}
@@ -541,8 +532,8 @@ export function AdminContentPanel({
             {(editor.kind === "historical_article" || editor.kind === "cultural_article") && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Article Title</label>
-                  <input
+                  <label htmlFor="content-article-title" className="block font-semibold text-[#1A2421] mb-1">Article Title</label>
+                  <input id="content-article-title"
                     required
                     type="text"
                     value={String(form.title || "")}
@@ -552,8 +543,8 @@ export function AdminContentPanel({
                 </div>
                 {editor.kind === "historical_article" ? (
                   <div>
-                    <label className="block font-semibold text-[#1A2421] mb-1">Era / Year</label>
-                    <input
+                    <label htmlFor="content-era-year" className="block font-semibold text-[#1A2421] mb-1">Era / Year</label>
+                    <input id="content-era-year"
                       required
                       type="text"
                       value={String(form.eraOrYear || "")}
@@ -564,8 +555,8 @@ export function AdminContentPanel({
                   </div>
                 ) : (
                   <div>
-                    <label className="block font-semibold text-[#1A2421] mb-1">Category</label>
-                    <select
+                    <label htmlFor="content-category" className="block font-semibold text-[#1A2421] mb-1">Category</label>
+                    <select id="content-category"
                       value={String(form.category || "heritage")}
                       onChange={(e) => updateField("category", e.target.value)}
                       className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -579,8 +570,8 @@ export function AdminContentPanel({
                   </div>
                 )}
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Summary</label>
-                  <input
+                  <label htmlFor="content-summary" className="block font-semibold text-[#1A2421] mb-1">Summary</label>
+                  <input id="content-summary"
                     required
                     type="text"
                     value={String(form.summary || "")}
@@ -589,8 +580,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Full Narrative</label>
-                  <textarea
+                  <label htmlFor="content-full-narrative" className="block font-semibold text-[#1A2421] mb-1">Full Narrative</label>
+                  <textarea id="content-full-narrative"
                     required
                     rows={5}
                     value={String(form.content || "")}
@@ -600,8 +591,8 @@ export function AdminContentPanel({
                 </div>
                 {editor.kind === "historical_article" && (
                   <div>
-                    <label className="block font-semibold text-[#1A2421] mb-1">Display Order</label>
-                    <input
+                    <label htmlFor="content-display-order" className="block font-semibold text-[#1A2421] mb-1">Display Order</label>
+                    <input id="content-display-order"
                       type="number"
                       value={String(form.displayOrder || "1")}
                       onChange={(e) => updateField("displayOrder", e.target.value)}
@@ -610,8 +601,8 @@ export function AdminContentPanel({
                   </div>
                 )}
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Status</label>
-                  <select
+                  <label htmlFor="content-status" className="block font-semibold text-[#1A2421] mb-1">Status</label>
+                  <select id="content-status"
                     value={String(form.status || "draft")}
                     onChange={(e) => updateField("status", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -628,8 +619,8 @@ export function AdminContentPanel({
             {editor.kind === "guide" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Guide Title</label>
-                  <input
+                  <label htmlFor="content-guide-title" className="block font-semibold text-[#1A2421] mb-1">Guide Title</label>
+                  <input id="content-guide-title"
                     required
                     type="text"
                     value={String(form.title || "")}
@@ -638,8 +629,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Category</label>
-                  <select
+                  <label htmlFor="content-category" className="block font-semibold text-[#1A2421] mb-1">Category</label>
+                  <select id="content-category"
                     value={String(form.category || "getting_here")}
                     onChange={(e) => updateField("category", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -651,8 +642,8 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Summary</label>
-                  <input
+                  <label htmlFor="content-summary" className="block font-semibold text-[#1A2421] mb-1">Summary</label>
+                  <input id="content-summary"
                     required
                     type="text"
                     value={String(form.summary || "")}
@@ -661,8 +652,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Guide Details</label>
-                  <textarea
+                  <label htmlFor="content-guide-details" className="block font-semibold text-[#1A2421] mb-1">Guide Details</label>
+                  <textarea id="content-guide-details"
                     required
                     rows={4}
                     value={String(form.content || "")}
@@ -671,10 +662,10 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">
+                  <label htmlFor="content-practical-tips-one-tip-per-line" className="block font-semibold text-[#1A2421] mb-1">
                     Practical Tips (one tip per line)
                   </label>
-                  <textarea
+                  <textarea id="content-practical-tips-one-tip-per-line"
                     rows={3}
                     value={String(form.tipsText || "")}
                     onChange={(e) => updateField("tipsText", e.target.value)}
@@ -682,8 +673,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Status</label>
-                  <select
+                  <label htmlFor="content-status" className="block font-semibold text-[#1A2421] mb-1">Status</label>
+                  <select id="content-status"
                     value={String(form.status || "draft")}
                     onChange={(e) => updateField("status", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -708,8 +699,8 @@ export function AdminContentPanel({
             {editor.kind === "event" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Event Title</label>
-                  <input
+                  <label htmlFor="content-event-title" className="block font-semibold text-[#1A2421] mb-1">Event Title</label>
+                  <input id="content-event-title"
                     required
                     type="text"
                     value={String(form.title || "")}
@@ -718,8 +709,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Category</label>
-                  <select
+                  <label htmlFor="content-category" className="block font-semibold text-[#1A2421] mb-1">Category</label>
+                  <select id="content-category"
                     value={String(form.category || "festival")}
                     onChange={(e) => updateField("category", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -732,8 +723,8 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Start Date</label>
-                  <input
+                  <label htmlFor="content-start-date" className="block font-semibold text-[#1A2421] mb-1">Start Date</label>
+                  <input id="content-start-date"
                     required
                     type="date"
                     value={String(form.startDate || "")}
@@ -742,8 +733,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">End Date (optional)</label>
-                  <input
+                  <label htmlFor="content-end-date-optional" className="block font-semibold text-[#1A2421] mb-1">End Date (optional)</label>
+                  <input id="content-end-date-optional"
                     type="date"
                     value={String(form.endDate || "")}
                     onChange={(e) => updateField("endDate", e.target.value)}
@@ -751,8 +742,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Venue Name</label>
-                  <input
+                  <label htmlFor="content-venue-name" className="block font-semibold text-[#1A2421] mb-1">Venue Name</label>
+                  <input id="content-venue-name"
                     required
                     type="text"
                     value={String(form.venueName || "")}
@@ -761,8 +752,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Barangay</label>
-                  <select
+                  <label htmlFor="content-barangay" className="block font-semibold text-[#1A2421] mb-1">Barangay</label>
+                  <select id="content-barangay"
                     value={String(form.barangayId || "")}
                     onChange={(e) => updateField("barangayId", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -776,8 +767,8 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Schedule Notes</label>
-                  <input
+                  <label htmlFor="content-schedule-notes" className="block font-semibold text-[#1A2421] mb-1">Schedule Notes</label>
+                  <input id="content-schedule-notes"
                     type="text"
                     value={String(form.scheduleNotes || "")}
                     onChange={(e) => updateField("scheduleNotes", e.target.value)}
@@ -786,8 +777,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Organizer</label>
-                  <input
+                  <label htmlFor="content-organizer" className="block font-semibold text-[#1A2421] mb-1">Organizer</label>
+                  <input id="content-organizer"
                     type="text"
                     value={String(form.organizer || "")}
                     onChange={(e) => updateField("organizer", e.target.value)}
@@ -795,8 +786,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Description</label>
-                  <textarea
+                  <label htmlFor="content-description" className="block font-semibold text-[#1A2421] mb-1">Description</label>
+                  <textarea id="content-description"
                     required
                     rows={4}
                     value={String(form.description || "")}
@@ -805,8 +796,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Status</label>
-                  <select
+                  <label htmlFor="content-status" className="block font-semibold text-[#1A2421] mb-1">Status</label>
+                  <select id="content-status"
                     value={String(form.status || "draft")}
                     onChange={(e) => updateField("status", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -831,8 +822,8 @@ export function AdminContentPanel({
             {editor.kind === "product" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Product Name</label>
-                  <input
+                  <label htmlFor="content-product-name" className="block font-semibold text-[#1A2421] mb-1">Product Name</label>
+                  <input id="content-product-name"
                     required
                     type="text"
                     value={String(form.name || "")}
@@ -841,8 +832,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Category</label>
-                  <select
+                  <label htmlFor="content-category" className="block font-semibold text-[#1A2421] mb-1">Category</label>
+                  <select id="content-category"
                     value={String(form.category || "delicacy")}
                     onChange={(e) => updateField("category", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -855,10 +846,10 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">
+                  <label htmlFor="content-seasonal-availability" className="block font-semibold text-[#1A2421] mb-1">
                     Seasonal Availability
                   </label>
-                  <input
+                  <input id="content-seasonal-availability"
                     type="text"
                     value={String(form.seasonalAvailability || "")}
                     onChange={(e) => updateField("seasonalAvailability", e.target.value)}
@@ -867,8 +858,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Price Note</label>
-                  <input
+                  <label htmlFor="content-price-note" className="block font-semibold text-[#1A2421] mb-1">Price Note</label>
+                  <input id="content-price-note"
                     type="text"
                     value={String(form.priceNote || "")}
                     onChange={(e) => updateField("priceNote", e.target.value)}
@@ -877,8 +868,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Origin Barangay</label>
-                  <select
+                  <label htmlFor="content-origin-barangay" className="block font-semibold text-[#1A2421] mb-1">Origin Barangay</label>
+                  <select id="content-origin-barangay"
                     value={String(form.barangayId || "")}
                     onChange={(e) => updateField("barangayId", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -892,8 +883,8 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Status</label>
-                  <select
+                  <label htmlFor="content-status" className="block font-semibold text-[#1A2421] mb-1">Status</label>
+                  <select id="content-status"
                     value={String(form.status || "draft")}
                     onChange={(e) => updateField("status", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -905,8 +896,8 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Description</label>
-                  <textarea
+                  <label htmlFor="content-description" className="block font-semibold text-[#1A2421] mb-1">Description</label>
+                  <textarea id="content-description"
                     required
                     rows={3}
                     value={String(form.description || "")}
@@ -915,10 +906,10 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">
+                  <label htmlFor="content-tradition-heritage-notes" className="block font-semibold text-[#1A2421] mb-1">
                     Tradition & Heritage Notes
                   </label>
-                  <textarea
+                  <textarea id="content-tradition-heritage-notes"
                     rows={2}
                     value={String(form.traditionNotes || "")}
                     onChange={(e) => updateField("traditionNotes", e.target.value)}
@@ -939,8 +930,8 @@ export function AdminContentPanel({
             {editor.kind === "announcement" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Title</label>
-                  <input
+                  <label htmlFor="content-title" className="block font-semibold text-[#1A2421] mb-1">Title</label>
+                  <input id="content-title"
                     required
                     type="text"
                     value={String(form.title || "")}
@@ -949,8 +940,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Priority</label>
-                  <select
+                  <label htmlFor="content-priority" className="block font-semibold text-[#1A2421] mb-1">Priority</label>
+                  <select id="content-priority"
                     value={String(form.priority || "normal")}
                     onChange={(e) => updateField("priority", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -961,8 +952,8 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Summary</label>
-                  <input
+                  <label htmlFor="content-summary" className="block font-semibold text-[#1A2421] mb-1">Summary</label>
+                  <input id="content-summary"
                     required
                     type="text"
                     value={String(form.summary || "")}
@@ -971,8 +962,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Full Message</label>
-                  <textarea
+                  <label htmlFor="content-full-message" className="block font-semibold text-[#1A2421] mb-1">Full Message</label>
+                  <textarea id="content-full-message"
                     required
                     rows={4}
                     value={String(form.content || "")}
@@ -981,8 +972,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Status</label>
-                  <select
+                  <label htmlFor="content-status" className="block font-semibold text-[#1A2421] mb-1">Status</label>
+                  <select id="content-status"
                     value={String(form.status || "draft")}
                     onChange={(e) => updateField("status", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -999,8 +990,8 @@ export function AdminContentPanel({
             {editor.kind === "emergency_contact" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Agency / Office Name</label>
-                  <input
+                  <label htmlFor="content-agency-office-name" className="block font-semibold text-[#1A2421] mb-1">Agency / Office Name</label>
+                  <input id="content-agency-office-name"
                     required
                     type="text"
                     value={String(form.agencyName || "")}
@@ -1009,8 +1000,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Category</label>
-                  <select
+                  <label htmlFor="content-category" className="block font-semibold text-[#1A2421] mb-1">Category</label>
+                  <select id="content-category"
                     value={String(form.category || "municipal")}
                     onChange={(e) => updateField("category", e.target.value)}
                     className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -1023,10 +1014,10 @@ export function AdminContentPanel({
                   </select>
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">
+                  <label htmlFor="content-phone-numbers-comma-or-line-separated" className="block font-semibold text-[#1A2421] mb-1">
                     Phone Numbers (comma or line separated)
                   </label>
-                  <input
+                  <input id="content-phone-numbers-comma-or-line-separated"
                     required
                     type="text"
                     value={String(form.phonesText || "")}
@@ -1036,8 +1027,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Operating Hours</label>
-                  <input
+                  <label htmlFor="content-operating-hours" className="block font-semibold text-[#1A2421] mb-1">Operating Hours</label>
+                  <input id="content-operating-hours"
                     type="text"
                     value={String(form.operatingHours || "")}
                     onChange={(e) => updateField("operatingHours", e.target.value)}
@@ -1045,8 +1036,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Address / Location</label>
-                  <input
+                  <label htmlFor="content-address-location" className="block font-semibold text-[#1A2421] mb-1">Address / Location</label>
+                  <input id="content-address-location"
                     required
                     type="text"
                     value={String(form.address || "")}
@@ -1055,8 +1046,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Notes</label>
-                  <input
+                  <label htmlFor="content-notes" className="block font-semibold text-[#1A2421] mb-1">Notes</label>
+                  <input id="content-notes"
                     type="text"
                     value={String(form.notes || "")}
                     onChange={(e) => updateField("notes", e.target.value)}
@@ -1077,8 +1068,8 @@ export function AdminContentPanel({
             {editor.kind === "barangay" && (
               <>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Barangay Name</label>
-                  <input
+                  <label htmlFor="content-barangay-name" className="block font-semibold text-[#1A2421] mb-1">Barangay Name</label>
+                  <input id="content-barangay-name"
                     required
                     type="text"
                     value={String(form.name || "")}
@@ -1087,8 +1078,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">District / Zone</label>
-                  <input
+                  <label htmlFor="content-district-zone" className="block font-semibold text-[#1A2421] mb-1">District / Zone</label>
+                  <input id="content-district-zone"
                     type="text"
                     value={String(form.district || "")}
                     onChange={(e) => updateField("district", e.target.value)}
@@ -1096,8 +1087,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">Public Summary</label>
-                  <textarea
+                  <label htmlFor="content-public-summary" className="block font-semibold text-[#1A2421] mb-1">Public Summary</label>
+                  <textarea id="content-public-summary"
                     required
                     rows={3}
                     value={String(form.summary || "")}
@@ -1106,10 +1097,10 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">
+                  <label htmlFor="content-local-history-heritage-notes" className="block font-semibold text-[#1A2421] mb-1">
                     Local History & Heritage Notes
                   </label>
-                  <textarea
+                  <textarea id="content-local-history-heritage-notes"
                     rows={3}
                     value={String(form.historyNotes || "")}
                     onChange={(e) => updateField("historyNotes", e.target.value)}
@@ -1117,10 +1108,10 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="block font-semibold text-[#1A2421] mb-1">
+                  <label htmlFor="content-local-highlights-one-per-line" className="block font-semibold text-[#1A2421] mb-1">
                     Local Highlights (one per line)
                   </label>
-                  <textarea
+                  <textarea id="content-local-highlights-one-per-line"
                     rows={3}
                     value={String(form.highlightsText || "")}
                     onChange={(e) => updateField("highlightsText", e.target.value)}
@@ -1128,8 +1119,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">2020 Population</label>
-                  <input
+                  <label htmlFor="content-2020-population" className="block font-semibold text-[#1A2421] mb-1">2020 Population</label>
+                  <input id="content-2020-population"
                     type="number"
                     value={String(form.population2020 || "")}
                     onChange={(e) => updateField("population2020", e.target.value)}
@@ -1137,8 +1128,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Elevation (m)</label>
-                  <input
+                  <label htmlFor="content-elevation-m" className="block font-semibold text-[#1A2421] mb-1">Elevation (m)</label>
+                  <input id="content-elevation-m"
                     type="number"
                     step="0.1"
                     value={String(form.elevationMeters || "")}
@@ -1147,8 +1138,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Latitude</label>
-                  <input
+                  <label htmlFor="content-latitude" className="block font-semibold text-[#1A2421] mb-1">Latitude</label>
+                  <input id="content-latitude"
                     type="number"
                     step="0.00001"
                     value={String(form.latitude || "")}
@@ -1157,8 +1148,8 @@ export function AdminContentPanel({
                   />
                 </div>
                 <div>
-                  <label className="block font-semibold text-[#1A2421] mb-1">Longitude</label>
-                  <input
+                  <label htmlFor="content-longitude" className="block font-semibold text-[#1A2421] mb-1">Longitude</label>
+                  <input id="content-longitude"
                     type="number"
                     step="0.00001"
                     value={String(form.longitude || "")}
@@ -1173,6 +1164,7 @@ export function AdminContentPanel({
           <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#EAE7E0]">
             <button
               type="button"
+              disabled={saving}
               onClick={closeEditor}
               className="rounded-full border border-[#EAE7E0] px-4 py-2 font-semibold text-[#616E69] hover:text-[#1A2421] cursor-pointer"
             >
@@ -1186,7 +1178,7 @@ export function AdminContentPanel({
               {saving ? "Saving..." : "Save Changes"}
             </button>
           </div>
-        </form>
+        </StaffEditorForm>
       )}
 
       {/* Tab Content */}

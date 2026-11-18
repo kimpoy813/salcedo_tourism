@@ -1,7 +1,8 @@
 "use client";
 
+import { StaffNotice } from "./StaffNotice";
 import React, { useState } from "react";
-import { CheckCircle2, Download, Lock, ShieldAlert, Trash2, UserX, X } from "lucide-react";
+import { CheckCircle2, Download, Lock, ShieldAlert, Trash2, UserX } from "lucide-react";
 
 export interface AdminVisitorRow {
   id: string;
@@ -83,6 +84,8 @@ export function AdminVisitorsPanel({
         });
         await onReload();
       }
+    } catch {
+      setNotice({ text: "The change could not be confirmed. Refresh the section before trying again.", tone: "err" });
     } finally {
       setBusyId(null);
     }
@@ -95,35 +98,18 @@ export function AdminVisitorsPanel({
         <div>
           <p className="font-semibold">
             {canReadPii
-              ? "Authorized PII Access Active (Audit Logged)"
-              : "Personal Contact Details Restricted by Server RBAC"}
+              ? "Contact details are visible to your role"
+              : "Contact details are hidden"}
           </p>
           <p className="text-[#616E69]">
             {canReadPii
-              ? "Your role holds 'visitor.pii.read'. Access is recorded in the audit log under RA 10173."
+              ? "Access to visitor contact details is recorded in the audit log under RA 10173."
               : "Your role inspects de-identified origin and itinerary aggregates only."}
           </p>
         </div>
       </div>
 
-      {notice && (
-        <div
-          className={`rounded-xl border px-3.5 py-2 text-xs flex items-center justify-between ${
-            notice.tone === "err"
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-white border-[#EAE7E0] text-[#164237]"
-          }`}
-        >
-          <span>{notice.text}</span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            className="text-[#616E69] hover:text-[#1A2421] cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
 
       {/* Filter & Export Bar */}
       <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3 flex flex-wrap items-center justify-between gap-2.5">
@@ -131,7 +117,8 @@ export function AdminVisitorsPanel({
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search reference #, city, province..."
+          aria-label="Search submissions by reference number, city, or province"
+          placeholder="Reference number, city, province…"
           className="w-full sm:w-72 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-1.5 text-xs focus:outline-none"
         />
 
@@ -328,11 +315,13 @@ export function AdminCheckinsPanel({
   const [checkInSource, setCheckInSource] = useState("CEDO Tourism Reception Desk");
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [recorded, setRecorded] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErr(null);
+    setRecorded(false);
     setSubmitting(true);
     try {
       const res = await fetch("/api/admin/checkins", {
@@ -355,7 +344,10 @@ export function AdminCheckinsPanel({
       }
       setItineraryRef("");
       setNotes("");
+      setRecorded(true);
       await onReload();
+    } catch {
+      setErr("The check-in could not be confirmed. Check the arrival log before trying again.");
     } finally {
       setSubmitting(false);
     }
@@ -383,15 +375,16 @@ export function AdminCheckinsPanel({
             Record Verified Arrival
           </h3>
 
+          {recorded && <p role="status" className="staff-feedback ok">Arrival recorded.</p>}
           {err && (
-            <p className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-rose-800">
+            <p role="alert" className="rounded-xl bg-rose-50 border border-rose-200 p-2.5 text-rose-800">
               {err}
             </p>
           )}
 
           <div>
-            <label className="font-medium text-[#616E69]">Destination *</label>
-            <select
+            <label htmlFor="checkin-destination" className="font-medium text-[#616E69]">Destination *</label>
+            <select id="checkin-destination"
               required
               value={placeId}
               onChange={(e) => setPlaceId(e.target.value)}
@@ -406,8 +399,8 @@ export function AdminCheckinsPanel({
           </div>
 
           <div>
-            <label className="font-medium text-[#616E69]">Method *</label>
-            <select
+            <label htmlFor="checkin-method" className="font-medium text-[#616E69]">Method *</label>
+            <select id="checkin-method"
               value={methodCode}
               onChange={(e) => setMethodCode(e.target.value)}
               className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
@@ -422,18 +415,18 @@ export function AdminCheckinsPanel({
 
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label className="font-medium text-[#616E69]">Itinerary Ref</label>
-              <input
+              <label htmlFor="checkin-itinerary-ref" className="font-medium text-[#616E69]">Itinerary Ref</label>
+              <input id="checkin-itinerary-ref"
                 type="text"
                 value={itineraryRef}
                 onChange={(e) => setItineraryRef(e.target.value.toUpperCase())}
-                placeholder="SLCD-..."
+                placeholder="CEDO-TRIP-…"
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2 font-mono uppercase"
               />
             </div>
             <div>
-              <label className="font-medium text-[#616E69]">Group Size *</label>
-              <input
+              <label htmlFor="checkin-group-size" className="font-medium text-[#616E69]">Group Size *</label>
+              <input id="checkin-group-size"
                 required
                 type="number"
                 min={1}
@@ -446,8 +439,8 @@ export function AdminCheckinsPanel({
           </div>
 
           <div>
-            <label className="font-medium text-[#616E69]">Check-In Point *</label>
-            <input
+            <label htmlFor="checkin-check-in-point" className="font-medium text-[#616E69]">Check-In Point *</label>
+            <input id="checkin-check-in-point"
               required
               type="text"
               value={checkInSource}
@@ -457,8 +450,8 @@ export function AdminCheckinsPanel({
           </div>
 
           <div>
-            <label className="font-medium text-[#616E69]">Notes</label>
-            <input
+            <label htmlFor="checkin-notes" className="font-medium text-[#616E69]">Notes</label>
+            <input id="checkin-notes"
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
