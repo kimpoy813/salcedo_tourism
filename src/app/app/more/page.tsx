@@ -10,7 +10,7 @@ import {
   ShieldCheck,
   ShoppingBasket,
 } from "lucide-react";
-import { Kicker, PageIntro } from "@/components/ui/FieldGuide";
+import { PageIntro } from "@/components/ui/FieldGuide";
 
 export const metadata = { title: "Local guide" };
 const essentials = [
@@ -26,6 +26,7 @@ const essentials = [
     title: "Festivals & events",
     text: "Explore the municipal calendar and harvest fairs.",
   },
+  {tab:"history",icon:BookOpen,title:"History & culture",text:"Baugen, Tirad Pass and the town’s heritage."},
   {
     tab: "products",
     icon: ShoppingBasket,
@@ -50,7 +51,6 @@ export default function MoreHubPage() {
     <>
       <div className="guide-wrap inner-mast">
         <PageIntro
-          eyebrow="Salcedo, Ilocos Sur"
           title="Local guide"
           description="Barangay information, public services, and the municipal calendar."
         />
@@ -78,29 +78,9 @@ export default function MoreHubPage() {
           </div>
         </section>
         <aside className="guide-aside">
-          <div className="guide-story">
-            <div className="history-cover">
-              <img
-                src="/images/salcedo/municipal-seal.webp"
-                width="68"
-                height="68"
-                alt="Municipal seal of Salcedo"
-              />
-              <Kicker>Municipal history</Kicker>
-              <h2>
-                Before Salcedo:
-                <br />
-                Baugen
-              </h2>
-              <p>
-                Baugen was the earlier name of Salcedo. Read about the town’s beginnings and its
-                links to Tirad Pass.
-              </p>
-              <Link className="text-link" href="/app/salcedo?tab=history">
-                Read local history <ArrowRight size={15} />
-              </Link>
-            </div>
-          </div>
+          <figure className="guide-map-note"><img src="/app/maps/valley-plate.webp" alt="Relief model of the Buaya River valley" width="640" height="394"/>
+            <figcaption><h2>The Buaya River valley</h2><p>Locate places, roads and waterways on the municipal map.</p><Link className="text-link" href="/app/map">Open map <ArrowRight size={15}/></Link><small>Relief: <a href="#sources">GEBCO</a> · <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a></small></figcaption>
+          </figure>
           <Link className="guide-overview" href="/app/salcedo">
             Municipality profile <ArrowUpRight size={16} />
           </Link>
@@ -113,9 +93,12 @@ export default function MoreHubPage() {
           <a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">
             GEBCO Compilation Group (2020) grid
           </a>
-          . Heights are exaggerated in the valley illustration. Roads and waterways:{" "}
+          . Heights are exaggerated in the relief model. Roads and waterways:{" "}
           <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap contributors</a>.
           Boundaries: PSA / NAMRIA. Maps are for orientation, not trail navigation.
+        </p>
+        <p>
+          <strong>Guide imagery.</strong> The landscape cover and images marked “Illustration” are representative artwork, not photographs of the listed sites. Where a place has its own photos, these are shown first.
         </p>
         <p>
           <strong>Botanical plate.</strong> <i>Theobroma cacao</i>, plate 275 of Francisco Manuel

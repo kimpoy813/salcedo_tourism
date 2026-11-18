@@ -11,8 +11,8 @@ export async function GET() {
     scope: "/app/",
     display: "standalone",
     orientation: "any",
-    background_color: "#FCFBF7",
-    theme_color: "#243D33",
+    background_color: "#FFFFFF",
+    theme_color: "#1E483A",
     lang: "en-PH",
     categories: ["travel", "navigation", "lifestyle"],
     icons: [

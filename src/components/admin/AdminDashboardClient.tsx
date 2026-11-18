@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Wordmark, Kicker } from "@/components/ui/FieldGuide";
+import { Wordmark } from "@/components/ui/FieldGuide";
 import { Modal } from "@/components/ui/Modal";
 import {
   BarChart3,
@@ -173,13 +173,13 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
     icon: React.ComponentType<{ className?: string }>;
     visible: boolean;
   }> = [
-    { id: "overview", label: "Analytics & Overview", icon: BarChart3, visible: canAnalytics },
-    { id: "places", label: "Places & Directory", icon: MapPin, visible: canContentEdit },
-    { id: "content", label: "Municipal Content", icon: FileText, visible: canContentEdit },
-    { id: "visitors", label: "Visitor Submissions", icon: Users, visible: canVisitorRead },
-    { id: "checkins", label: "Verified Check-Ins", icon: CheckSquare, visible: canCheckins },
-    { id: "media", label: "Media Library", icon: ImageIcon, visible: canMedia },
-    { id: "governance", label: "Users, Logs & Privacy", icon: Settings, visible: canAdminGov },
+    { id: "overview", label: "Overview", icon: BarChart3, visible: canAnalytics },
+    { id: "places", label: "Place directory", icon: MapPin, visible: canContentEdit },
+    { id: "content", label: "Municipal content", icon: FileText, visible: canContentEdit },
+    { id: "visitors", label: "Visitor submissions", icon: Users, visible: canVisitorRead },
+    { id: "checkins", label: "Check-ins", icon: CheckSquare, visible: canCheckins },
+    { id: "media", label: "Media library", icon: ImageIcon, visible: canMedia },
+    { id: "governance", label: "Users, logs & privacy", icon: Settings, visible: canAdminGov },
   ];
 
   const currentData = {
@@ -269,7 +269,6 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
         </header>
         <main id="staff-content" tabIndex={-1} className="staff-main">
           <div className="staff-page-heading">
-            <Kicker>Municipal workspace</Kicker>
             <h1>{title}</h1>
           </div>
           {loadErrors[activeTab] ? (

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import { ArrowUpRight, ChevronRight, Star } from "lucide-react";
-import { listingPhoto } from "@/lib/visitor-media";
 import type { PlaceCardData } from "./PlaceCard";
 
 const modes = [
@@ -16,7 +14,7 @@ export function HomeRankingsCard({
   places,
   categories,
 }: {
-  places: PlaceCardData[];
+  places: Pick<PlaceCardData, 'id' | 'name' | 'slug' | 'mostVisitedRank' | 'topRatedRank' | 'categoryRank' | 'averageRating' | 'ratingCount' | 'barangay' | 'primaryCategory'>[];
   categories: { id: string; slug: string; name: string; publishedCount: number }[];
 }) {
   const [mode, setMode] = useState<(typeof modes)[number]["key"]>("most_visited");
@@ -39,11 +37,11 @@ export function HomeRankingsCard({
           <h2>Visitor rankings</h2>
         </div>
         <Link
-          className="round-link"
-          aria-label="See all ranked places"
+          className="text-link"
+          aria-label="View all ranked places"
           href={`/app/discover?sort=${mode}${mode === "by_category" ? `&category=${encodeURIComponent(category)}` : ""}`}
         >
-          <ArrowUpRight size={18} />
+          View all <ArrowUpRight size={15} />
         </Link>
       </div>
       <div className="guide-tabs" aria-label="Rank places">
@@ -72,9 +70,6 @@ export function HomeRankingsCard({
           <li key={place.id}>
             <Link href={`/app/places/${place.slug}`}>
               <span className="rank-number">{String(place[key] ?? i + 1).padStart(2, "0")}</span>
-              {listingPhoto(place) && (
-                <Image alt="" src={listingPhoto(place)!} width={68} height={52} />
-              )}
               <span className="rank-name">
                 <strong>{place.name.split(" (")[0]}</strong>
                 <small>{place.barangay?.name || "Salcedo"}</small>

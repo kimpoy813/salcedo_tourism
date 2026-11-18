@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { photoUrl } from "@/lib/visitor-media";
+import { GuideImage } from "./GuideImage";
+import { FactList } from "@/components/ui/FactList";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Phone, ShieldAlert } from "lucide-react";
 
 type TabId = "overview" | "barangays" | "history" | "events" | "products" | "guides" | "emergency";
@@ -115,6 +116,7 @@ function SalcedoInfoInner({
   contacts,
   municipalInfo,
 }: SalcedoDataProps & { initialTab: TabId }) {
+  const router = useRouter();
   const tab = initialTab;
   const [barangayQuery, setBarangayQuery] = useState("");
 
@@ -144,13 +146,14 @@ function SalcedoInfoInner({
       <nav className="profile-nav" aria-label="Visitor information topics">
         {tabs.map(t => <Link href={`/app/salcedo?tab=${t.id}`} scroll={false} key={t.id} aria-current={tab === t.id ? "page" : undefined}>{t.label}</Link>)}
       </nav>
+      <label className="profile-topic">Guide section<select className="guide-field" value={tab} onChange={e=>router.push(`/app/salcedo?tab=${e.target.value}`,{scroll:false})}>{tabs.map(t=><option key={t.id} value={t.id}>{t.label}</option>)}</select></label>
       <div className="profile-content">
       {tab === "overview" && (
         <div className="profile-overview">
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
             <div className="flex items-center gap-3">
               <img
-                src="/images/salcedo/seal-of-salcedo.png"
+                src="/images/salcedo/municipal-seal.webp"
                 alt="Official Seal of Salcedo"
                 className="w-11 h-11 rounded-full border border-[#EAE7E0] shrink-0"
               />
@@ -174,36 +177,7 @@ function SalcedoInfoInner({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-2.5">
-            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
-              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
-                2020 Population
-              </p>
-              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
-                11,110
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
-              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">ZIP Code</p>
-              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
-                2711
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
-              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">Barangays</p>
-              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
-                {barangays.length} Official
-              </p>
-            </div>
-            <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5">
-              <p className="text-[10px] uppercase tracking-wider text-[#616E69]">
-                Land Area
-              </p>
-              <p className="font-display font-bold text-sm text-[#1A2421] mt-0.5 tabular-nums">
-                103.44 km²
-              </p>
-            </div>
-          </div>
+          <section className="municipal-facts"><h2>Municipal figures</h2><FactList rows={[["Population (2020)","11,110"],["Barangays",barangays.length],["Land area","103.44 km²"],["ZIP code","2711"]]} numeric/></section>
 
           {municipalInfo.filter(sec => sec.key !== "profile_overview").map((sec) => (
             <article
@@ -222,40 +196,18 @@ function SalcedoInfoInner({
 
       {tab === "barangays" && (
         <div className="space-y-3">
-          <input
+          <div className="community-search"><input
             type="search"
             value={barangayQuery}
             onChange={(e) => setBarangayQuery(e.target.value)}
             aria-label="Search the barangay directory"
             placeholder="Search the 21 barangays…"
-            className="w-full rounded-full border border-[#EAE7E0] bg-white px-4 py-2 text-sm focus:outline-none focus:border-[#164237]/40"
-          />
+            className="guide-field"
+          /><small role="status">{filteredBarangays.length} of {barangays.length}</small></div>
 
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
-            {filteredBarangays.length === 0 && <p className="empty-note" role="status">No barangays match “{barangayQuery}”. Try a different name.</p>}
-            {filteredBarangays.map((b) => (
-              <Link
-                key={b.id}
-                href={`/app/discover?barangay=${encodeURIComponent(b.slug)}`}
-                className="block p-3.5 hover:bg-[#FAF9F6] transition space-y-1"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-display font-bold text-sm text-[#1A2421]">
-                    Brgy. {b.name}
-                  </p>
-                  <span className="text-[11px] font-medium text-[#616E69] tabular-nums shrink-0">
-                    {b.publishedPlacesCount}{" "}
-                    {b.publishedPlacesCount === 1 ? "spot" : "spots"}
-                  </span>
-                </div>
-                <p className="text-xs text-[#616E69] leading-relaxed">{b.summary}</p>
-                <p className="text-[11px] text-[#616E69]/80 tabular-nums">
-                  Pop: {b.population2020?.toLocaleString() ?? "—"}
-                  {b.elevationMeters ? ` • ${Math.round(b.elevationMeters)}m ASL` : ""}
-                </p>
-              </Link>
-            ))}
-          </div>
+          {!filteredBarangays.length ? <p className="empty-note" role="status">No barangays match “{barangayQuery}”. Try a different name.</p> : <table className="community-register"><caption className="sr-only">Barangay directory</caption><thead><tr><th scope="col">Barangay</th><th scope="col">Population (2020)</th><th scope="col">Elevation</th><th scope="col">Places</th></tr></thead><tbody>
+            {filteredBarangays.map(b=><tr key={b.id}><th scope="row"><Link href={`/app/discover?barangay=${encodeURIComponent(b.slug)}`}>{b.name}</Link><small>{b.summary}</small></th><td><span className="compact-prefix">Population: </span>{b.population2020?.toLocaleString('en-PH')??'—'}</td><td><span className="compact-prefix">Elevation: </span>{b.elevationMeters==null?'—':`${Math.round(b.elevationMeters)} m`}</td><td>{b.publishedPlacesCount}<span className="compact-prefix"> {b.publishedPlacesCount===1?"place":"places"}</span></td></tr>)}
+          </tbody></table>}
         </div>
       )}
 
@@ -316,33 +268,14 @@ function SalcedoInfoInner({
       )}
 
       {tab === "products" && (
-        <div className="profile-grid">
-          {products.map((pr) => (
-            <article
-              key={pr.id}
-              className="bg-white rounded-2xl border border-[#EAE7E0] overflow-hidden flex gap-3 p-3"
-            >
-              {photoUrl(pr.imageUrl) && <img
-                src={pr.imageUrl!}
-                alt={pr.name}
-                className="w-20 h-20 object-cover shrink-0"
-              />}
-              <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
-                  {pr.category}
-                </p>
-                <h3 className="font-display text-sm font-bold text-[#1A2421] leading-snug">
-                  {pr.name}
-                </h3>
-                <p className="text-xs text-[#616E69] leading-relaxed">{pr.description}</p>
-                {pr.producers.length > 0 && (
-                  <p className="text-[11px] font-medium text-[#164237]">
-                    {pr.producers.map((p) => p.producerName).join(", ")}
-                  </p>
-                )}
-              </div>
-            </article>
-          ))}
+        <div className="harvest-layout">
+          <div className="product-list">{products.length===0 && <p className="empty-note">No local products are listed yet.</p>}{products.map(pr=><article key={pr.id} className="product-entry">
+            {pr.imageUrl && <GuideImage src={pr.imageUrl} size="thumb" width={100} height={80} alt="" className="product-thumb"/>}
+            <header><small>{pr.category}{pr.barangay && ` · Brgy. ${pr.barangay.name}`}</small><h2>{pr.name}</h2></header>
+            <p>{pr.description}</p>
+            {pr.producers.length>0 && <p className="product-source"><strong>{pr.producers.length===1?'Producer':'Producers'}:</strong> {pr.producers.map(p=>p.producerName).join(', ')}</p>}
+          </article>)}</div>
+          <figure className="harvest-plate"><img src="/images/salcedo/cacao-plate.webp" alt="Botanical plate of a cacao branch, pod and flower" width="500" height="731" loading="lazy"/><figcaption><strong>Cacao &amp; tablea</strong><p>Cacao grows in Sorioan. In Poblacion, local makers roast and grind the beans into tablea for hot chocolate.</p></figcaption><small className="plate-credit"><i>Theobroma cacao</i> · <Link href="/app/more#sources">Flora de Filipinas, pl.&nbsp;275</Link></small></figure>
         </div>
       )}
 

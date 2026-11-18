@@ -326,16 +326,16 @@ export function AdminPlacesPanel({
       {!showForm && <StaffNotice notice={notice} dismiss={() => setNotice(null)} />}
 
       {/* Toolbar */}
-      <div className="bg-white rounded-2xl border border-[#EAE7E0] p-3 flex flex-wrap items-center justify-between gap-2.5">
-        <div className="flex flex-wrap items-center gap-2 flex-1">
-          <div className="relative w-full sm:w-64">
+      <div className="office-register-tools">
+        <div className="office-filters">
+          <div className="office-search relative">
             <Search className="w-4 h-4 text-[#616E69] absolute left-3 top-1/2 -translate-y-1/2" />
             <input
               type="search"
               aria-label="Search destinations"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search destinations..."
+              placeholder="Name, barangay or type"
               className="w-full rounded-full border border-[#EAE7E0] bg-[#FAF9F6] pl-9 pr-3 py-1.5 text-xs focus:outline-none"
             />
           </div>
@@ -359,7 +359,7 @@ export function AdminPlacesPanel({
           className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-4 py-1.5 text-xs font-semibold hover:bg-[#10322A] transition cursor-pointer"
         >
           <Plus className="w-3.5 h-3.5" />
-          Add Place
+          Add place
         </button>
       </div>
 
@@ -545,14 +545,14 @@ export function AdminPlacesPanel({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label htmlFor="place-featured-image-url" className="font-medium text-[#616E69]">Cover photo URL (optional)</label>
+              <label htmlFor="place-featured-image-url" className="font-medium text-[#616E69]">Cover image URL (optional)</label>
               <input id="place-featured-image-url" aria-describedby="cover-photo-help"
                 type="text"
                 value={featuredImageUrl}
                 onChange={(e) => setFeaturedImageUrl(e.target.value)}
                 className="mt-1 w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
               />
-              <p id="cover-photo-help" className="mt-1 text-[#616E69]">Use a photo of this place. Without a photo, its page shows a location map.</p>
+              <p id="cover-photo-help" className="mt-1 text-[#616E69]">Use an image of this place. Leave blank to use its gallery or location map.</p>
             </div>
             <div>
               <label htmlFor="place-source-attribution" className="font-medium text-[#616E69]">Source Attribution *</label>
@@ -703,9 +703,10 @@ export function AdminPlacesPanel({
         </StaffEditorForm>
       )}
 
+      <p className="staff-count" role="status">{filtered.length} of {places.length} destinations</p>
       {/* Places Table */}
       <div className="staff-places-table bg-white rounded-2xl border border-[#EAE7E0] overflow-x-auto">
-        <table className="w-full text-left border-collapse text-xs">
+        <table className="w-full text-left border-collapse text-xs"><caption className="sr-only">Place register</caption>
           <thead className="bg-[#FAF9F6] border-b border-[#EAE7E0] text-[#616E69]">
             <tr>
               <th className="px-4 py-2.5 font-medium">Destination</th>

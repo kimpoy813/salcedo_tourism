@@ -29,12 +29,11 @@ export default async function SalcedoInfoPage() {
         Local guide
       </Link>
       <PageIntro
-        eyebrow="Municipality profile"
         title="Salcedo, Ilocos Sur"
         description="Local history, barangay profiles, products, and emergency contacts."
         aside={
           <img
-            src="/images/salcedo/seal-of-salcedo.png"
+            src="/images/salcedo/municipal-seal.webp"
             width="78"
             height="78"
             alt="Official seal of Salcedo"

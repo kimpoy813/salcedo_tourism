@@ -17,12 +17,15 @@ export function Modal({
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current!;
+    // Native dialogs do not reliably return focus on unmount; keep it on the opener.
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const overflow = document.documentElement.style.overflow;
     document.documentElement.style.overflow = "hidden";
     dialog.showModal();
     return () => {
       dialog.close();
       document.documentElement.style.overflow = overflow;
+      if (opener?.isConnected) opener.focus();
     };
   }, []);
   return (

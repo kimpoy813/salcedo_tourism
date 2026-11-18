@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listingPhoto, photoUrl, placePhotos } from "../src/lib/visitor-media";
+import { guideArtSrc, listingImage, listingPhoto, photoUrl, placeMedia, snapshotMedia } from "../src/lib/visitor-media";
 import { locatorPoint, RELIEF } from "../src/lib/geo/relief";
 
 const art = "/images/salcedo/baluarte-falls.png";
@@ -14,24 +14,32 @@ describe("visitor media", () => {
   });
   it("respects an explicit gallery flag even if the same asset is the cover", () => {
     expect(
-      placePhotos("/uploads/painting.jpg", null, [
+      placeMedia("/uploads/painting.jpg", null, [
         { url: "/uploads/painting.jpg", isIllustrative: true },
         { url: art },
         { url: uploaded, caption: "On the trail" },
-      ]).map((i) => i.url),
-    ).toEqual([uploaded]);
-    expect(placePhotos(null, null, [])).toEqual([]);
+      ]).map((i) => [i.url,i.kind]),
+    ).toEqual([[uploaded,"photo"],["/uploads/painting.jpg","illustration"],[art,"illustration"]]);
+    expect(placeMedia(null, null, [])).toEqual([]);
   });
   it("retains cover order, captions and photographers’ credits when deduplicating", () => {
     const other = { url: "/uploads/pool.jpg", caption: "The pool" };
-    const gallery = placePhotos(uploaded, "The falls", [
+    const gallery = placeMedia(uploaded, "The falls", [
       other,
       { url: uploaded, attribution: "Tourism office" },
     ]);
     expect(gallery).toEqual([
-      { url: uploaded, caption: "The falls", attribution: "Tourism office" },
-      other,
+      { url: uploaded, kind:"photo", caption: "The falls", attribution: "Tourism office" },
+      {...other,kind:"photo"},
     ]);
+  });
+  it("carries the chosen media into trip and saved-place snapshots without changing its kind", () => {
+    const row = {displayPhotoUrl:null, displayIllustrationUrl:"/uploads/drawing.jpg"};
+    expect(listingImage(snapshotMedia(row))).toEqual({url:row.displayIllustrationUrl,kind:"illustration"});
+    expect(listingImage({featuredImageUrl:art})?.kind).toBe("illustration");
+    expect(listingImage({featuredImageUrl:null})).toBeNull();
+    expect(guideArtSrc(art,"thumb")).toBe("/app/art/baluarte-falls-thumb.webp");
+    expect(guideArtSrc(uploaded,"thumb")).toBeNull();
   });
   it("does not resurrect excluded covers from current or legacy on-device snapshots", () => {
     expect(listingPhoto({ featuredImageUrl: art })).toBeNull();

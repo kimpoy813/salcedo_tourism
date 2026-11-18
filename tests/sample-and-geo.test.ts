@@ -88,6 +88,7 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
     ]);
     const [entry] = await getPublishedPlaces();
     expect(entry.displayPhotoUrl).toBe(first);
+    expect(entry.displayIllustrationUrl).toBe(cover);
     expect(entry.featuredImageUrl).toBe(cover);
   });
 

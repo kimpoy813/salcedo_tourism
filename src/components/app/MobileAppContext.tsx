@@ -43,6 +43,7 @@ interface MobileAppContextValue {
     placeType: string;
     barangayName?: string | null;
     featuredImageUrl?: string | null;
+    displayIllustrationUrl?: string | null;
     latitude?: number | null;
     longitude?: number | null;
   }) => Promise<boolean>;
@@ -124,6 +125,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
       placeType: string;
       barangayName?: string | null;
       featuredImageUrl?: string | null;
+      displayIllustrationUrl?: string | null;
       latitude?: number | null;
       longitude?: number | null;
     }) => {
@@ -146,6 +148,7 @@ export function MobileAppProvider({ children }: { children: React.ReactNode }) {
           placeType: place.placeType,
           barangayName: place.barangayName ?? null,
           featuredImageUrl: place.featuredImageUrl ?? null,
+          displayIllustrationUrl: place.displayIllustrationUrl ?? null,
           latitude: place.latitude ?? null,
           longitude: place.longitude ?? null,
           visitTime: activeDraft.stops.length === 0 ? "09:00" : "",

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Image from "next/image";
-import { listingPhoto } from "@/lib/visitor-media";
+import { PlaceThumbnail } from "./GuideImage";
+import { snapshotMedia } from "@/lib/visitor-media";
 import { Modal } from "@/components/ui/Modal";
 import { SectionHeader, Skeleton, StepHeader } from "@/components/ui/design";
 import Link from "next/link";
@@ -31,7 +31,6 @@ import {
   Search,
   Send,
   ShieldCheck,
-  Map as MapIcon,
   Star,
   Trash2,
   TriangleAlert,
@@ -331,7 +330,7 @@ export function TripsPlannerClient({
             address: "",
             latitude: s.latitude ?? null,
             longitude: s.longitude ?? null,
-            featuredImageUrl: s.featuredImageUrl ?? null,
+            ...snapshotMedia(s),
             barangay: s.barangayName ? { name: s.barangayName, slug: "" } : null,
           }) as (typeof availablePlaces)[number]
       );
@@ -568,20 +567,17 @@ export function TripsPlannerClient({
     setCompletionNotice(null);
     await persistDraft(fresh);
     setActiveTab("builder");
-    showToast("Fresh trip started — happy planning!", { tone: "success" });
+    showToast("New trip started", { tone: "success" });
   };
 
+  const placesBySlug = new Map(availablePlaces.map(p=>[p.slug,p]));
+  const fromDirectory = (slugs:string[]) => slugs.flatMap(slug=>placesBySlug.get(slug) ?? []);
+  const routeOptions = {
+    nature: fromDirectory(["baluarte-falls-agila-falls","kinbandiw-falls","bago-resort-spring-water"]),
+    heritage: fromDirectory(["salcedo-town-plaza-del-pilar-shrine","tsokolate-de-ylocos-wynns-food-products","palays-bbq-poblacion-norte"]),
+  };
   const applyQuickPreset = async (preset: "nature" | "heritage") => {
-    const picks =
-      preset === "nature"
-        ? availablePlaces.filter((p) =>
-            ["nature", "resort", "attraction"].includes(p.placeType)
-          )
-        : availablePlaces.filter((p) =>
-            ["heritage", "restaurant", "cafe", "business"].includes(p.placeType)
-          );
-
-    const selected = picks.slice(0, 3);
+    const selected = routeOptions[preset];
     if (selected.length === 0) return;
 
     const times = ["09:00", "11:30", "14:00"];
@@ -591,7 +587,7 @@ export function TripsPlannerClient({
       placeSlug: p.slug,
       placeType: p.placeType,
       barangayName: p.barangay?.name ?? null,
-      featuredImageUrl: listingPhoto(p),
+      ...snapshotMedia(p),
       latitude: p.latitude ?? null,
       longitude: p.longitude ?? null,
       visitTime: times[idx] || "",
@@ -623,7 +619,7 @@ export function TripsPlannerClient({
             placeSlug: place.slug,
             placeType: place.placeType,
             barangayName: place.barangay?.name ?? null,
-            featuredImageUrl: listingPhoto(place),
+            ...snapshotMedia(place),
             latitude: place.latitude ?? null,
             longitude: place.longitude ?? null,
             day: activeDay,
@@ -1051,7 +1047,7 @@ export function TripsPlannerClient({
               {/* Native Trip Header Card */}
               <div className={`surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <div className="space-y-2">
-                  <label className="guide-kicker" htmlFor="draft-title">Itinerary name</label>
+                  <label className="draft-name-label" htmlFor="draft-title">Itinerary name</label>
                   <input
                     id="draft-title"
                     type="text"
@@ -1061,45 +1057,15 @@ export function TripsPlannerClient({
                   />
 
                   <div className="flex flex-wrap items-center gap-2 text-xs text-[#616E69]">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] px-2.5 py-1 text-[11px] font-semibold text-[#164237] tabular-nums">
+                    <span className="draft-summary">
                       <Clock className="w-3 h-3" />
-                      {draft.stops.length} {draft.stops.length === 1 ? "stop" : "stops"} · {formatDuration(totalMinutes)}
+                      {draft.stops.length} {draft.stops.length === 1 ? "stop" : "stops"}{draft.stops.length>0 ? ` · ${formatDuration(totalMinutes)}` : ""}
                       {totalDistanceKm > 0 ? ` • ${totalDistanceKm} km` : ""}
                     </span>
                   </div>
                 </div>
 
-                {/* Quick Starter Templates when empty */}
-                {draft.stops.length === 0 && availablePlaces.length > 0 && (
-                  <div className="pt-2 border-t border-[#EAE7E0] space-y-2">
-                    <p className="text-[11px] font-semibold text-[#616E69] inline-flex items-center gap-1">
-                      <MapIcon className="w-3.5 h-3.5 text-[#B88A44]" />
-                      Start from a Salcedo route
-                    </p>
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => void applyQuickPreset("nature")}
-                        className="preset-card nature-preset"
-                      >
-                        <p className="font-display text-xs font-bold text-[#1A2421]">
-                          Falls &amp; Springs
-                        </p>
-                        <p className="text-[11px] text-[#616E69] mt-0.5">Nature route</p>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void applyQuickPreset("heritage")}
-                        className="preset-card heritage-preset"
-                      >
-                        <p className="font-display text-xs font-bold text-[#1A2421]">
-                          Heritage &amp; Dining
-                        </p>
-                        <p className="text-[11px] text-[#616E69] mt-0.5">Cultural route</p>
-                      </button>
-                    </div>
-                  </div>
-                )}
+
               </div>
 
 
@@ -1158,12 +1124,7 @@ export function TripsPlannerClient({
                           return (
                             <>
                               <div className="flex items-center gap-3">
-                                {listingPhoto(s) && <Image src={listingPhoto(s)!}
-                                  alt=""
-                                  width={44}
-                                  height={44}
-                                  className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                                />}
+                                <PlaceThumbnail place={s} width={44} height={44} className="stop-thumb" />
                                 <div className="flex-1 min-w-0">
                                   <Link
                                     href={`/app/places/${s.placeSlug}`}
@@ -1561,12 +1522,13 @@ export function TripsPlannerClient({
               )}
 
               {draft.stops.length === 0 && (
-                <div className="surface-card p-5 space-y-3">
-                  <StepHeader step={1} eyebrow="Destinations" title="Choose your first stop" description="Start with a place you want to visit. You can add dates and reorder your stops later." />
-                  <div className="empty-trip-actions no-print">
-                    <button type="button" className="primary-button" onClick={() => setStopPickerOpen(true)}><Plus size={15}/>Choose stops</button>
-                    <Link href="/app/discover" className="text-link">Explore the directory <ArrowRight size={14}/></Link>
-                  </div>
+                <div className="trip-start surface-card">
+                  <div className="trip-start-head"><div><h2>Choose your first stop</h2><p>{routeOptions.nature.length||routeOptions.heritage.length ? "Add destinations yourself or start with a suggested route." : "Choose destinations from the place directory."}</p></div><button type="button" className="primary-button" onClick={()=>setStopPickerOpen(true)}><Plus size={16}/>Choose stops</button></div>
+                  {(Object.keys(routeOptions) as Array<keyof typeof routeOptions>).filter(key=>routeOptions[key].length>0).map(key=><button className="route-option" key={key} onClick={()=>void applyQuickPreset(key)}>
+                    <PlaceThumbnail place={routeOptions[key][0]} width={64} height={50}/>
+                    <span><strong>{key==='nature'?'Falls & springs':'Heritage & dining'}</strong><small>{routeOptions[key].map(p=>p.name.split(' (')[0]).join(' · ')}</small></span><span className="route-count">{routeOptions[key].length} {routeOptions[key].length===1?'stop':'stops'}</span><ChevronRight size={16}/>
+                  </button>)}
+                  <Link className="text-link" href="/app/discover">Browse place directory <ArrowRight size={14}/></Link>
                 </div>
               )}
 
@@ -1614,7 +1576,7 @@ export function TripsPlannerClient({
                       href={`/app/places/${p.slug}`}
                       className="saved-place-row"
                     >
-                      {listingPhoto(p) && <Image src={listingPhoto(p)!} alt="" width={70} height={50}/>}
+                      <PlaceThumbnail place={p} width={70} height={50} />
                       <span>{p.name}<small>{p.barangay?.name || "Salcedo"}</small></span>
                     </Link>
                     <button
@@ -1962,12 +1924,7 @@ export function TripsPlannerClient({
                     onClick={() => void toggleStop(p)}
                     className="w-full flex items-center gap-3 py-3 text-left active:bg-[#FAF9F6] cursor-pointer"
                   >
-                    {listingPhoto(p) && <Image src={listingPhoto(p)!}
-                      alt=""
-                      width={44}
-                      height={44}
-                      className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                    />}
+                    <PlaceThumbnail place={p} width={44} height={44} className="stop-thumb" />
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-bold text-xs text-[#1A2421] truncate">
                         {p.name}

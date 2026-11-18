@@ -1,5 +1,5 @@
 /* Only public guide content is cached. Submissions and all admin/API routes bypass this worker. */
-const CACHE = "turi-salcedo-v6";
+const CACHE = "turi-salcedo-v7";
 const SHELL = ["/app/", "/app/trips", "/app/offline", "/app/discover", "/app/map", "/app/more"];
 
 // Collect only this build's public static resources; never store API payloads.
@@ -11,6 +11,8 @@ async function cachePage(cache, path, assets) {
   const html = await response.text();
   for (const [, src] of html.matchAll(/(?:src|href)="(\/_next\/static\/[^"<>]+)"/g))
     assets.add(src.replaceAll("&amp;", "&"));
+  // These are small, same-origin derivatives of the guide's bundled artwork.
+  for (const [, src] of html.matchAll(/src="(\/app\/art\/[a-z0-9-]+\.webp)"/g)) assets.add(src);
 }
 
 self.addEventListener("install", (event) => {
@@ -20,6 +22,7 @@ self.addEventListener("install", (event) => {
       const assets = new Set([
         "/app/icons/icon-192x192.png",
         "/app/icons/icon-512x512.png",
+        "/images/salcedo/guide-valley.webp",
         "/images/salcedo/municipal-seal.webp",
         "/images/salcedo/cacao-plate.webp",
         "/app/maps/valley-plate.webp",
@@ -27,6 +30,10 @@ self.addEventListener("install", (event) => {
         "/app/maps/salcedo-relief.webp",
         "/app/maps/salcedo-field.geojson",
       ]);
+      // Keep every directory thumbnail, but only the full covers used by the shell.
+      const artList = await fetch("/app/art/sources.json", { cache: "reload" });
+      if (!artList.ok) throw new Error("Guide artwork is unavailable");
+      for (const file of await artList.json()) assets.add(`/app/art/${file.replace(/\.[^.]+$/, "-thumb.webp")}`);
       await Promise.all(SHELL.map((path) => cachePage(cache, path, assets)));
       await cache.addAll([...assets]);
       await self.skipWaiting();
@@ -77,6 +84,7 @@ self.addEventListener("fetch", (event) => {
     path.startsWith("/images/salcedo/") ||
     path.startsWith("/app/icons/") ||
     path.startsWith("/app/maps/") ||
+    path.startsWith("/app/art/") ||
     path === "/_next/image";
   if (asset) {
     event.respondWith(
@@ -89,10 +97,14 @@ self.addEventListener("fetch", (event) => {
           if (response.ok) await cache.put(request, response.clone()).catch(() => undefined);
           return response;
         } catch {
+          if (path.startsWith("/app/art/") && path.endsWith("-cover.webp")) {
+            const thumb = await cache.match(path.replace(/-cover\.webp$/, "-thumb.webp"));
+            if (thumb) return thumb;
+          }
           if (request.destination !== "image") return Response.error();
           // Do not cache this placeholder: the real photo loads when the connection returns.
           return new Response(
-            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150"><rect width="240" height="150" fill="#e9ebde"/><path d="m79 88 26-33 17 20 13-15 26 28H79Z" fill="none" stroke="#687664" stroke-width="2"/><text x="120" y="110" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4d5c4d">Photo unavailable offline</text></svg>',
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150"><rect width="240" height="150" fill="#e9ebde"/><path d="m79 88 26-33 17 20 13-15 26 28H79Z" fill="none" stroke="#687664" stroke-width="2"/><text x="120" y="110" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4d5c4d">Image unavailable offline</text></svg>',
             { headers: { "Content-Type": "image/svg+xml" } },
           );
         }

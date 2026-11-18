@@ -1,13 +1,16 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Kicker, Wordmark } from "@/components/ui/FieldGuide";
+import { Wordmark } from "@/components/ui/FieldGuide";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 
+// Do not accept a credential submission until the JSON sign-in handler is ready.
+const subscribe = () => () => {};
 export default function AdminLoginPage() {
   const router = useRouter();
+  const ready = useSyncExternalStore(subscribe, () => true, () => false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -40,24 +43,9 @@ export default function AdminLoginPage() {
 
   return (
     <main className="staff-login">
-      <aside className="staff-login-landscape">
-        <div>
-          <Kicker>Municipality of Salcedo</Kicker>
-          <h2>Tourism office</h2>
-          <p>Manage the place directory, visitor information, and submitted itineraries.</p>
-          <figure className="staff-relief">
-            <img
-              src="/app/maps/valley-plate.webp"
-              width="640"
-              height="394"
-              alt="Relief model of the Buaya River valley"
-            />
-            <figcaption>
-              Buaya River valley · <Link href="/app/more#sources">GEBCO</Link> ·{" "}
-              <a href="https://www.openstreetmap.org/copyright">© OpenStreetMap</a>
-            </figcaption>
-          </figure>
-        </div>
+      <aside className="office-cover" aria-label="Tourism office">
+        <img src="/images/salcedo/guide-valley.webp" width="1408" height="768" alt="Illustrated valley landscape"/>
+        <div><span>Municipality of Salcedo</span><h2>Tourism office</h2><p>Staff access to the directory and visitor records.</p></div>
       </aside>
       <section className="staff-login-form">
         <Link className="back-link" href="/app/">
@@ -67,14 +55,15 @@ export default function AdminLoginPage() {
         <div className="login-inner">
           <Wordmark subtitle="Tourism office" />
           <div className="login-heading">
-            <Kicker>Staff workspace</Kicker>
             <h1>Staff sign in</h1>
             <p>Use your municipal staff account to continue.</p>
           </div>
-          <form onSubmit={handleSubmit} aria-busy={loading}>
+          <noscript><p className="form-error">Enable JavaScript to sign in to the staff workspace.</p></noscript>
+          <form method="post" onSubmit={handleSubmit} aria-busy={loading}>
             <label htmlFor="username">Username or official email</label>
             <input
               id="username"
+              disabled={!ready}
               name="username"
               className="guide-field"
               required
@@ -88,6 +77,7 @@ export default function AdminLoginPage() {
             <div className="login-password">
               <input
                 id="password"
+                disabled={!ready}
                 name="password"
                 type={showPassword ? "text" : "password"}
                 className="guide-field"
@@ -110,7 +100,7 @@ export default function AdminLoginPage() {
                 {error}
               </p>
             )}
-            <button className="primary-button" type="submit" disabled={loading}>
+            <button className="primary-button" type="submit" disabled={!ready || loading}>
               <Lock size={15} />
               {loading ? "Signing in…" : "Sign in"}
             </button>

@@ -1,0 +1,44 @@
+/* Office screens use the same typography, rules and controls as the directory.
+   Numbers align with their column; color is supplemental, never the metric. */
+.office-cover { background:#203f33; color:#fff; display:flex; flex-direction:column; }
+.office-cover img { width:100%; height:0; flex:1; min-height:200px; object-fit:cover; }
+.office-cover > div { padding:clamp(25px,3.8vw,60px); }
+.office-cover span { font-size:14px; color:#dae5d8; } .office-cover h2 { font:510 clamp(38px,4.4vw,67px)/1.05 var(--display); letter-spacing:-.04em; margin:10px 0 3px; } .office-cover p { font-size:14px; color:#e4eae1; }
+.staff-sidebar,.staff-mobile-sidebar { background:#f4f6f2; }
+.staff-header { background:#fff; } .staff-identity { background:transparent; }
+.staff-main { max-width:1340px; }
+.staff-page-heading { margin-bottom:16px; }
+.staff-page-heading h1,.login-heading h1 { font:650 clamp(31px,2.6vw,42px)/1.14 var(--font-sans); letter-spacing:-.04em; color:var(--ink); }
+.staff-main h3.font-display { font:620 19px/1.3 var(--font-sans); }
+.report-modes { display:flex; gap:20px; border-bottom:1px solid var(--rule); margin:0 0 22px; }
+.report-modes button { cursor:pointer; border-bottom:2px solid transparent; padding:9px 1px; color:var(--quiet); font-size:14px; }
+.report-modes button[aria-pressed=true] { color:var(--pine); border-color:var(--pine); font-weight:650; }
+.office-report h2 { font:630 19px/1.3 var(--font-sans); letter-spacing:-.025em; }
+.report-today { padding:17px 20px 19px; border:1px solid var(--rule); border-radius:5px; background:var(--surface); }
+.report-today h2 { font-size:16px; margin-bottom:13px; }
+.report-today dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.report-today dl > div { padding-inline:clamp(13px,2vw,32px); border-left:1px solid #cbd5cc; }
+.report-today dl > div:first-child { border:none; padding-left:0; }
+.report-today dt { font-size:14px; font-weight:550; } .report-today dd { font:560 clamp(28px,2.8vw,43px)/1.22 var(--font-sans); font-variant-numeric:tabular-nums; letter-spacing:-.04em; margin:4px 0; color:var(--pine); }
+.report-today dd.measure-note,.report-note,.report-empty { color:var(--quiet); font:400 13px/1.5 var(--font-sans); letter-spacing:normal; }
+.report-note,.report-empty { margin-block:5px 12px; }
+.report-overview-grid,.report-pair { display:grid; gap:clamp(20px,2.6vw,40px); }
+.report-overview-grid { grid-template-columns:minmax(0,1.8fr) minmax(215px,1fr); } .report-pair { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.office-report > :is(.report-pair,.report-overview-grid,.report-block,.directory-record) { margin-top:25px; }
+.report-block { min-width:0; } .report-block h2 { margin-bottom:8px; } .report-block .fact-list > div { font-size:13px; padding-block:7px; }
+.chart-frame { width:100%; height:260px; }
+.report-scroll { width:100%; overflow-x:auto; }
+.report-scroll:focus-visible { outline:2px solid rgba(29,120,116,.65); outline-offset:2px; }
+.report-table { font-size:13px; }
+.report-table :is(th,td) { padding:9px 10px; border-bottom:1px solid var(--rule); }
+.report-table th[scope=row] { font-weight:500; } .report-table td,.report-table th:not(:first-child) { text-align:right; font-variant-numeric:tabular-nums; }
+.report-table th:first-child { min-width:8em; }
+.chart-values { margin-top:10px; } .chart-values summary { font-size:13px; } .chart-values .report-block h2 { font-size:16px; }
+.office-register-tools { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; padding-block:12px; border-block:1px solid var(--rule); }
+.office-register-tools :is(select,input,button),.staff-places-table button { border-radius:5px; }
+.office-filters{display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex:1;}.office-search{width:min(100%,24em);}
+.office-register-tools > button { min-height:40px; } .staff-count { font-size:13px; color:var(--quiet); }
+.staff-main .staff-places-table { border:0; border-radius:0; } .staff-places-table :is(td,th) { border-bottom:1px solid var(--rule); } .staff-places-table td button { min-height:32px; }
+.staff-places-table thead { background:var(--surface); }
+@media(max-width:1050px) and (min-width:901px){.report-overview-grid{grid-template-columns:1fr;}}
+@media(max-width:680px){.office-cover{display:none;}.staff-login{grid-template-columns:1fr;}.report-overview-grid,.report-pair{grid-template-columns:1fr;gap:23px;}.report-today{padding:14px;}.report-today dl{grid-template-columns:1fr;}.report-today dl>div,.report-today dl>div:first-child{border-left:0;padding:8px 0;display:grid;grid-template-columns:1fr auto;align-items:baseline;border-top:1px solid var(--rule);}.report-today h2{margin-bottom:5px;}.report-today dd{font-size:26px;grid-column:2;grid-row:1/3;margin:0;}.report-today dd.measure-note{grid-column:1;grid-row:2;}.chart-frame{height:215px;}.report-modes{gap:12px;}.report-modes button{font-size:13px;min-height:40px;}.staff-places-table td{border:0;}.office-register-tools{display:grid;grid-template-columns:1fr auto;}.office-filters{display:contents;}.office-search{grid-column:1/-1;width:100%;}.office-register-tools select{width:max-content;max-width:100%;}}

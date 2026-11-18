@@ -23,12 +23,10 @@ export function Kicker({ children }: { children: ReactNode }) {
 }
 
 export function PageIntro({
-  eyebrow,
   title,
   description,
   aside,
 }: {
-  eyebrow: string;
   title: string;
   description: string;
   aside?: ReactNode;
@@ -36,7 +34,6 @@ export function PageIntro({
   return (
     <header className="page-intro">
       <div>
-        <Kicker>{eyebrow}</Kicker>
         <h1>{title}</h1>
         <p className="intro-description">{description}</p>
       </div>
