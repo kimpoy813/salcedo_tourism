@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { listingPhoto } from "@/lib/visitor-media";
 import { Modal } from "@/components/ui/Modal";
 import { SectionHeader, Skeleton, StepHeader } from "@/components/ui/design";
 import Link from "next/link";
@@ -30,7 +31,7 @@ import {
   Search,
   Send,
   ShieldCheck,
-  Sparkles,
+  Map as MapIcon,
   Star,
   Trash2,
   TriangleAlert,
@@ -590,7 +591,7 @@ export function TripsPlannerClient({
       placeSlug: p.slug,
       placeType: p.placeType,
       barangayName: p.barangay?.name ?? null,
-      featuredImageUrl: p.featuredImageUrl ?? null,
+      featuredImageUrl: listingPhoto(p),
       latitude: p.latitude ?? null,
       longitude: p.longitude ?? null,
       visitTime: times[idx] || "",
@@ -622,7 +623,7 @@ export function TripsPlannerClient({
             placeSlug: place.slug,
             placeType: place.placeType,
             barangayName: place.barangay?.name ?? null,
-            featuredImageUrl: place.featuredImageUrl ?? null,
+            featuredImageUrl: listingPhoto(place),
             latitude: place.latitude ?? null,
             longitude: place.longitude ?? null,
             day: activeDay,
@@ -1056,7 +1057,6 @@ export function TripsPlannerClient({
                     type="text"
                     value={draft.title}
                     onChange={(e) => void persistDraft({ ...draft, title: e.target.value })}
-                    aria-label="Trip Title"
                     className="w-full font-display text-3xl font-medium text-[#1A2421] bg-transparent focus:outline-none border-b border-transparent focus:border-[#EAE7E0] pb-0.5"
                   />
 
@@ -1073,7 +1073,7 @@ export function TripsPlannerClient({
                 {draft.stops.length === 0 && availablePlaces.length > 0 && (
                   <div className="pt-2 border-t border-[#EAE7E0] space-y-2">
                     <p className="text-[11px] font-semibold text-[#616E69] inline-flex items-center gap-1">
-                      <Sparkles className="w-3.5 h-3.5 text-[#B88A44]" />
+                      <MapIcon className="w-3.5 h-3.5 text-[#B88A44]" />
                       Start from a Salcedo route
                     </p>
                     <div className="grid grid-cols-2 gap-2">
@@ -1158,13 +1158,12 @@ export function TripsPlannerClient({
                           return (
                             <>
                               <div className="flex items-center gap-3">
-                                <Image
-                                  src={s.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
-                                  alt={s.placeName}
+                                {listingPhoto(s) && <Image src={listingPhoto(s)!}
+                                  alt=""
                                   width={44}
                                   height={44}
                                   className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                                />
+                                />}
                                 <div className="flex-1 min-w-0">
                                   <Link
                                     href={`/app/places/${s.placeSlug}`}
@@ -1615,7 +1614,7 @@ export function TripsPlannerClient({
                       href={`/app/places/${p.slug}`}
                       className="saved-place-row"
                     >
-                      <Image src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"} alt="" width={70} height={50}/>
+                      {listingPhoto(p) && <Image src={listingPhoto(p)!} alt="" width={70} height={50}/>}
                       <span>{p.name}<small>{p.barangay?.name || "Salcedo"}</small></span>
                     </Link>
                     <button
@@ -1963,13 +1962,12 @@ export function TripsPlannerClient({
                     onClick={() => void toggleStop(p)}
                     className="w-full flex items-center gap-3 py-3 text-left active:bg-[#FAF9F6] cursor-pointer"
                   >
-                    <Image
-                      src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
-                      alt={p.name}
+                    {listingPhoto(p) && <Image src={listingPhoto(p)!}
+                      alt=""
                       width={44}
                       height={44}
                       className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                    />
+                    />}
                     <div className="flex-1 min-w-0">
                       <p className="font-display font-bold text-xs text-[#1A2421] truncate">
                         {p.name}

@@ -6,7 +6,7 @@ import { BrowserAtlas } from "./BrowserAtlas";
 import {
   Check,
   Coffee,
-  Grid2X2,
+  List,
   Landmark,
   LayoutGrid,
   Map as MapIcon,
@@ -124,7 +124,7 @@ export function DiscoverDirectoryClient({
               type="search"
               value={query}
               onChange={(e) => changeView({ q: e.target.value })}
-              placeholder="Search places, activities, or barangays…"
+              placeholder="Search by place or barangay"
             />
           </label>
           <button type="button" className="secondary-button" onClick={() => setFiltersOpen(true)}>
@@ -134,11 +134,11 @@ export function DiscoverDirectoryClient({
           <div className="view-toggle" aria-label="Directory view">
             <button
               aria-pressed={!isMap}
-              aria-label="Grid view"
+              aria-label="List view"
               onClick={() => changeView({ view: "" })}
             >
-              <Grid2X2 size={16} />
-              <span>Grid</span>
+              <List size={16} />
+              <span>List</span>
             </button>
             <button
               aria-pressed={isMap}
@@ -187,7 +187,7 @@ export function DiscoverDirectoryClient({
           ) : interest ? (
             ` in ${interest.label.toLowerCase()}`
           ) : (
-            " to explore"
+            " in the directory"
           )}
         </p>
         <label>
@@ -240,9 +240,9 @@ export function DiscoverDirectoryClient({
         Array.from(groups, ([name, group]) => (
           <section key={name} className="directory-group">
             {name && <h2>{name}</h2>}
-            <div className="places-grid">
-              {group.map((p) => (
-                <PlaceCard key={p.id} place={p} />
+            <div className="directory-entries">
+              {group.map((p,i) => (
+                <PlaceCard key={p.id} place={p} number={i+1} />
               ))}
             </div>
           </section>

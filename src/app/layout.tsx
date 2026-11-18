@@ -3,6 +3,7 @@ import { QueryProvider } from "@/components/providers/QueryProvider";
 import localFont from "next/font/local";
 import "./globals.css";
 import "./field-guide.css";
+import "./visitor-guide.css";
 
 const sans = localFont({
   src: "./fonts/dm-sans-latin-wght-normal.woff2",
@@ -42,7 +43,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FAF9F6",
+  themeColor: "#FCFBF7",
   width: "device-width",
   initialScale: 1,
   viewportFit: "cover",

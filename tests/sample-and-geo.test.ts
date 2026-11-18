@@ -71,6 +71,26 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
     expect(computeHaversineKm(17.15107, 120.53634, 17.1415, 120.5675)).toBeGreaterThan(3);
   });
 
+  it("uses the first non-illustrative photo in publication order without changing stored media", async () => {
+    const db = await createMigratedTestDb();
+    await resetLocalTestDb(db);
+    const cover = "/uploads/valley-illustration.jpg";
+    const first = "/uploads/accessible-entrance.jpg";
+    const [place] = await db.insert(schema.places).values({
+      name: "Photo fixture", slug: "photo-fixture", placeType: "nature", status: "published",
+      shortDescription: "Fixture", description: "Fixture", address: "Salcedo",
+      sourceReference: "Test", featuredImageUrl: cover,
+    }).returning();
+    await db.insert(schema.placeImages).values([
+      { placeId: place.id, url: cover, isIllustrative: true, displayOrder: 0 },
+      { placeId: place.id, url: "/uploads/path.jpg", displayOrder: 2 },
+      { placeId: place.id, url: first, displayOrder: 1, attribution: "Tourism office" },
+    ]);
+    const [entry] = await getPublishedPlaces();
+    expect(entry.displayPhotoUrl).toBe(first);
+    expect(entry.featuredImageUrl).toBe(cover);
+  });
+
   it("seeds sample places, tourist ratings, rankings, itineraries, check-ins, and analytics idempotently", async () => {
     const db = await createMigratedTestDb();
     await resetLocalTestDb(db);

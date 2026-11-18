@@ -21,6 +21,23 @@ test("the installed atlas and Discover map open from a cold offline navigation",
     )
     .toBe(true);
   await context.setOffline(true);
+  await page.goto("/app/");
+  for (const [path, width] of [
+    ["/app/maps/valley-plate.webp", 1440],
+    ["/app/maps/salcedo-relief.webp", 1024],
+    ["/app/maps/salcedo-locator.webp", 1024],
+    ["/images/salcedo/cacao-plate.webp", 500],
+    ["/images/salcedo/municipal-seal.webp", 120],
+  ] as const) {
+    expect(
+      await page.evaluate(async (url) => {
+        const img = new Image();
+        img.src = url;
+        await img.decode();
+        return img.naturalWidth;
+      }, path),
+    ).toBe(width);
+  }
   await page.goto("/app/map?place=baluarte-falls-agila-falls");
   await expect(page.locator(".atlas-preview h2")).toHaveText("Baluarte Falls");
   await expect(page.locator(".atlas-surface canvas")).toBeAttached();

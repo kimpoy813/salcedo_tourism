@@ -106,7 +106,7 @@ export async function POST(req: Request) {
           email: input.email ?? null,
           websiteUrl: input.websiteUrl ?? null,
           socialMediaUrl: input.socialMediaUrl ?? null,
-          featuredImageUrl: input.featuredImageUrl ?? "/images/salcedo/hero-salcedo-valley.png",
+          featuredImageUrl: input.featuredImageUrl ?? null,
           featuredImageCaption: input.featuredImageCaption ?? null,
           isFeatured: input.isFeatured,
           isHiddenGem: input.isHiddenGem,

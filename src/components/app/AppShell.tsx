@@ -84,8 +84,9 @@ function GuideShell({ children }: { children: ReactNode }) {
       </a>
       <header className="site-header no-print">
         <div className="guide-wrap header-layout">
-          <Link href="/app/" aria-label="Salcedo Tourism Guide home">
+          <Link href="/app/">
             <Wordmark />
+            <span className="sr-only"> home</span>
           </Link>
           <nav aria-label="Main navigation" className="desktop-nav">
             {NAV.map((item) => (
@@ -102,12 +103,16 @@ function GuideShell({ children }: { children: ReactNode }) {
             <Link
               className="saved-link"
               href="/app/trips?tab=saved"
-              aria-label={`Saved places${savedCount ? ` (${savedCount})` : ""}`}
+              aria-label={`Saved${savedCount ? ` (${savedCount})` : ""} places`}
             >
               <Bookmark size={16} />
               <span>Saved{savedCount > 0 ? ` (${savedCount})` : ""}</span>
             </Link>
-            <Link className="trip-link" href="/app/trips">
+            <Link
+              className="trip-link"
+              href="/app/trips"
+              aria-current={active(TRIP.href) ? "page" : undefined}
+            >
               <Route size={16} />
               <span>My trip</span>
               {draftStopCount > 0 && <b>{draftStopCount}</b>}
@@ -127,8 +132,9 @@ function GuideShell({ children }: { children: ReactNode }) {
       {!isMap && (
         <footer className="site-footer no-print">
           <div className="guide-wrap footer-layout">
-            <Link href="/app/" aria-label="Salcedo Tourism Guide home">
+            <Link href="/app/">
               <Wordmark />
+              <span className="sr-only"> home</span>
             </Link>
             <p>
               Project CEDO: Turi <span>·</span> Municipality of Salcedo, Ilocos Sur

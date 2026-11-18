@@ -5,7 +5,7 @@ import {
   getPublishedPlaces,
 } from "@/lib/queries/public-tourism";
 import { DiscoverDirectoryClient } from "@/components/app/DiscoverDirectoryClient";
-import { FieldStamp, PageIntro } from "@/components/ui/FieldGuide";
+import { PageIntro } from "@/components/ui/FieldGuide";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Discover places" };
@@ -19,10 +19,9 @@ export default async function DiscoverPage() {
   return (
     <div className="guide-wrap directory-page">
       <PageIntro
-        eyebrow="The place directory"
-        title="Discover Salcedo"
-        description="Find a mountain escape, a table for lunch, or your next place to stay."
-        aside={<FieldStamp />}
+        eyebrow="Salcedo, Ilocos Sur"
+        title="Place directory"
+        description="Look up a destination by name, interest, or barangay."
       />
       <Suspense
         fallback={

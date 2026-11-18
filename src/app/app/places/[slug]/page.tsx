@@ -7,13 +7,11 @@ import {
   BedDouble,
   Car,
   Check,
-  CheckCircle2,
   Clock,
   Coffee,
   ExternalLink,
   Eye,
   Flame,
-  Gem,
   Globe,
   Home,
   MapPin,
@@ -35,7 +33,10 @@ import {
 } from "@/components/app/PlaceDetailClient";
 import { PlaceCard } from "@/components/app/PlaceCard";
 import { Chip, FeatureTile, InfoRow, SectionHeader, StatTile } from "@/components/ui/design";
-import { PlaceGallery, PlacePhotosSection, type GalleryImage } from "@/components/app/PlaceGallery";
+import { PlaceGallery, PlacePhotosSection } from "@/components/app/PlaceGallery";
+
+import { placePhotos } from "@/lib/visitor-media";
+import { PlaceLocator } from "@/components/app/PlaceLocator";
 
 export const dynamic = "force-dynamic";
 
@@ -66,14 +67,14 @@ export default async function PlaceDetailPage({
     notFound();
   }
 
-  const imageSrc = place.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png";
+  const gallery = placePhotos(place.featuredImageUrl, place.featuredImageCaption, place.images);
   const actionPayload = {
     id: place.id,
     name: place.name,
     slug: place.slug,
     placeType: place.placeType,
     barangayName: place.barangay?.name ?? null,
-    featuredImageUrl: place.featuredImageUrl ?? null,
+    featuredImageUrl: gallery[0]?.url ?? null,
     latitude: place.latitude ?? null,
     longitude: place.longitude ?? null,
   };
@@ -97,19 +98,6 @@ export default async function PlaceDetailPage({
   }
   const categoryLabel = place.primaryCategory?.name || place.placeType;
 
-  // Photo gallery: cover first, then the place's gallery images (deduped)
-  const gallery: GalleryImage[] = [];
-  const seenUrls = new Set<string>();
-  const pushImage = (url?: string | null, caption?: string | null) => {
-    if (url && !seenUrls.has(url)) {
-      seenUrls.add(url);
-      gallery.push({ url, caption: caption ?? null });
-    }
-  };
-  pushImage(place.featuredImageUrl, place.featuredImageCaption);
-  for (const img of place.images) pushImage(img.url, img.caption);
-  if (gallery.length === 0) pushImage(imageSrc, null);
-
   return (
     <div className="guide-wrap detail-page">
       <nav className="breadcrumbs" aria-label="Breadcrumb">
@@ -121,7 +109,17 @@ export default async function PlaceDetailPage({
       </nav>
       <div className="detail-lead">
         <div className="detail-gallery">
-          <PlaceGallery name={place.name} images={gallery} />
+          {gallery.length ? (
+            <PlaceGallery name={place.name} images={gallery} />
+          ) : (
+            <PlaceLocator
+              name={place.name}
+              slug={place.slug}
+              latitude={place.latitude}
+              longitude={place.longitude}
+              area={place.barangay?.name}
+            />
+          )}
           <PlaceHeroOverlayControls place={actionPayload} />
         </div>
         <header className="detail-heading">
@@ -137,17 +135,7 @@ export default async function PlaceDetailPage({
             {place.address}
           </p>
           <div className="detail-tags">
-            <span>
-              <CheckCircle2 size={13} />
-              Municipal directory
-            </span>
             {openNow !== null && <span>{openNow ? "Open now" : "Closed now"}</span>}
-            {place.isHiddenGem && (
-              <span>
-                <Gem size={13} />
-                Hidden gem
-              </span>
-            )}
             {place.ratingCount > 0 && (
               <a href="#community-reviews">
                 <Star size={13} />
@@ -624,7 +612,6 @@ export default async function PlaceDetailPage({
         <section className="detail-related">
           <div className="section-heading">
             <div>
-              <Kicker>Keep exploring</Kicker>
               <h2>More in Salcedo</h2>
             </div>
             <Link className="text-link" href="/app/discover">

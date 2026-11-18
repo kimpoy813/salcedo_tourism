@@ -40,6 +40,7 @@ import {
   municipalBounds,
   node,
 } from "./cartography";
+import { RELIEF } from "@/lib/geo/relief";
 import { MAP_LAYERS, type LayerId } from "./layers";
 
 export type CameraTarget =
@@ -296,6 +297,31 @@ export function AtlasCanvas({
       part.remove();
     };
   }, [isField, borders, area, compact]);
+  // The generalized surface is useful at valley scale, not street or trail scale.
+  const reliefOpacity =
+    zoom <= 13.5 ? 0.88 : zoom <= 14.5 ? 0.6 : zoom < 15.5 ? 0.25 : 0;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isField || !reliefOpacity) return;
+    const relief = L.imageOverlay(
+      "/app/maps/salcedo-relief.webp",
+      [
+        [RELIEF.south, RELIEF.west],
+        [RELIEF.north, RELIEF.east],
+      ],
+      {
+        pane: "tilePane",
+        opacity: reliefOpacity,
+        interactive: false,
+        alt: "",
+        attribution:
+          '<a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">GEBCO 2020</a>',
+      },
+    ).addTo(map);
+    return () => {
+      relief.remove();
+    };
+  }, [isField, reliefOpacity]);
   const detail = zoom >= 14.5;
   useEffect(() => {
     if (mapRef.current && isField && fieldData)
@@ -409,13 +435,12 @@ export function AtlasCanvas({
         type="button"
         onClick={() => setOptions(true)}
         aria-haspopup="dialog"
-        aria-label={`Map layers: ${MAP_LAYERS[layerId].name}`}
       >
         <span className={"layer-swatch " + layerId} aria-hidden="true">
           <Layers size={18} />
         </span>
         <span>
-          <small>Map layers</small>
+          <small>Map layers </small>
           <b>{MAP_LAYERS[layerId].name}</b>
         </span>
         <ChevronDown size={14} />
@@ -463,11 +488,8 @@ export function AtlasCanvas({
           </button>
         </div>
       </div>
-      {!compact && (
+      {!compact && (isField || weather) && (
         <div className="atlas-corner">
-          <span className="atlas-sheet-id">
-            SALCEDO <i /> FIELD ATLAS
-          </span>
           {isField && <MapKey />}
           {weather && (
             <span
@@ -567,7 +589,8 @@ export function AtlasCanvas({
             <MapKey />
             <p className="atlas-source-note">
               Select a numbered circle to explore its places. The field map is
-              for orientation, not turn-by-turn navigation.{" "}
+              for orientation, not turn-by-turn navigation. Generalized relief:
+              GEBCO 2020.{" "}
               <a href="/app/maps/salcedo-field.geojson" download>
                 Local OSM extract
               </a>{" "}
