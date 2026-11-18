@@ -225,3 +225,38 @@ export function PlaceListSkeleton({ rows = 5 }: { rows?: number }) {
     </div>
   );
 }
+
+/**
+ * The one header for every numbered step section (Trip planner Steps 1–3).
+ * Number badge + eyebrow + Fraunces title + description, identical metrics
+ * everywhere so the steps read as one matched set.
+ */
+export function StepHeader({
+  step,
+  eyebrow,
+  title,
+  description,
+  action,
+}: {
+  step: number;
+  eyebrow: string;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3 min-w-0">
+        <span className="w-8 h-8 rounded-full bg-[#164237] text-white font-display text-sm font-bold flex items-center justify-center shrink-0 shadow-[0_6px_16px_-6px_rgba(22,66,55,0.6)]">
+          {step}
+        </span>
+        <div className="space-y-0.5 min-w-0 pt-0.5">
+          <Eyebrow>{eyebrow}</Eyebrow>
+          <h2 className="font-display text-lg font-bold leading-tight text-[#1A2421]">{title}</h2>
+          {description && <p className="text-xs leading-relaxed text-[#616E69]">{description}</p>}
+        </div>
+      </div>
+      {action && <div className="shrink-0">{action}</div>}
+    </div>
+  );
+}
