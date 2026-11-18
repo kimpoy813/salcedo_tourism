@@ -1,7 +1,8 @@
 "use client";
 
+import { StaffNotice } from "./StaffNotice";
 import React, { useState } from "react";
-import { FileClock, Shield, Upload, UserPlus, X } from "lucide-react";
+import { FileClock, Shield, Upload, UserPlus } from "lucide-react";
 
 export { AdminContentPanel } from "./AdminContentPanel";
 
@@ -44,6 +45,8 @@ export function AdminMediaPanel({
         setNotice({ text: "Asset uploaded.", tone: "ok" });
         await onReload();
       }
+    } catch {
+      setNotice({ text: "Upload could not be confirmed. Check the media library before trying again.", tone: "err" });
     } finally {
       setUploading(false);
     }
@@ -51,24 +54,7 @@ export function AdminMediaPanel({
 
   return (
     <div className="space-y-4">
-      {notice && (
-        <div
-          className={`rounded-xl border px-3.5 py-2 text-xs flex items-center justify-between ${
-            notice.tone === "err"
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-white border-[#EAE7E0] text-[#164237]"
-          }`}
-        >
-          <span>{notice.text}</span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            className="text-[#616E69] hover:text-[#1A2421] cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
 
       <form
         onSubmit={handleUpload}
@@ -84,6 +70,7 @@ export function AdminMediaPanel({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <label className="grid gap-1.5 font-medium">Image file (PNG, JPG, WebP or GIF)
           <input
             required
             type="file"
@@ -91,13 +78,16 @@ export function AdminMediaPanel({
             accept="image/png,image/jpeg,image/webp,image/gif"
             className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
           />
+          </label>
+          <label className="grid gap-1.5 font-medium">Photo credit
           <input
             type="text"
             value={attribution}
             onChange={(e) => setAttribution(e.target.value)}
-            placeholder="Source Attribution"
+            placeholder="Photographer or source"
             className="rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
           />
+          </label>
         </div>
 
         <button
@@ -110,6 +100,7 @@ export function AdminMediaPanel({
         </button>
       </form>
 
+      {assets.length === 0 && <p className="empty-note">No images yet. Upload a photo above to use it in the guide.</p>}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {assets.map((a) => (
           <div
@@ -122,9 +113,11 @@ export function AdminMediaPanel({
               <p className="text-[11px] text-[#616E69] truncate">{a.attribution}</p>
               <button
                 type="button"
-                onClick={() => {
-                  navigator.clipboard?.writeText(a.url);
-                  setNotice({ text: "Asset URL copied.", tone: "ok" });
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(a.url);
+                    setNotice({ text: "Image URL copied.", tone: "ok" });
+                  } catch { setNotice({ text: `Copy this image URL: ${a.url}`, tone: "ok" }); }
                 }}
                 className="text-[11px] font-semibold text-[#164237] hover:underline cursor-pointer"
               >
@@ -141,10 +134,14 @@ export function AdminMediaPanel({
 export function AdminGovernancePanel({
   users,
   auditLogs,
+  canUsers, canAudit, canSettings,
   privacySettings,
   analyticsSettings,
   onReload,
 }: {
+  canUsers: boolean;
+  canAudit: boolean;
+  canSettings: boolean;
   users: Array<{
     id: string;
     username: string;
@@ -178,49 +175,38 @@ export function AdminGovernancePanel({
   const [roleSlug, setRoleSlug] = useState("content_editor");
   const [notice, setNotice] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
 
+  const [creating, setCreating] = useState(false);
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setNotice(null);
-    const res = await fetch("/api/admin/users", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, email, fullName, password, roleSlug }),
-    });
-    if (!res.ok) {
-      const err = await res.json();
-      setNotice({ text: err.error || "Failed to create admin user.", tone: "err" });
-      return;
-    }
-    setUsername("");
-    setEmail("");
-    setFullName("");
-    setPassword("");
-    setNotice({ text: "Staff account created.", tone: "ok" });
-    await onReload();
+    setCreating(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, email, fullName, password, roleSlug }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        setNotice({ text: err.error || "Failed to create admin user.", tone: "err" });
+        return;
+      }
+      setUsername("");
+      setEmail("");
+      setFullName("");
+      setPassword("");
+      setNotice({ text: "Staff account created.", tone: "ok" });
+      await onReload();
+    } catch {
+      setNotice({ text: "The account could not be confirmed. Check the account list before trying again.", tone: "err" });
+    } finally { setCreating(false); }
   };
 
   return (
     <div className="space-y-4">
-      {notice && (
-        <div
-          className={`rounded-xl border px-3.5 py-2 text-xs flex items-center justify-between ${
-            notice.tone === "err"
-              ? "bg-rose-50 border-rose-200 text-rose-800"
-              : "bg-white border-[#EAE7E0] text-[#164237]"
-          }`}
-        >
-          <span>{notice.text}</span>
-          <button
-            type="button"
-            onClick={() => setNotice(null)}
-            className="text-[#616E69] hover:text-[#1A2421] cursor-pointer"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      )}
+      <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      {canUsers && <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <form
           onSubmit={handleCreateUser}
           className="lg:col-span-5 bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-2.5 text-xs"
@@ -262,6 +248,7 @@ export function AdminGovernancePanel({
             placeholder="Password (min 8 chars)"
             className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
           />
+          <label className="grid gap-1 font-medium">Staff role
           <select
             value={roleSlug}
             onChange={(e) => setRoleSlug(e.target.value)}
@@ -272,18 +259,20 @@ export function AdminGovernancePanel({
             <option value="visitor_data_officer">Visitor Data Officer</option>
             <option value="super_admin">Super Administrator</option>
           </select>
+          </label>
           <button
             type="submit"
+            disabled={creating}
             className="w-full rounded-full bg-[#164237] text-white py-2.5 font-semibold cursor-pointer"
           >
-            Create Account
+            {creating ? "Creating…" : "Create account"}
           </button>
         </form>
 
         <div className="lg:col-span-7 bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
           <div className="flex items-center gap-1.5 font-display text-sm font-bold text-[#1A2421]">
             <Shield className="w-4 h-4 text-[#1D7874]" />
-            RBAC Staff Accounts
+            Staff accounts
           </div>
           <ul className="divide-y divide-[#EAE7E0] text-xs">
             {users.map((u) => (
@@ -309,9 +298,9 @@ export function AdminGovernancePanel({
             ))}
           </ul>
         </div>
-      </div>
+      </div>}
 
-      <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-2.5">
+      {canSettings && <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-2.5">
         <h3 className="font-display text-sm font-bold text-[#1A2421]">
           RA 10173 &amp; Analytics Configuration
         </h3>
@@ -335,14 +324,14 @@ export function AdminGovernancePanel({
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
-      <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-2.5">
+      {canAudit && <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-2.5">
         <div className="flex items-center gap-1.5 font-display text-sm font-bold text-[#1A2421]">
           <FileClock className="w-4 h-4 text-[#164237]" />
           Audit Log
         </div>
-        <ul className="divide-y divide-[#EAE7E0] max-h-72 overflow-y-auto text-xs">
+        <ul tabIndex={0} aria-label="Recent audit entries" className="divide-y divide-[#EAE7E0] max-h-72 overflow-y-auto text-xs">
           {auditLogs.map((log) => (
             <li key={log.id} className="py-2.5 flex items-center justify-between gap-3">
               <div>
@@ -357,7 +346,7 @@ export function AdminGovernancePanel({
             </li>
           ))}
         </ul>
-      </div>
+      </div>}
     </div>
   );
 }

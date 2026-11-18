@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  devIndicators: false,
+  // Keep the installed home URL inside the /app/ service-worker scope.
+  skipTrailingSlashRedirect: true,
+  allowedDevOrigins: ["*.e2b.app"],
   serverExternalPackages: ["@electric-sql/pglite", "ws", "sharp"],
   images: {
     remotePatterns: [

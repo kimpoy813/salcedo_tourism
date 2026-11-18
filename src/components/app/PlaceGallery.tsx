@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
+import { Modal } from "@/components/ui/Modal";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 
 export interface GalleryImage {
@@ -27,12 +28,8 @@ function Lightbox({
   const go = (dir: 1 | -1) => setIndex((index + dir + total) % total);
 
   return (
-    <div
-      className="fixed inset-0 z-[80] bg-black/95 flex flex-col"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Photos of ${name}`}
-    >
+    <Modal className="lightbox-dialog" label={`Photos of ${name}`} onClose={onClose}>
+      <div className="lightbox-layout" onKeyDown={e => { if (e.key === "ArrowRight") go(1); if (e.key === "ArrowLeft") go(-1); }}>
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-white text-xs font-semibold tabular-nums">
           {index + 1} / {total} · {name}
@@ -95,7 +92,8 @@ function Lightbox({
           </button>
         ))}
       </div>
-    </div>
+      </div>
+    </Modal>
   );
 }
 
@@ -126,12 +124,12 @@ export function PlaceGallery({
           alt={current.caption || name}
           fill
           priority={index === 0}
-          sizes="100vw"
+          sizes="(max-width: 780px) 100vw, 52vw"
           className="object-cover animate-in fade-in duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-transparent to-black/30 pointer-events-none" />
 
-        <div className="absolute bottom-10 right-3 flex items-center gap-1.5 z-10">
+        <div className="absolute bottom-3 right-3 flex items-center gap-1.5 z-10">
           <span className="rounded-full bg-black/55 backdrop-blur-md text-white px-2.5 py-1 text-[11px] font-semibold tabular-nums">
             {index + 1} / {total}
           </span>
@@ -167,7 +165,7 @@ export function PlaceGallery({
         )}
 
         {current.caption && (
-          <p className="absolute bottom-10 left-3 z-10 max-w-[62%] rounded-full bg-black/55 backdrop-blur-md text-white px-3 py-1 text-[11px] font-medium truncate">
+          <p className="absolute bottom-3 left-3 z-10 max-w-[62%] rounded-full bg-black/55 backdrop-blur-md text-white px-3 py-1 text-[11px] font-medium truncate">
             {current.caption}
           </p>
         )}
@@ -205,7 +203,7 @@ export function PlacePhotosSection({
 
   return (
     <>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4">
+      <div className="gallery-rail">
         {images.map((img, i) => (
           <button
             key={`${img.url}-${i}`}

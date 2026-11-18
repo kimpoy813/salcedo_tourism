@@ -4,13 +4,13 @@ export async function GET() {
   const manifest = {
     id: "/app/",
     name: "Project CEDO: Turi",
-    short_name: "Project CEDO: Turi",
+    short_name: "Turi",
     description:
       "Project CEDO: Turi — Official Municipal Tourism Discovery, Visitor Information, and Itinerary App for Salcedo, Ilocos Sur, Philippines.",
     start_url: "/app/",
     scope: "/app/",
     display: "standalone",
-    orientation: "portrait",
+    orientation: "any",
     background_color: "#FAF9F6",
     theme_color: "#164237",
     lang: "en-PH",
@@ -48,7 +48,7 @@ export async function GET() {
         sizes: "1280x720",
         type: "image/png",
         form_factor: "wide",
-        label: "Project CEDO: Turi App — Salcedo Map & Itinerary Planner",
+        label: "Project CEDO: Turi App — Salcedo Place Directory",
       },
     ],
     shortcuts: [

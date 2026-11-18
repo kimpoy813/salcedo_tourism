@@ -47,12 +47,12 @@ The Tourist PWA lives strictly under `/app/` so installed app users open directl
    - **Start URL:** `/app/`
    - **Scope:** `/app/`
    - **Display:** `standalone`
-   - **Theme Color:** `#123F35`
+   - **Theme Color:** `#164237`
    - **Icons:** `192x192`, `512x512`, and `512x512` maskable PNGs under `/app/icons/`
    - **Screenshots:** Narrow (`540x960`) and Wide (`1280x720`) PNGs under `/app/screenshots/`
 3. PWABuilder will validate `/app/sw.js`:
    - Served with `Service-Worker-Allowed: /app/` and `Cache-Control: no-store`.
-   - Offline fallback (`/app/offline`) verified.
+   - Visit `/app/` online first and wait for the worker to activate. In offline mode, reload `/app/trips` to check that local drafts and saved places still open. Uncached destination URLs show `/app/offline`.
    - Explicitly bypasses `/admin` and `/api/*` so personal visitor data and admin state are never cached.
 4. Generate the **Android Package (AAB / APK via Trusted Web Activity / Bubblewrap)**.
 

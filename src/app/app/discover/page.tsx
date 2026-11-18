@@ -5,8 +5,10 @@ import {
   getPublishedPlaces,
 } from "@/lib/queries/public-tourism";
 import { DiscoverDirectoryClient } from "@/components/app/DiscoverDirectoryClient";
+import { FieldStamp, PageIntro } from "@/components/ui/FieldGuide";
 
 export const dynamic = "force-dynamic";
+export const metadata = { title: "Discover places" };
 
 export default async function DiscoverPage() {
   const [places, categories, barangays] = await Promise.all([
@@ -14,25 +16,19 @@ export default async function DiscoverPage() {
     getCategoriesWithCounts(),
     getAllBarangaysWithCounts(),
   ]);
-
   return (
-    <div className="pt-[max(18px,env(safe-area-inset-top))] pb-6 space-y-2">
-      <div className="px-4 space-y-0.5">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
-          Directory
-        </p>
-        <h1 className="font-display text-2xl font-bold text-[#1A2421]">
-          Discover Salcedo
-        </h1>
-      </div>
-
+    <div className="guide-wrap directory-page">
+      <PageIntro
+        eyebrow="The place directory"
+        title="Discover Salcedo"
+        description="Find a mountain escape, a table for lunch, or your next place to stay."
+        aside={<FieldStamp />}
+      />
       <Suspense
         fallback={
-          <div className="px-4">
-            <div className="rounded-2xl bg-white border border-[#EAE7E0] p-6 text-xs text-[#616E69]">
-              Loading directory...
-            </div>
-          </div>
+          <p className="empty-note" role="status">
+            Loading the directory…
+          </p>
         }
       >
         <DiscoverDirectoryClient

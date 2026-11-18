@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { Kicker, Wordmark } from "@/components/ui/FieldGuide";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
 
@@ -38,101 +40,87 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF9F6] text-[#1A2421] flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-5">
-        <Link
-          href="/app"
-          className="inline-flex items-center gap-1.5 text-xs font-medium text-[#616E69] hover:text-[#164237] transition"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Tourist App
+    <main className="staff-login">
+      <aside className="staff-login-landscape">
+        <Image src="/images/salcedo/hero-salcedo-valley.png" fill sizes="55vw" priority alt="" />
+        <div className="login-shade" />
+        <div>
+          <Kicker>Municipality of Salcedo</Kicker>
+          <h2>
+            Behind the
+            <br />
+            <em>field guide.</em>
+          </h2>
+          <p>
+            The tourism office workspace for local places, visitor information, and travel planning.
+          </p>
+        </div>
+      </aside>
+      <section className="staff-login-form">
+        <Link className="back-link" href="/app/">
+          <ArrowLeft size={15} />
+          Back to the visitor guide
         </Link>
-
-        <div className="bg-white rounded-3xl border border-[#EAE7E0] p-7 space-y-6">
-          <div className="flex items-center gap-3">
-            <img
-              src="/images/salcedo/turi-logo.png"
-              alt="Project CEDO: Turi Logo"
-              className="w-11 h-11 rounded-xl object-cover shrink-0 shadow-xs"
+        <div className="login-inner">
+          <Wordmark subtitle="Tourism office" />
+          <div className="login-heading">
+            <Kicker>Staff workspace</Kicker>
+            <h1>Staff sign in</h1>
+            <p>Use your municipal staff account to continue.</p>
+          </div>
+          <form onSubmit={handleSubmit} aria-busy={loading}>
+            <label htmlFor="username">Username or official email</label>
+            <input
+              id="username"
+              name="username"
+              className="guide-field"
+              required
+              autoComplete="username"
+              autoCapitalize="none"
+              spellCheck={false}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
             />
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
-                Project CEDO: Turi
-              </p>
-              <h1 className="font-display text-xl font-bold text-[#1A2421]">
-                Admin Console
-              </h1>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#616E69] flex items-start gap-2">
-            <ShieldCheck className="w-4 h-4 text-[#164237] shrink-0 mt-0.5" />
-            <span>
-              Restricted to authorized LGU tourism staff. Tourist browsing remains
-              account-free.
-            </span>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#616E69]">
-                Username or Official Email
-              </label>
+            <label htmlFor="password">Password</label>
+            <div className="login-password">
               <input
-                type="text"
+                id="password"
+                name="password"
+                type={showPassword ? "text" : "password"}
+                className="guide-field"
                 required
-                autoComplete="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="cedo_superadmin"
-                className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3.5 py-2.5 text-sm focus:outline-none focus:border-[#164237]/40"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
+              <button
+                type="button"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                aria-pressed={showPassword}
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+              </button>
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-[#616E69]">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] pl-3.5 pr-10 py-2.5 text-sm focus:outline-none focus:border-[#164237]/40"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((prev) => !prev)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-[#616E69] hover:text-[#1A2421] cursor-pointer"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-4 h-4" />
-                  ) : (
-                    <Eye className="w-4 h-4" />
-                  )}
-                </button>
-              </div>
-            </div>
-
             {error && (
-              <div className="rounded-xl bg-rose-50 border border-rose-200 px-3 py-2 text-xs text-rose-800">
+              <p className="form-error" role="alert">
                 {error}
-              </div>
+              </p>
             )}
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#164237] text-white py-3 text-xs font-semibold hover:bg-[#10322A] transition disabled:opacity-60 cursor-pointer"
-            >
-              <Lock className="w-3.5 h-3.5" />
-              {loading ? "Signing in..." : "Sign In"}
+            <button className="primary-button" type="submit" disabled={loading}>
+              <Lock size={15} />
+              {loading ? "Signing in…" : "Sign in"}
             </button>
           </form>
+          <p className="staff-notice">
+            <ShieldCheck size={17} />
+            For authorized LGU staff. Visitors can explore and plan trips without signing in.
+          </p>
         </div>
-      </div>
-    </div>
+        <p className="login-colophon">
+          Project CEDO: Turi <span>·</span> Salcedo, Ilocos Sur
+        </p>
+      </section>
+    </main>
   );
 }

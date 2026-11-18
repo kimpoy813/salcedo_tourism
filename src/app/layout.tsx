@@ -1,6 +1,23 @@
 import type { Metadata, Viewport } from "next";
-import "./globals.css";
 import { QueryProvider } from "@/components/providers/QueryProvider";
+import localFont from "next/font/local";
+import "./globals.css";
+import "./field-guide.css";
+
+const sans = localFont({
+  src: "./fonts/dm-sans-latin-wght-normal.woff2",
+  variable: "--guide-sans",
+  weight: "100 1000",
+  display: "swap",
+});
+const serif = localFont({
+  src: [
+    { path: "./fonts/newsreader-latin-standard-normal.woff2", weight: "200 800", style: "normal" },
+    { path: "./fonts/newsreader-latin-standard-italic.woff2", weight: "200 800", style: "italic" },
+  ],
+  variable: "--guide-serif",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -33,8 +50,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-[#FAF9F6] text-[#1A2421] antialiased">
+    <html lang="en-PH" className={`${sans.variable} ${serif.variable}`}>
+      <body className="min-h-screen antialiased">
         <QueryProvider>{children}</QueryProvider>
       </body>
     </html>

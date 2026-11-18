@@ -2,13 +2,16 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { SectionHeader, StepHeader } from "@/components/ui/design";
+import { Modal } from "@/components/ui/Modal";
+import { SectionHeader, Skeleton, StepHeader } from "@/components/ui/design";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowDown,
   ArrowUp,
   BadgeCheck,
+  Bookmark,
+  ArrowRight,
   Calendar,
   Check,
   ChevronDown,
@@ -51,7 +54,6 @@ import {
   removeLocalReceipt,
   saveLocalDraft,
   saveLocalReceipt,
-  toggleSavedPlaceId,
   type LocalItineraryDraft,
   type LocalItineraryStop,
   type LocalTripReceipt,
@@ -163,6 +165,30 @@ function computeSegmentDistanceKm(
   return Number((2 * R * Math.asin(Math.sqrt(h))).toFixed(1));
 }
 
+function useStopReviews() {
+  const [stopRatings, setStopRatings] = useState<Record<string, number>>({});
+  const [stopComments, setStopComments] = useState<Record<string, string>>({});
+  const [visitedStops, setVisitedStops] = useState<Record<string, boolean>>({});
+  const [completionNotice, setCompletionNotice] = useState<string | null>(null);
+  function clear() {
+    setStopRatings({});
+    setStopComments({});
+    setVisitedStops({});
+    setCompletionNotice(null);
+  }
+  return {
+    stopRatings,
+    setStopRatings,
+    stopComments,
+    setStopComments,
+    visitedStops,
+    setVisitedStops,
+    completionNotice,
+    setCompletionNotice,
+    clear,
+  };
+}
+
 export function TripsPlannerClient({
   availablePlaces,
   privacyNotice,
@@ -171,33 +197,13 @@ export function TripsPlannerClient({
   privacyNotice: PrivacyNoticeData;
 }) {
   const searchParams = useSearchParams();
-  const initialTabParam = searchParams.get("tab");
-  const initialTab: "builder" | "retrieve" | "saved" =
-    initialTabParam === "retrieve" || initialTabParam === "saved"
-      ? initialTabParam
-      : "builder";
-
-  return (
-    <TripsPlannerInner
-      key={initialTab}
-      initialTab={initialTab}
-      availablePlaces={availablePlaces}
-      privacyNotice={privacyNotice}
-    />
-  );
-}
-
-function TripsPlannerInner({
-  initialTab,
-  availablePlaces,
-  privacyNotice,
-}: {
-  initialTab: "builder" | "retrieve" | "saved";
-  availablePlaces: PlaceCardData[];
-  privacyNotice: PrivacyNoticeData;
-}) {
-  const { refreshCounts, showToast } = useMobileApp();
-  const [activeTab, setActiveTab] = useState<"builder" | "retrieve" | "saved">(initialTab);
+  const tab = searchParams.get("tab");
+  const activeTab = tab === "retrieve" || tab === "saved" ? tab : "builder";
+  const setActiveTab = (next: "builder" | "retrieve" | "saved") => {
+    if (next === activeTab) return;
+    window.history.pushState(null, "", next === "builder" ? "/app/trips" : `/app/trips?tab=${next}`);
+  };
+  const { refreshCounts, showToast, toggleBookmark } = useMobileApp();
 
   // Native bottom sheets instead of multi-step web forms
   const [stopPickerOpen, setStopPickerOpen] = useState(false);
@@ -222,23 +228,21 @@ function TripsPlannerInner({
   const [visitorName, setVisitorName] = useState("");
   const [originMunicipality, setOriginMunicipality] = useState("");
   const [originProvince, setOriginProvince] = useState("");
-  const [originCountry] = useState("Philippines");
+  const [originCountry, setOriginCountry] = useState("Philippines");
   const [contactNumber, setContactNumber] = useState("");
   const [emailAddress, setEmailAddress] = useState("");
-  const [travelerCount, setTravelerCount] = useState<number>(2);
-  const [purposeOfVisit, setPurposeOfVisit] = useState("Leisure & Nature Sightseeing");
-  const [firstTimeVisitor, setFirstTimeVisitor] = useState<"yes" | "no" | "prefer_not_to_say">("yes");
-  const [transportationType, setTransportationType] = useState("Private Vehicle");
-  const [lengthOfStay, setLengthOfStay] = useState("Day Trip");
-  const [discoverySource, setDiscoverySource] = useState("Social Media / Online Search");
-  const [preferredExperience, setPreferredExperience] = useState("Waterfalls & Resorts");
+  const [travelerCount, setTravelerCount] = useState<number>(1);
+  const [purposeOfVisit, setPurposeOfVisit] = useState("");
+  const [firstTimeVisitor, setFirstTimeVisitor] = useState<"yes" | "no" | "prefer_not_to_say">("prefer_not_to_say");
+  const [transportationType, setTransportationType] = useState("");
+  const [lengthOfStay, setLengthOfStay] = useState("");
+  const [discoverySource, setDiscoverySource] = useState("");
+  const [preferredExperience, setPreferredExperience] = useState("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  // After-trip rating state: placeId -> stars (builder/local + retrieved trips)
-  const [stopRatings, setStopRatings] = useState<Record<string, number>>({});
-  const [stopComments, setStopComments] = useState<Record<string, string>>({});
-  const [visitedStops, setVisitedStops] = useState<Record<string, boolean>>({});
+  const draftReviews = useStopReviews();
+  const passReviews = useStopReviews();
+  const { stopRatings, setStopRatings, stopComments, setStopComments, visitedStops, setVisitedStops, completionNotice, setCompletionNotice } = activeTab === "retrieve" ? passReviews : draftReviews;
   const [completing, setCompleting] = useState(false);
-  const [completionNotice, setCompletionNotice] = useState<string | null>(null);
   const [privacyAcknowledged, setPrivacyAcknowledged] = useState(false);
   const [followUpConsentGiven, setFollowUpConsentGiven] = useState(false);
 
@@ -261,16 +265,20 @@ function TripsPlannerInner({
   const [retrieved, setRetrieved] = useState<RetrievedItinerary | null>(null);
   const [rotatedCode, setRotatedCode] = useState<string | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [passBusy, setPassBusy] = useState<"rotate" | "delete" | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
 
+  const [notebookState, setNotebookState] = useState<"opening" | "ready" | "error">("opening");
   useEffect(() => {
-    Promise.resolve().then(async () => {
+    let active = true;
+    void (async () => {
       const [loadedDrafts, savedIds, receipts, snapshots] = await Promise.all([
         listLocalDrafts(),
         listSavedPlaceIds(),
         listLocalReceipts(),
         listSavedPlaceSnapshots(),
       ]);
+      if (!active) return;
       setSavedSnapshots(snapshots);
       const activeDraft = loadedDrafts.find((d) => d.status !== "completed");
       if (activeDraft) {
@@ -288,7 +296,9 @@ function TripsPlannerInner({
       }
       setSavedPlaceIds(savedIds);
       setLocalReceipts(receipts);
-    });
+      setNotebookState("ready");
+    })().catch(() => { if (active) setNotebookState("error"); });
+    return () => { active = false; };
   }, []);
 
   const filteredPlaces = useMemo(() => {
@@ -447,7 +457,8 @@ function TripsPlannerInner({
               reviewerToken: getReviewerToken(),
             }),
           });
-          if (res.ok) rated += 1;
+          if (!res.ok) throw new Error("Review not saved");
+          rated += 1;
         }
       }
       const completed: LocalItineraryDraft = {
@@ -474,7 +485,7 @@ function TripsPlannerInner({
       setCompletionNotice(message);
       showToast("Trip completed — planner cleared for your next trip!", { tone: "success" });
     } catch {
-      setCompletionNotice("Could not save completion while offline. Your ratings are kept in this draft — try again when connected.");
+      setCompletionNotice("Your trip is still open. A review could not be saved; check your connection and try again.");
     } finally {
       setCompleting(false);
     }
@@ -495,7 +506,7 @@ function TripsPlannerInner({
           reviewerToken: getReviewerToken(),
           stops: retrieved.stops.map((s) => ({
             placeId: s.placeId,
-            visited: visitedStops[s.placeId] ?? Boolean(s.visitedAt) ?? true,
+            visited: visitedStops[s.placeId] ?? Boolean(s.visitedAt),
             rating: stopRatings[s.placeId] ?? null,
             comment: stopComments[s.placeId]?.trim() || null,
           })),
@@ -506,7 +517,9 @@ function TripsPlannerInner({
         setRetError(data.error || "Could not complete this trip.");
         return;
       }
-      setRetrieved({ ...retrieved, status: "completed", completedAt: data.completedAt });
+      setRetrieved({ ...retrieved, status: "completed", completedAt: data.completedAt,
+        stops: retrieved.stops.map(s => ({ ...s, visitedAt: s.visitedAt || (visitedStops[s.placeId] ? data.completedAt : null) })),
+      });
       const receipt = localReceipts.find((r) => r.referenceNumber === retrieved.referenceNumber);
       if (receipt) {
         await saveLocalReceipt({ ...receipt, status: "completed", completedAt: data.completedAt, ratings: stopRatings });
@@ -734,12 +747,12 @@ function TripsPlannerInner({
             emailAddress: emailAddress.trim() || null,
             plannedVisitDate: draft.plannedVisitDate,
             travelerCount: Number(travelerCount) || 1,
-            purposeOfVisit,
+            purposeOfVisit: purposeOfVisit || null,
             firstTimeVisitor,
-            transportationType,
-            lengthOfStay,
-            discoverySource,
-            preferredExperience,
+            transportationType: transportationType || null,
+            lengthOfStay: lengthOfStay || null,
+            discoverySource: discoverySource || null,
+            preferredExperience: preferredExperience || null,
             privacyAcknowledged: true,
             privacyNoticeVersion: privacyNotice.version,
             followUpConsentGiven,
@@ -754,17 +767,21 @@ function TripsPlannerInner({
       }
 
       setVisitorSubmittedRef(data.referenceNumber);
-      if (view !== "review") {
-        setSubmissionResult({
+      // Always present the one-time code, including registrations made during review.
+      setSubmissionResult({
           referenceNumber: data.referenceNumber,
           privateCode: data.privateCode,
           warning: data.warning,
           title: draft.title,
           plannedVisitDate: draft.plannedVisitDate,
           totalStops: draft.stops.length,
-        });
-      }
+      });
       setRegisterSheetOpen(false);
+      // Do not carry a previous visitor’s details or consent to the next submission.
+      setVisitorName(""); setContactNumber(""); setEmailAddress("");
+      setOriginMunicipality(""); setOriginProvince(""); setOriginCountry("Philippines"); setTravelerCount(1);
+      setPurposeOfVisit(""); setTransportationType(""); setLengthOfStay(""); setDiscoverySource(""); setPreferredExperience("");
+      setFirstTimeVisitor("prefer_not_to_say"); setPrivacyAcknowledged(false); setFollowUpConsentGiven(false);
 
       await saveLocalReceipt({
         referenceNumber: data.referenceNumber,
@@ -788,6 +805,7 @@ function TripsPlannerInner({
     setRotatedCode(null);
     setConfirmingDelete(false);
     setRetLoading(true);
+    setRetrieved(null);
     try {
       const res = await fetch("/api/itineraries/retrieve", {
         method: "POST",
@@ -803,6 +821,7 @@ function TripsPlannerInner({
         setRetError(data.error || "Invalid reference number or private code.");
         return;
       }
+      passReviews.clear();
       setRetrieved(data.itinerary);
       void trackItineraryEvent({
         eventType: "retrieved",
@@ -815,84 +834,96 @@ function TripsPlannerInner({
     }
   };
 
-  const handleRotateCode = async () => {
-    if (!retrieved) return;
-    setRetError(null);
-    const res = await fetch("/api/itineraries/access/rotate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        referenceNumber: retrieved.referenceNumber,
-        privateCode: retCode.trim(),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setRetError(data.error || "Could not rotate retrieval code.");
+  const changePass = async (action: "rotate" | "delete") => {
+    if (!retrieved || passBusy) return;
+    if (
+      action === "rotate" &&
+      !window.confirm("Replace your private code? The old code will stop working immediately.")
+    )
       return;
+    setPassBusy(action);
+    setRetError(null);
+    try {
+      const endpoint = action === "rotate" ? "access/rotate" : "delete";
+      const res = await fetch(`/api/itineraries/${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          referenceNumber: retrieved.referenceNumber,
+          privateCode: retCode.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setRetError(data.error || "Your pass could not be updated.");
+        return;
+      }
+      if (action === "rotate") {
+        setRotatedCode(data.newPrivateCode);
+        setRetCode(data.newPrivateCode);
+        setSubmissionResult((prev) =>
+          prev?.referenceNumber === retrieved.referenceNumber
+            ? { ...prev, privateCode: data.newPrivateCode }
+            : prev,
+        );
+        showToast("Save your new code. The previous one no longer works.", { tone: "success" });
+      } else {
+        await removeLocalReceipt(retrieved.referenceNumber);
+        setLocalReceipts(await listLocalReceipts());
+        if (visitorSubmittedRef === retrieved.referenceNumber) {
+          setVisitorSubmittedRef(null);
+          setSubmissionResult(null);
+        }
+        setRetrieved(null);
+        setConfirmingDelete(false);
+        setRetCode("");
+        setRetRef("");
+        setRotatedCode(null);
+        passReviews.clear();
+        setDeleteSuccess(data.message);
+      }
+    } catch {
+      setRetError(
+        "Could not confirm the change. Check your connection and retrieve the trip again.",
+      );
+    } finally {
+      setPassBusy(null);
     }
-    setRotatedCode(data.newPrivateCode);
-    setRetCode(data.newPrivateCode);
-    showToast("New retrieval code issued", { tone: "success" });
   };
 
-  const handleDeleteRetrieved = async () => {
-    if (!retrieved) return;
-    const res = await fetch("/api/itineraries/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        referenceNumber: retrieved.referenceNumber,
-        privateCode: retCode.trim(),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setRetError(data.error || "Could not delete itinerary.");
-      return;
-    }
-    await removeLocalReceipt(retrieved.referenceNumber);
-    setLocalReceipts(await listLocalReceipts());
+  function editCredentials(ref: string, code: string) {
+    setRetRef(ref);
+    setRetCode(code);
     setRetrieved(null);
+    setRotatedCode(null);
+    setRetError(null);
+    setDeleteSuccess(null);
     setConfirmingDelete(false);
-    setRetCode("");
-    setDeleteSuccess(data.message);
-  };
+  }
+
+  // Never offer an empty itinerary for editing while its persisted stops are still opening.
+  if (notebookState === "opening") return (
+    <div role="status" className="surface-card p-5 space-y-3">
+      <p className="text-sm">Opening the trip notebook on this device…</p>
+      <Skeleton className="h-4 w-1/3" /><Skeleton className="h-14 w-full" />
+    </div>
+  );
+  if (notebookState === "error") return (
+    <div role="alert" className="surface-card p-5 space-y-3">
+      <p>Your trip notebook couldn’t be opened. Allow browser storage, then try again.</p>
+      <button type="button" className="secondary-button" onClick={() => window.location.reload()}>Try again</button>
+    </div>
+  );
 
   const inReview = view === "review" && draft.status !== "completed";
 
   return (
     <div className="space-y-5">
-      {/* Native Segmented Control */}
-      <div className="no-print grid grid-cols-3 rounded-full bg-[#EFECE5] p-1 border border-[#EAE7E0] shadow-[inset_0_1px_2px_rgba(26,36,33,0.05)]">
-        <button
-          type="button"
-          onClick={() => setActiveTab("builder")}
-          className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
-            activeTab === "builder" ? "bg-white text-[#1A2421] shadow-[0_2px_8px_rgba(26,36,33,0.10)]" : "text-[#616E69]"
-          }`}
-        >
-          My Trip ({draft.stops.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("saved")}
-          className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
-            activeTab === "saved" ? "bg-white text-[#1A2421] shadow-[0_2px_8px_rgba(26,36,33,0.10)]" : "text-[#616E69]"
-          }`}
-        >
-          Saved ({savedPlaces.length + drafts.length})
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveTab("retrieve")}
-          className={`rounded-full py-2 text-xs font-semibold transition cursor-pointer ${
-            activeTab === "retrieve" ? "bg-white text-[#1A2421] shadow-[0_2px_8px_rgba(26,36,33,0.10)]" : "text-[#616E69]"
-          }`}
-        >
-          Find My Trip
-        </button>
-      </div>
+      <nav className="planner-tabs no-print" aria-label="Trip notebook sections">
+        {([{ id: "builder", label: "Itinerary", icon: RouteIcon, count: draft.stops.length }, { id: "saved", label: "Saved", icon: Bookmark, count: savedPlaces.length }, { id: "retrieve", label: "Find my trip", icon: KeyRound, count: 0 }] as const).map(({ id, label, icon: Icon, count }) => (
+          <button key={id} type="button" aria-pressed={activeTab === id} onClick={() => setActiveTab(id)}><Icon size={16}/>{label}{count > 0 && <span>{count}</span>}</button>
+        ))}
+      </nav>
 
       {/* TAB 1: NATIVE TIMELINE TRIP BUILDER */}
       {activeTab === "builder" && (
@@ -949,12 +980,14 @@ function TripsPlannerInner({
                   </div>
                   <button
                     type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(
+                    aria-label="Copy reference number and private code"
+                    onClick={async () => {
+                      try { await navigator.clipboard.writeText(
                         `Reference: ${submissionResult.referenceNumber}\nPrivate Code: ${submissionResult.privateCode}`
                       );
                       setCopiedCode(true);
                       setTimeout(() => setCopiedCode(false), 2000);
+                      } catch { showToast("Copy isn’t available here. Download the receipt to keep both codes.", { tone: "info" }); }
                     }}
                     className="rounded-full bg-white border border-[#EAE7E0] p-2 text-[#1A2421] shrink-0 active:scale-90 transition cursor-pointer"
                   >
@@ -993,8 +1026,7 @@ function TripsPlannerInner({
                   <button
                     type="button"
                     onClick={() => {
-                      setRetRef(submissionResult.referenceNumber);
-                      setRetCode(submissionResult.privateCode);
+                      editCredentials(submissionResult.referenceNumber, submissionResult.privateCode);
                       setActiveTab("retrieve");
                     }}
                     className="rounded-full border border-[#EAE7E0] bg-white py-2.5 text-xs font-semibold text-[#1A2421] cursor-pointer"
@@ -1005,11 +1037,10 @@ function TripsPlannerInner({
                     type="button"
                     onClick={() => {
                       setSubmissionResult(null);
-                      setDraft(createEmptyDraft());
                     }}
                     className="rounded-full border border-[#EAE7E0] bg-white py-2.5 text-xs font-medium text-[#616E69] cursor-pointer"
                   >
-                    New Trip
+                    Continue my trip
                   </button>
                 </div>
               </div>
@@ -1019,18 +1050,20 @@ function TripsPlannerInner({
               {/* Native Trip Header Card */}
               <div className={`surface-card p-5 space-y-3 ${inReview ? "hidden" : ""}`}>
                 <div className="space-y-2">
+                  <label className="guide-kicker" htmlFor="draft-title">Itinerary name</label>
                   <input
+                    id="draft-title"
                     type="text"
                     value={draft.title}
                     onChange={(e) => void persistDraft({ ...draft, title: e.target.value })}
                     aria-label="Trip Title"
-                    className="w-full font-display text-lg font-bold text-[#1A2421] bg-transparent focus:outline-none border-b border-transparent focus:border-[#EAE7E0] pb-0.5"
+                    className="w-full font-display text-3xl font-medium text-[#1A2421] bg-transparent focus:outline-none border-b border-transparent focus:border-[#EAE7E0] pb-0.5"
                   />
 
                   <div className="flex flex-wrap items-center gap-2 text-xs text-[#616E69]">
                     <span className="inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] px-2.5 py-1 text-[11px] font-semibold text-[#164237] tabular-nums">
                       <Clock className="w-3 h-3" />
-                      ~{(totalMinutes / 60).toFixed(1)}h
+                      {draft.stops.length} {draft.stops.length === 1 ? "stop" : "stops"} · {formatDuration(totalMinutes)}
                       {totalDistanceKm > 0 ? ` • ${totalDistanceKm} km` : ""}
                     </span>
                   </div>
@@ -1047,17 +1080,17 @@ function TripsPlannerInner({
                       <button
                         type="button"
                         onClick={() => void applyQuickPreset("nature")}
-                        className="inset-panel p-3.5 text-left active:scale-[0.98] transition cursor-pointer hover:border-[#164237]/30"
+                        className="preset-card nature-preset"
                       >
                         <p className="font-display text-xs font-bold text-[#1A2421]">
                           Falls &amp; Springs
                         </p>
-                        <p className="text-[11px] text-[#616E69] mt-0.5">3 top stops</p>
+                        <p className="text-[11px] text-[#616E69] mt-0.5">Nature route</p>
                       </button>
                       <button
                         type="button"
                         onClick={() => void applyQuickPreset("heritage")}
-                        className="inset-panel p-3.5 text-left active:scale-[0.98] transition cursor-pointer hover:border-[#164237]/30"
+                        className="preset-card heritage-preset"
                       >
                         <p className="font-display text-xs font-bold text-[#1A2421]">
                           Heritage &amp; Dining
@@ -1401,7 +1434,7 @@ function TripsPlannerInner({
                     description={
                       draft.status === "completed"
                         ? "Thank you — your reviews help the next tourists and Salcedo's rankings."
-                        : "Everything happens here: mark visited places, rate or comment, add your visitor details, then finish — one step, one button."
+                        : "Mark the stops you visited. Ratings, comments, and registration are optional."
                     }
                   />
 
@@ -1453,7 +1486,7 @@ function TripsPlannerInner({
 
                               {visited && (
                                 <>
-                                  <div className="flex items-center gap-1" role="radiogroup" aria-label={`Rate ${s.placeName}`}>
+                                  <div className="flex items-center gap-1" role="group" aria-label={`Rate ${s.placeName}`}>
                                     {[1, 2, 3, 4, 5].map((n) => (
                                       <button key={n} type="button" onClick={() => setStopRatings((r) => ({ ...r, [s.placeId]: n }))} aria-label={`${n} stars`} aria-pressed={rating === n} className="p-1 active:scale-90 transition cursor-pointer">
                                         <Star className={`w-7 h-7 ${n <= rating ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= rating ? "currentColor" : "none"} />
@@ -1495,18 +1528,18 @@ function TripsPlannerInner({
                       </div>
 
                       {completionNotice && (
-                        <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">{completionNotice}</p>
+                        <p role="status" className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">{completionNotice}</p>
                       )}
                       <div className="inset-panel p-3.5 space-y-2">
                         <p className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#616E69]">Your details · Visitor form (optional)</p>
                         {visitorSubmittedRef ? (
                           <p className="text-xs text-[#164237] inline-flex items-start gap-1.5">
                             <Check className="w-4 h-4 shrink-0 mt-px" />
-                            <span>Visitor form submitted — Reference <strong className="font-mono">{visitorSubmittedRef}</strong>. Salcedo CEDO can now count your visit.</span>
+                            <span>Visitor form submitted — Reference <strong className="font-mono">{visitorSubmittedRef}</strong>. Your travel plan has been recorded.</span>
                           </p>
                         ) : (
                           <>
-                            <p className="text-xs leading-relaxed text-[#616E69]">Same final step — fill this in now if you&apos;d like Salcedo to count and thank your visit. Only where you&apos;re from, how many travelers, and one privacy tick.</p>
+                            <p className="text-xs leading-relaxed text-[#616E69]">Share your travel plan with the tourism office and get a private retrieval code. You can finish your trip without registering.</p>
                             <button type="button" onClick={() => setRegisterSheetOpen(true)} className="inline-flex items-center gap-1.5 rounded-full bg-white border border-[#164237]/30 px-4 min-h-[40px] text-xs font-semibold text-[#164237] active:scale-95 transition cursor-pointer">
                               <Send className="w-3.5 h-3.5" /> Fill the visitor form
                             </button>
@@ -1530,19 +1563,17 @@ function TripsPlannerInner({
 
               {draft.stops.length === 0 && (
                 <div className="surface-card p-5 space-y-3">
-                  <StepHeader step={1} eyebrow="Destinations" title="Your destinations" description="Add places from Discover, then plan your days." />
-                  <div className="text-center space-y-3 pt-1">
-                    <span className="mx-auto w-12 h-12 rounded-full bg-[#164237]/10 text-[#164237] flex items-center justify-center"><RouteIcon className="w-5 h-5" /></span>
-                    <p className="font-display text-base font-bold text-[#1A2421]">Your trip is empty — let&apos;s fix that</p>
-                    <p className="text-xs leading-relaxed text-[#616E69]">Pick a ready-made route above, browse places, or add stops one by one. Takes less than a minute.</p>
-                    <Link href="/app/discover" className="inline-flex items-center rounded-full btn-primary-pro px-5 min-h-[44px] text-xs font-semibold">Browse Destinations →</Link>
+                  <StepHeader step={1} eyebrow="Destinations" title="Choose your first stop" description="Start with a place you want to visit. You can add dates and reorder your stops later." />
+                  <div className="empty-trip-actions no-print">
+                    <button type="button" className="primary-button" onClick={() => setStopPickerOpen(true)}><Plus size={15}/>Choose stops</button>
+                    <Link href="/app/discover" className="text-link">Explore the directory <ArrowRight size={14}/></Link>
                   </div>
                 </div>
               )}
 
               {/* One sticky action dock for plan mode: Add + the single next step */}
               {draft.stops.length > 0 && !inReview && draft.status !== "completed" && (
-                <div className="no-print sticky bottom-3 z-30 flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] shadow-[0_16px_40px_-16px_rgba(22,66,55,0.35)] p-1.5">
+                <div className="trip-action-dock no-print sticky bottom-3 z-30 flex items-center gap-2 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] shadow-[0_16px_40px_-16px_rgba(22,66,55,0.35)] p-1.5">
                   <button
                     type="button"
                     onClick={() => setStopPickerOpen(true)}
@@ -1574,7 +1605,7 @@ function TripsPlannerInner({
             <SectionHeader eyebrow="Offline" title={`Bookmarked places (${savedPlaces.length})`} />
             {savedPlaces.length === 0 ? (
               <p className="text-xs text-[#616E69]">
-                Tap the bookmark icon on any destination to save it offline here.
+                Bookmark a destination to keep it here for later. <Link className="text-link" href="/app/discover">Find places <ArrowRight size={13}/></Link>
               </p>
             ) : (
               <div className="divide-y divide-[#EAE7E0]">
@@ -1582,14 +1613,15 @@ function TripsPlannerInner({
                   <div key={p.id} className="flex items-center justify-between gap-2 py-2.5">
                     <Link
                       href={`/app/places/${p.slug}`}
-                      className="text-xs font-semibold text-[#1A2421] hover:text-[#164237] truncate"
+                      className="saved-place-row"
                     >
-                      {p.name}
+                      <Image src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"} alt="" width={70} height={50}/>
+                      <span>{p.name}<small>{p.barangay?.name || "Salcedo"}</small></span>
                     </Link>
                     <button
                       type="button"
                       onClick={async () => {
-                        await toggleSavedPlaceId(p.id);
+                        await toggleBookmark(p.id, p.name);
                         setSavedPlaceIds(await listSavedPlaceIds());
                         await refreshCounts();
                       }}
@@ -1626,8 +1658,9 @@ function TripsPlannerInner({
                       {d.status !== "completed" && (
                         <button
                           type="button"
-                          onClick={() => {
-                            setDraft(d);
+                          onClick={async () => {
+                            await persistDraft(d);
+                            setActiveDay(1); setView("plan"); setReviewOpen(false); setSubmissionResult(null); setVisitorSubmittedRef(null); draftReviews.clear();
                             setActiveTab("builder");
                           }}
                           className="rounded-full bg-[#164237] text-white px-3 py-1 text-[11px] font-semibold cursor-pointer"
@@ -1638,8 +1671,11 @@ function TripsPlannerInner({
                       <button
                         type="button"
                         onClick={async () => {
+                          if (!window.confirm(`Delete “${d.title}” from this device? This cannot be undone.`)) return;
                           await deleteLocalDraft(d.id);
-                          setDrafts(await listLocalDrafts());
+                          const remaining = await listLocalDrafts();
+                          setDrafts(remaining);
+                          if (d.id === draft.id) setDraft(remaining.find(item => item.status !== "completed") ?? createEmptyDraft());
                           await refreshCounts();
                         }}
                         aria-label="Delete draft"
@@ -1668,7 +1704,7 @@ function TripsPlannerInner({
                 <button
                   key={r.referenceNumber}
                   type="button"
-                  onClick={() => setRetRef(r.referenceNumber)}
+                  onClick={() => editCredentials(r.referenceNumber, retRef === r.referenceNumber ? retCode : "")}
                   className="w-full px-4 py-3 text-left active:bg-[#F3F2EE] flex items-center justify-between gap-2 cursor-pointer"
                 >
                   <div className="min-w-0">
@@ -1685,7 +1721,7 @@ function TripsPlannerInner({
 
           <form
             onSubmit={handleRetrieveTrip}
-            className="surface-card p-5 space-y-3"
+            className="no-print surface-card p-5 space-y-3"
           >
             <div className="flex items-center gap-2">
               <KeyRound className="w-4 h-4 text-[#164237]" />
@@ -1694,37 +1730,42 @@ function TripsPlannerInner({
               </h2>
             </div>
 
+            <label htmlFor="trip-reference" className="block text-sm font-semibold">Reference number</label>
             <input
+              id="trip-reference"
               type="text"
               required
               value={retRef}
-              onChange={(e) => setRetRef(e.target.value.toUpperCase())}
-              placeholder="Reference Number (CEDO-TRIP-...)"
+              onChange={(e) => editCredentials(e.target.value.toUpperCase(), retCode)}
+              placeholder="CEDO-TRIP-YYYY-XXXXXX"
               className="field-pro font-mono uppercase"
             />
+            <label htmlFor="retrieval-code" className="block text-sm font-semibold">Private retrieval code</label>
             <input
-              type="text"
+              id="retrieval-code"
+              autoComplete="off"
+              type="password"
               required
               value={retCode}
-              onChange={(e) => setRetCode(e.target.value)}
-              placeholder="Private Retrieval Code"
+              onChange={(e) => editCredentials(retRef, e.target.value)}
+              placeholder="SALCEDO-XXXX-XXXX-XXXX"
               className="field-pro font-mono"
             />
 
             {retError && (
-              <p className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
+              <p role="alert" className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800">
                 {retError}
               </p>
             )}
             {deleteSuccess && (
-              <p className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">
+              <p role="status" className="rounded-xl bg-[#F3F2EE] p-3 text-xs text-[#164237]">
                 {deleteSuccess}
               </p>
             )}
 
             <button
               type="submit"
-              disabled={retLoading}
+              disabled={retLoading || completing || Boolean(passBusy)}
               className="w-full rounded-full btn-primary-pro py-3 text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
             >
               {retLoading ? "Verifying..." : "Retrieve Itinerary"}
@@ -1785,15 +1826,15 @@ function TripsPlannerInner({
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs font-bold text-[#1A2421] truncate">{s.placeName}</p>
                       <label className="flex items-center gap-1.5 text-[11px] font-semibold text-[#164237] cursor-pointer shrink-0">
-                        <input type="checkbox" checked={visitedStops[s.placeId] ?? Boolean(s.visitedAt) ?? true} onChange={(e) => setVisitedStops((v) => ({ ...v, [s.placeId]: e.target.checked }))} className="accent-[#164237]" />
+                        <input type="checkbox" checked={visitedStops[s.placeId] ?? Boolean(s.visitedAt)} onChange={(e) => setVisitedStops((v) => ({ ...v, [s.placeId]: e.target.checked }))} className="accent-[#164237]" />
                         Visited
                       </label>
                     </div>
-                    {(visitedStops[s.placeId] ?? Boolean(s.visitedAt) ?? true) && (
+                    {(visitedStops[s.placeId] ?? Boolean(s.visitedAt)) && (
                       <>
                         <div className="flex items-center gap-1">
                           {[1, 2, 3, 4, 5].map((n) => (
-                            <button key={n} type="button" onClick={() => setStopRatings((r) => ({ ...r, [s.placeId]: n }))} aria-label={`Rate ${s.placeName} ${n} stars`} className="p-0.5 active:scale-90 transition cursor-pointer">
+                            <button key={n} type="button" onClick={() => setStopRatings((r) => ({ ...r, [s.placeId]: n }))} aria-label={`Rate ${s.placeName} ${n} stars`} aria-pressed={n === stopRatings[s.placeId]} className="p-0.5 active:scale-90 transition cursor-pointer">
                               <Star className={`w-6 h-6 ${n <= (stopRatings[s.placeId] ?? 0) ? "text-[#B88A44]" : "text-[#D8D3C8]"}`} fill={n <= (stopRatings[s.placeId] ?? 0) ? "currentColor" : "none"} />
                             </button>
                           ))}
@@ -1805,8 +1846,8 @@ function TripsPlannerInner({
                   </div>
                 ))}
                 {completionNotice && <p className="rounded-lg bg-[#F3F2EE] p-2.5 text-[11px] text-[#164237]">{completionNotice}</p>}
-                <button type="button" disabled={completing} onClick={() => void handleCompleteRegisteredTrip()}
-                  className="w-full rounded-full bg-[#B88A44] text-white py-2.5 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer">
+                <button type="button" disabled={completing || Boolean(passBusy)} onClick={() => void handleCompleteRegisteredTrip()}
+                  className="w-full rounded-full bg-[#8A6527] text-white py-2.5 text-xs font-semibold disabled:opacity-50 active:scale-[0.98] transition cursor-pointer">
                   {completing ? "Saving…" : retrieved.status === "completed" ? "Update My Ratings" : "Complete Trip & Submit Ratings"}
                 </button>
               </div>
@@ -1815,11 +1856,12 @@ function TripsPlannerInner({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => void handleRotateCode()}
+                    onClick={() => void changePass("rotate")}
+                    disabled={Boolean(passBusy) || completing}
                     className="flex-1 inline-flex items-center justify-center gap-1 rounded-full border border-[#EAE7E0] py-2 text-xs font-semibold text-[#1A2421] cursor-pointer"
                   >
                     <RefreshCw className="w-3.5 h-3.5" />
-                    Rotate Code
+                    {passBusy === "rotate" ? "Replacing…" : "Replace private code"}
                   </button>
                   <button
                     type="button"
@@ -1855,10 +1897,11 @@ function TripsPlannerInner({
                       </button>
                       <button
                         type="button"
-                        onClick={() => void handleDeleteRetrieved()}
+                        onClick={() => void changePass("delete")}
+                        disabled={Boolean(passBusy) || completing}
                         className="flex-1 rounded-full bg-rose-700 text-white py-1.5 text-xs font-semibold cursor-pointer"
                       >
-                        Confirm Erase
+                        {passBusy === "delete" ? "Erasing…" : "Confirm Erase"}
                       </button>
                     </div>
                   </div>
@@ -1871,8 +1914,8 @@ function TripsPlannerInner({
 
       {/* NATIVE BOTTOM SHEET: ADD DESTINATION STOP */}
       {stopPickerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[1px]">
-          <div className="w-full max-w-[430px] max-h-[82dvh] bg-white rounded-t-[28px] border-t border-[#EAE7E0] p-4 pb-6 flex flex-col gap-3 shadow-2xl animate-in slide-in-from-bottom-6 duration-200">
+        <Modal label="Add a destination" onClose={() => setStopPickerOpen(false)}>
+          <div className="w-full max-h-[82dvh] bg-white rounded-xl border-t border-[#EAE7E0] p-4 pb-6 flex flex-col gap-3 shadow-2xl animate-in slide-in-from-bottom-6 duration-200">
             <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto" />
 
             {tripDaysCount > 1 && (
@@ -1902,18 +1945,21 @@ function TripsPlannerInner({
                 type="search"
                 value={placeSearch}
                 onChange={(e) => setPlaceSearch(e.target.value)}
-                placeholder="Search waterfalls, cafés, resorts..."
+                aria-label="Search stops to add"
+                placeholder="Search waterfalls, cafés, resorts…"
                 className="w-full rounded-full border border-[#EAE7E0] bg-white pl-9 pr-4 min-h-[40px] text-xs focus:outline-none focus:border-[#164237] focus:ring-[3px] focus:ring-[#164237]/10 shadow-[inset_0_1px_2px_rgba(26,36,33,0.04)]"
               />
             </div>
 
             <div className="flex-1 overflow-y-auto divide-y divide-[#EAE7E0]">
+              {filteredPlaces.length === 0 && <p role="status" className="empty-note">No matching stops. Try a different place or barangay.</p>}
               {filteredPlaces.map((p) => {
                 const selected = draft.stops.some((s) => s.placeId === p.id);
                 return (
                   <button
                     key={p.id}
                     type="button"
+                    aria-pressed={selected}
                     onClick={() => void toggleStop(p)}
                     className="w-full flex items-center gap-3 py-3 text-left active:bg-[#FAF9F6] cursor-pointer"
                   >
@@ -1950,15 +1996,15 @@ function TripsPlannerInner({
               })}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* NATIVE BOTTOM SHEET: OPTIONAL TOURISM OFFICE REGISTRATION (RA 10173) */}
       {registerSheetOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-[1px]">
+        <Modal label="Register trip with Salcedo CEDO" onClose={() => { if (!submitLoading) setRegisterSheetOpen(false); }}>
           <form
             onSubmit={handleSubmitPlan}
-            className="w-full max-w-[430px] max-h-[88dvh] bg-white rounded-t-[28px] border-t border-[#EAE7E0] p-5 pb-6 flex flex-col gap-3.5 shadow-2xl overflow-y-auto animate-in slide-in-from-bottom-6 duration-200"
+            className="w-full max-h-[88dvh] bg-white rounded-xl border-t border-[#EAE7E0] p-5 pb-6 flex flex-col gap-3.5 shadow-2xl overflow-y-auto animate-in slide-in-from-bottom-6 duration-200"
           >
             <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto shrink-0" />
 
@@ -1968,6 +2014,7 @@ function TripsPlannerInner({
                 type="button"
                 onClick={() => setRegisterSheetOpen(false)}
                 aria-label="Close registration sheet"
+                disabled={submitLoading}
                 className="w-8 h-8 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -1981,25 +2028,7 @@ function TripsPlannerInner({
               </span>
             </div>
 
-            <p className="rounded-xl bg-[#B88A44]/10 border border-[#B88A44]/25 px-3 py-2 text-[11px] text-[#1A2421] inline-flex items-start gap-1.5">
-              <Star className="w-3.5 h-3.5 text-[#B88A44] shrink-0 mt-px" fill="currentColor" />
-              <span><strong>Part of your final step:</strong> finish, reviews, and this visitor form all happen together in Step 3. This form is only your visitor information — always optional.</span>
-            </p>
-            <p className="text-[11px] text-[#616E69] leading-relaxed">
-              <strong>Only 3 things needed:</strong> where you&apos;re from, how many travelers, and the privacy tick at the bottom. Everything else is optional — skip freely.
-            </p>
-
-            <label className="block">
-              <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Your full name <span className="font-normal text-[#616E69]">(optional)</span></span>
-              <input
-                type="text"
-                value={visitorName}
-                onChange={(e) => setVisitorName(e.target.value)}
-                placeholder="e.g. Maria Clara"
-                autoComplete="name"
-                className="field-pro"
-              />
-            </label>
+            <p className="text-xs text-[#616E69] leading-relaxed">Registering sends your itinerary to the tourism office. Enter your origin and group size, then read the privacy notice below. No name or contact details are required.</p>
 
             <div>
               <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Where are you visiting from? *</span>
@@ -2011,6 +2040,7 @@ function TripsPlannerInner({
                   onClick={() => {
                     setOriginMunicipality(c.city);
                     setOriginProvince(c.province);
+                    setOriginCountry("Philippines");
                   }}
                   className={`rounded-full px-3 py-1 text-[11px] font-medium border cursor-pointer ${
                     originMunicipality === c.city
@@ -2031,13 +2061,56 @@ function TripsPlannerInner({
                 {formErrors.originMunicipality && <span className="block text-[11px] text-rose-700 mt-1">{formErrors.originMunicipality}</span>}
               </label>
               <label className="block">
-                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Province <span className="text-rose-700">*</span></span>
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Province / region <span className="text-rose-700">*</span></span>
                 <input type="text" required value={originProvince} onChange={(e) => setOriginProvince(e.target.value)} placeholder="e.g. Ilocos Sur" autoComplete="address-level1"
                   className={`w-full rounded-xl border bg-[#FAF9F6] px-3.5 py-2.5 text-sm ${formErrors.originProvince ? "border-rose-400" : "border-[#EAE7E0]"}`} />
                 {formErrors.originProvince && <span className="block text-[11px] text-rose-700 mt-1">{formErrors.originProvince}</span>}
               </label>
             </div>
             </div>
+
+            <label className="block"><span className="block text-[11px] font-semibold mb-1">Country</span>
+              <input type="text" required autoComplete="country-name" maxLength={120} value={originCountry} onChange={e => setOriginCountry(e.target.value)} className="field-pro" />
+            </label>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">How many travelers? *</span>
+                <div className="flex items-center gap-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-2 py-1.5">
+                  <button type="button" aria-label="Fewer travelers" onClick={() => setTravelerCount((c) => Math.max(1, c - 1))} className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
+                  <span className="flex-1 text-center text-sm font-bold tabular-nums">{travelerCount}</span>
+                  <button type="button" aria-label="More travelers" onClick={() => setTravelerCount((c) => Math.min(200, c + 1))} className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+              <label className="block">
+                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Purpose of visit</span>
+                <select value={purposeOfVisit} onChange={(e) => setPurposeOfVisit(e.target.value)} className="field-pro">
+                  <option value="">Not specified</option>
+                  <option>Leisure &amp; Nature Sightseeing</option>
+                  <option>Family Resort Outing</option>
+                  <option>Agri-Tourism / Farm Visit</option>
+                  <option>Cultural / Fiesta Participation</option>
+                  <option>Research / Educational Fieldwork</option>
+                  <option>Business / Official Travel</option>
+                </select>
+              </label>
+            </div>
+
+            <details className="rounded-xl border border-dashed border-[#EAE7E0] p-3 space-y-3">
+              <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">
+                Optional details: contact information and travel preferences
+              </summary>
+            <label className="block">
+              <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Your full name <span className="font-normal text-[#616E69]">(optional)</span></span>
+              <input
+                type="text"
+                value={visitorName}
+                onChange={(e) => setVisitorName(e.target.value)}
+                placeholder="e.g. Maria Clara"
+                autoComplete="name"
+                className="field-pro"
+              />
+            </label>
 
             <div className="grid grid-cols-2 gap-2">
               <label className="block">
@@ -2053,37 +2126,12 @@ function TripsPlannerInner({
               </label>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">How many travelers? *</span>
-                <div className="flex items-center gap-2 rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-2 py-1.5">
-                  <button type="button" aria-label="Fewer travelers" onClick={() => setTravelerCount((c) => Math.max(1, c - 1))} className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Minus className="w-3.5 h-3.5" /></button>
-                  <span className="flex-1 text-center text-sm font-bold tabular-nums">{travelerCount}</span>
-                  <button type="button" aria-label="More travelers" onClick={() => setTravelerCount((c) => Math.min(200, c + 1))} className="w-8 h-8 rounded-full bg-white border border-[#EAE7E0] flex items-center justify-center cursor-pointer"><Plus className="w-3.5 h-3.5" /></button>
-                </div>
-              </div>
-              <label className="block">
-                <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Purpose of visit</span>
-                <select value={purposeOfVisit} onChange={(e) => setPurposeOfVisit(e.target.value)} className="field-pro">
-                  <option>Leisure &amp; Nature Sightseeing</option>
-                  <option>Family Resort Outing</option>
-                  <option>Agri-Tourism / Farm Visit</option>
-                  <option>Cultural / Fiesta Participation</option>
-                  <option>Research / Educational Fieldwork</option>
-                  <option>Business / Official Travel</option>
-                </select>
-              </label>
-            </div>
 
-            <details className="rounded-xl border border-dashed border-[#EAE7E0] p-3 space-y-3">
-              <summary className="text-[11px] font-semibold text-[#164237] cursor-pointer">
-                Optional details — tap to add (name, contact, transport…)
-              </summary>
             <div>
               <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">First time visiting Salcedo?</span>
               <div className="flex gap-1.5">
                 {([["yes", "Yes, first time"], ["no", "Returning visitor"], ["prefer_not_to_say", "Prefer not to say"]] as const).map(([v, label]) => (
-                  <button key={v} type="button" onClick={() => setFirstTimeVisitor(v)} className={`flex-1 rounded-full px-2 py-1.5 text-[11px] font-semibold border cursor-pointer ${firstTimeVisitor === v ? "bg-[#164237] text-white border-[#164237]" : "bg-[#FAF9F6] border-[#EAE7E0] text-[#1A2421]"}`}>{label}</button>
+                  <button key={v} type="button" aria-pressed={firstTimeVisitor === v} onClick={() => setFirstTimeVisitor(v)} className={`flex-1 rounded-full px-2 py-1.5 text-[11px] font-semibold border cursor-pointer ${firstTimeVisitor === v ? "bg-[#164237] text-white border-[#164237]" : "bg-[#FAF9F6] border-[#EAE7E0] text-[#1A2421]"}`}>{label}</button>
                 ))}
               </div>
             </div>
@@ -2092,24 +2140,28 @@ function TripsPlannerInner({
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Transportation</span>
                 <select value={transportationType} onChange={(e) => setTransportationType(e.target.value)} className="field-pro">
+                  <option value="">Not specified</option>
                   <option>Private Vehicle</option><option>Public Bus / Van</option><option>Tricycle / Local Transport</option><option>Motorcycle</option><option>Organized Tour Van</option><option>Walking / Cycling</option>
                 </select>
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Length of stay</span>
                 <select value={lengthOfStay} onChange={(e) => setLengthOfStay(e.target.value)} className="field-pro">
+                  <option value="">Not specified</option>
                   <option>Day Trip</option><option>Overnight (1 night)</option><option>2–3 Days</option><option>4+ Days</option>
                 </select>
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">How did you discover Salcedo?</span>
                 <select value={discoverySource} onChange={(e) => setDiscoverySource(e.target.value)} className="field-pro">
+                  <option value="">Not specified</option>
                   <option>Social Media / Online Search</option><option>Friend / Family Recommendation</option><option>Tourism Office / LGU</option><option>School / Work</option><option>Passed By / Nearby Resident</option>
                 </select>
               </label>
               <label className="block">
                 <span className="block text-[11px] font-semibold text-[#1A2421] mb-1">Preferred experience</span>
                 <select value={preferredExperience} onChange={(e) => setPreferredExperience(e.target.value)} className="field-pro">
+                  <option value="">Not specified</option>
                   <option>Waterfalls &amp; Resorts</option><option>Heritage &amp; Culture</option><option>Food &amp; Local Products</option><option>Farms &amp; Nature</option><option>Adventure / Hiking</option>
                 </select>
               </label>
@@ -2160,7 +2212,7 @@ function TripsPlannerInner({
               {submitLoading ? "Submitting..." : "Get Official CEDO Reference"}
             </button>
           </form>
-        </div>
+        </Modal>
       )}
     </div>
   );

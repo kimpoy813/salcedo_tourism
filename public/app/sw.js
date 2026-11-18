@@ -1,118 +1,117 @@
-const CACHE_VERSION = "turi-salcedo-v3";
-const STATIC_SHELL = [
-  "/app",
-  "/app/discover",
-  "/app/map",
-  "/app/trips",
-  "/app/more",
-  "/app/offline",
-  "/app/icons/icon-192x192.png",
-  "/app/icons/icon-512x512.png",
-  "/images/salcedo/turi-logo.png",
-  "/images/salcedo/seal-of-salcedo.png",
-  "/images/salcedo/hero-salcedo-valley.png",
-];
+/* Only public guide content is cached. Submissions and all admin/API routes bypass this worker. */
+const CACHE = "turi-salcedo-v4";
+const SHELL = ["/app/", "/app/trips", "/app/offline", "/app/discover", "/app/map", "/app/more"];
+
+// Collect only this build's public static resources; never store API payloads.
+async function cachePage(cache, path, assets) {
+  const response = await fetch(path, { cache: "reload" });
+  if (!response.ok || !response.headers.get("content-type")?.includes("text/html"))
+    throw new Error("Guide not ready");
+  await cache.put(path, response.clone());
+  const html = await response.text();
+  for (const [, src] of html.matchAll(/(?:src|href)="(\/_next\/static\/[^"<>]+)"/g))
+    assets.add(src.replaceAll("&amp;", "&"));
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE_VERSION)
-      .then((cache) => cache.addAll(STATIC_SHELL))
-      .catch(() => undefined)
+    (async () => {
+      const cache = await caches.open(CACHE);
+      const assets = new Set([
+        "/app/icons/icon-192x192.png",
+        "/app/icons/icon-512x512.png",
+        "/images/salcedo/guide-valley.webp",
+      ]);
+      await Promise.all(SHELL.map((path) => cachePage(cache, path, assets)));
+      await cache.addAll([...assets]);
+      await self.skipWaiting();
+    })(),
   );
-  self.skipWaiting();
+});
+
+self.addEventListener("message", (event) => {
+  const path = event.data?.path;
+  if (
+    event.data?.type !== "keep-place" ||
+    typeof path !== "string" ||
+    !/^\/app\/places\/[a-z0-9_-]+$/i.test(path)
+  )
+    return;
+  event.waitUntil(
+    (async () => {
+      const cache = await caches.open(CACHE);
+      const assets = new Set();
+      await cachePage(cache, path, assets);
+      await Promise.all(
+        [...assets].map(async (src) => {
+          if (!(await cache.match(src))) await cache.add(src);
+        }),
+      );
+    })().catch(() => undefined),
+  );
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(
-        keys.filter((key) => key !== CACHE_VERSION).map((oldKey) => caches.delete(oldKey))
-      )
-    )
+    (async () => {
+      for (const key of await caches.keys()) {
+        if (key.startsWith("turi-salcedo-") && key !== CACHE) await caches.delete(key);
+      }
+      await self.clients.claim();
+    })(),
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-  if (url.origin !== self.location.origin) return;
-
-  // NEVER cache admin routes, API routes, visitor data, or itinerary submissions
-  if (url.pathname.startsWith("/admin") || url.pathname.startsWith("/api/")) {
-    return;
-  }
-
-  // Immutable Next.js build assets: cache-first (hashed filenames)
-  if (url.pathname.startsWith("/_next/static/")) {
+  const request = event.request;
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin || request.method !== "GET") return;
+  const path = url.pathname;
+  const asset =
+    path.startsWith("/_next/static/") ||
+    path.startsWith("/images/salcedo/") ||
+    path.startsWith("/app/icons/") ||
+    path === "/_next/image";
+  if (asset) {
     event.respondWith(
-      caches.match(req).then(
-        (cached) =>
-          cached ||
-          fetch(req).then((res) => {
-            if (res && res.status === 200) {
-              const copy = res.clone();
-              caches.open(CACHE_VERSION).then((c) => c.put(req, copy));
-            }
-            return res;
-          })
-      )
+      (async () => {
+        const cache = await caches.open(CACHE);
+        const cached = await cache.match(request);
+        if (cached) return cached;
+        try {
+          const response = await fetch(request);
+          if (response.ok) await cache.put(request, response.clone()).catch(() => undefined);
+          return response;
+        } catch {
+          if (request.destination !== "image") return Response.error();
+          // Do not cache this placeholder: the real photo loads when the connection returns.
+          return new Response(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 150"><rect width="240" height="150" fill="#e9ebde"/><path d="m79 88 26-33 17 20 13-15 26 28H79Z" fill="none" stroke="#687664" stroke-width="2"/><text x="120" y="110" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#4d5c4d">Photo unavailable offline</text></svg>',
+            { headers: { "Content-Type": "image/svg+xml" } },
+          );
+        }
+      })(),
     );
     return;
   }
-
-  // Salcedo images & icons: stale-while-revalidate so saved places show photos offline
-  if (
-    url.pathname.startsWith("/images/salcedo/") ||
-    url.pathname.startsWith("/app/icons/") ||
-    url.pathname.startsWith("/_next/image")
-  ) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        const networkFetch = fetch(req)
-          .then((res) => {
-            if (res && res.status === 200) {
-              const copy = res.clone();
-              caches.open(CACHE_VERSION).then((c) => c.put(req, copy));
-            }
-            return res;
-          })
-          .catch(() => cached);
-        return cached || networkFetch;
-      })
-    );
-    return;
-  }
-
-  // Tourist app pages (home, discover, map, trips, place details):
-  // stale-while-revalidate — instant offline open from cache, refreshed in
-  // the background when signal returns. Place pages a tourist opened are
-  // therefore readable later in upland barangays with no signal.
-  if (url.pathname.startsWith("/app")) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        const networkFetch = fetch(req)
-          .then((res) => {
-            if (res && res.status === 200) {
-              const copy = res.clone();
-              caches.open(CACHE_VERSION).then((c) => c.put(req, copy));
-            }
-            return res;
-          })
-          .catch(async () => {
-            if (cached) return cached;
-            const offlineFallback = await caches.match("/app/offline");
-            return (
-              offlineFallback ||
-              new Response("Offline — Turi Salcedo", { status: 503 })
-            );
-          });
-        return cached || networkFetch;
-      })
-    );
-    return;
-  }
+  // Never confuse a Next router/prefetch payload with an HTML navigation.
+  if (request.mode !== "navigate" || !(path === "/app" || path.startsWith("/app/"))) return;
+  event.respondWith(
+    (async () => {
+      const cache = await caches.open(CACHE);
+      try {
+        const response = await fetch(request);
+        if (response.ok && response.headers.get("content-type")?.includes("text/html"))
+          await cache.put(request, response.clone()).catch(() => undefined);
+        return response;
+      } catch {
+        return (
+          (await cache.match(request)) ||
+          (await cache.match(path === "/app" ? "/app/" : path)) ||
+          (await cache.match("/app/offline")) ||
+          Response.error()
+        );
+      }
+    })(),
+  );
 });

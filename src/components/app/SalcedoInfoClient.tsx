@@ -114,7 +114,7 @@ function SalcedoInfoInner({
   contacts,
   municipalInfo,
 }: SalcedoDataProps & { initialTab: TabId }) {
-  const [tab, setTab] = useState<TabId>(initialTab);
+  const tab = initialTab;
   const [barangayQuery, setBarangayQuery] = useState("");
 
   const filteredBarangays = useMemo(() => {
@@ -140,29 +140,12 @@ function SalcedoInfoInner({
 
   return (
     <div className="w-full min-w-0 space-y-4">
-      {/* Minimal Sticky Pills */}
-      <div className="sticky top-0 z-30 w-full py-2 bg-[#FAF9F6]/95 backdrop-blur-md border-b border-[#EAE7E0]">
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar px-4 after:content-[''] after:w-1 after:shrink-0">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-medium transition cursor-pointer ${
-                tab === t.id
-                  ? "bg-[#164237] text-white"
-                  : "bg-white text-[#1A2421] border border-[#EAE7E0]"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="px-4 space-y-4">
+      <nav className="profile-nav" aria-label="Visitor information topics">
+        {tabs.map(t => <Link href={`/app/salcedo?tab=${t.id}`} scroll={false} key={t.id} aria-current={tab === t.id ? "page" : undefined}>{t.label}</Link>)}
+      </nav>
+      <div className="profile-content">
       {tab === "overview" && (
-        <div className="space-y-4">
+        <div className="profile-overview">
           <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
             <div className="flex items-center gap-3">
               <img
@@ -186,7 +169,7 @@ function SalcedoInfoInner({
             <img
               src="/images/salcedo/ilocos-sur-locator-map.jpg"
               alt="Locator Map of Salcedo, Ilocos Sur"
-              className="w-full rounded-xl border border-[#EAE7E0]"
+              className="locator-map"
             />
           </div>
 
@@ -221,7 +204,7 @@ function SalcedoInfoInner({
             </div>
           </div>
 
-          {municipalInfo.map((sec) => (
+          {municipalInfo.filter(sec => sec.key !== "profile_overview").map((sec) => (
             <article
               key={sec.key}
               className="bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-1.5"
@@ -242,11 +225,13 @@ function SalcedoInfoInner({
             type="search"
             value={barangayQuery}
             onChange={(e) => setBarangayQuery(e.target.value)}
-            placeholder="Filter the 21 barangays..."
+            aria-label="Search the barangay directory"
+            placeholder="Search the 21 barangays…"
             className="w-full rounded-full border border-[#EAE7E0] bg-white px-4 py-2 text-sm focus:outline-none focus:border-[#164237]/40"
           />
 
           <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
+            {filteredBarangays.length === 0 && <p className="empty-note" role="status">No barangays match “{barangayQuery}”. Try a different name.</p>}
             {filteredBarangays.map((b) => (
               <Link
                 key={b.id}
@@ -274,7 +259,7 @@ function SalcedoInfoInner({
       )}
 
       {tab === "history" && (
-        <div className="space-y-3">
+        <div className="profile-grid">
           {historicalArticles.map((art) => (
             <article
               key={art.id}
@@ -308,7 +293,7 @@ function SalcedoInfoInner({
       )}
 
       {tab === "events" && (
-        <div className="space-y-3">
+        <div className="profile-grid">
           {events.map((ev) => (
             <article
               key={ev.id}
@@ -330,7 +315,7 @@ function SalcedoInfoInner({
       )}
 
       {tab === "products" && (
-        <div className="space-y-3">
+        <div className="profile-grid">
           {products.map((pr) => (
             <article
               key={pr.id}
@@ -361,7 +346,7 @@ function SalcedoInfoInner({
       )}
 
       {tab === "guides" && (
-        <div className="space-y-3">
+        <div className="profile-grid">
           {guides.map((g) => (
             <article
               key={g.id}

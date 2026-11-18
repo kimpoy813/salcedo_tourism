@@ -2,23 +2,15 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { Modal } from "@/components/ui/Modal";
+import { Kicker } from "@/components/ui/FieldGuide";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+import type { GeoSearchItem as SearchHit } from "@/app/api/geo/search/route";
 import {
-  ChevronUp,
-  CloudSun,
-  Crosshair,
-  Eye,
-  Flame,
-  Layers,
-  MapPin,
-  Mountain,
-  Navigation,
-  Plus,
-  Search,
-  Star,
-  Tag,
-  X,
+  ArrowUpRight, Check, ChevronRight, CloudSun, Crosshair, Layers, List,
+  MapPin, Minus, Mountain, Navigation, Plus, Search, Star, X,
 } from "lucide-react";
 import {
   findSalcedoBarangayForPoint,
@@ -36,7 +28,7 @@ import { useMobileApp } from "./MobileAppContext";
 const TYPE_COLORS: Record<string, string> = {
   attraction: "#164237",
   nature: "#164237",
-  heritage: "#B88A44",
+  heritage: "#8A6527",
   resort: "#1D7874",
   restaurant: "#9E6340",
   cafe: "#7A5842",
@@ -66,17 +58,19 @@ const TYPE_OPTIONS = [
   { id: "accommodation", label: "Stays" },
   { id: "heritage", label: "Heritage" },
   { id: "business", label: "Crafts" },
+  { id: "service", label: "Services" },
 ];
 
-type BasemapStyle = "osm" | "clean" | "terrain" | "satellite";
+type BasemapStyle = "atlas" | "osm" | "clean" | "terrain" | "satellite";
 type MapRankMode = "explore" | "most_visited" | "top_rated";
 
 const BASEMAP_CONFIG: Record<
   BasemapStyle,
   { label: string; url: string; attribution: string; maxZoom: number }
 > = {
+  atlas: { label: "Field map", url: "", attribution: "Boundaries: PSA / NAMRIA", maxZoom: 19 },
   osm: {
-    label: "OSM",
+    label: "Street map",
     url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     attribution: "&copy; OpenStreetMap contributors • Salcedo PSA",
     maxZoom: 19,
@@ -101,7 +95,7 @@ const BASEMAP_CONFIG: Record<
   },
 };
 
-const BASEMAP_ORDER: BasemapStyle[] = ["osm", "clean", "terrain", "satellite"];
+const BASEMAP_ORDER: BasemapStyle[] = ["atlas", "osm", "clean", "terrain", "satellite"];
 
 const TYPE_PIN_SVG: Record<string, string> = {
   nature:
@@ -136,16 +130,11 @@ function computeCentroid(coords: LatLngTuple[]): LatLngTuple {
 
 
 
-interface SearchHit {
-  id: string;
-  label: string;
-  subtitle: string;
-  kind: "place" | "barangay" | "osm";
-  slug?: string;
-  latitude: number;
-  longitude: number;
+function textLabel(value: string) {
+  const node = document.createElement("span");
+  node.textContent = value;
+  return node;
 }
-
 
 export interface MapBarangayItem {
   id: string;
@@ -177,17 +166,18 @@ export function SalcedoMap({
   const userLayerRef = useRef<L.LayerGroup | null>(null);
   const markersLayerRef = useRef<L.LayerGroup | null>(null);
   const searchMarkerLayerRef = useRef<L.LayerGroup | null>(null);
-  const { addPlaceToActiveDraft, showToast } = useMobileApp();
+  const { draftStopIds, addPlaceToActiveDraft, showToast } = useMobileApp();
 
-  const [basemap, setBasemap] = useState<BasemapStyle>("osm");
+  const [basemap, setBasemap] = useState<BasemapStyle>("atlas");
   const [rankMode, setRankMode] = useState<MapRankMode>("most_visited");
+  const [zoom, setZoom] = useState(13);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [selectedBarangay, setSelectedBarangay] = useState<string>("all");
   const [showBarangayBorders, setShowBarangayBorders] = useState(true);
   const [showBarangayNames, setShowBarangayNames] = useState(true);
   const [rankingDrawerOpen, setRankingDrawerOpen] = useState(false);
   const [activePlace, setActivePlace] = useState<PlaceCardData | null>(() =>
-    initialPlaceSlug ? places.find((p) => p.slug === initialPlaceSlug) ?? null : null
+    initialPlaceSlug ? (places.find((p) => p.slug === initialPlaceSlug) ?? null) : null,
   );
   const [locating, setLocating] = useState(false);
 
@@ -205,13 +195,13 @@ export function SalcedoMap({
     barangayName: string | null;
   } | null>(null);
 
-
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<SearchHit[]>([]);
   const [pinnedOsmResult, setPinnedOsmResult] = useState<SearchHit | null>(null);
   const deepLinkAppliedRef = useRef(false);
+  const focusedBarangay = useRef<string | null>(null);
 
   const visiblePlaces = useMemo(() => {
     const filtered = places.filter((p) => {
@@ -230,23 +220,17 @@ export function SalcedoMap({
     });
 
     if (rankMode === "most_visited") {
-      return [...filtered].sort(
-        (a, b) => (a.mostVisitedRank ?? 99) - (b.mostVisitedRank ?? 99)
-      );
+      return [...filtered].sort((a, b) => (a.mostVisitedRank ?? 99) - (b.mostVisitedRank ?? 99));
     }
     if (rankMode === "top_rated") {
-      return [...filtered].sort(
-        (a, b) => (a.topRatedRank ?? 99) - (b.topRatedRank ?? 99)
-      );
+      return [...filtered].sort((a, b) => (a.topRatedRank ?? 99) - (b.topRatedRank ?? 99));
     }
-    return [...filtered].sort(
-      (a, b) => (a.categoryRank ?? 99) - (b.categoryRank ?? 99)
-    );
+    return [...filtered].sort((a, b) => (a.categoryRank ?? 99) - (b.categoryRank ?? 99));
   }, [places, selectedType, selectedBarangay, rankMode]);
 
   // Fetch free Open-Meteo current weather for Salcedo on fullscreen mount
   useEffect(() => {
-    if (mode !== "fullscreen") return;
+    if (mode !== "fullscreen" || !navigator.onLine) return;
     let cancelled = false;
     fetch("/api/geo/telemetry")
       .then((r) => (r.ok ? r.json() : null))
@@ -266,12 +250,16 @@ export function SalcedoMap({
 
   // Fetch spot elevation via free Open-Meteo DEM API whenever a spot opens
   useEffect(() => {
-    if (!activePlace || activePlace.latitude == null || activePlace.longitude == null) return;
+    if (
+      !navigator.onLine ||
+      !activePlace ||
+      activePlace.latitude == null ||
+      activePlace.longitude == null
+    )
+      return;
     if (elevationCache[activePlace.id] !== undefined) return;
     let cancelled = false;
-    fetch(
-      `/api/geo/telemetry?lat=${activePlace.latitude}&lng=${activePlace.longitude}`
-    )
+    fetch(`/api/geo/telemetry?lat=${activePlace.latitude}&lng=${activePlace.longitude}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
         if (!cancelled && typeof data?.elevationMeters === "number") {
@@ -287,11 +275,51 @@ export function SalcedoMap({
     };
   }, [activePlace, elevationCache]);
 
-  // Debounced free OpenStreetMap Nominatim bounded search
+  // Show matching directory entries immediately, including when road search is offline.
+  const localHits = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!searchOpen || q.length < 2) return [];
+    const hits: SearchHit[] = [];
+    for (const p of places) {
+      if (
+        p.latitude != null &&
+        p.longitude != null &&
+        `${p.name} ${p.address}`.toLowerCase().includes(q)
+      )
+        hits.push({
+          id: `place-${p.id}`,
+          label: p.name,
+          subtitle: p.address,
+          slug: p.slug,
+          kind: "place",
+          latitude: p.latitude,
+          longitude: p.longitude,
+        });
+    }
+    for (const b of barangays) {
+      if (b.name.toLowerCase().includes(q))
+        hits.push({
+          id: `brgy-${b.id}`,
+          label: `Brgy. ${b.name}`,
+          subtitle: "Salcedo barangay",
+          slug: b.slug,
+          kind: "barangay",
+          latitude: b.latitude,
+          longitude: b.longitude,
+        });
+    }
+    return hits.slice(0, 10);
+  }, [places, barangays, searchQuery, searchOpen]);
+  const mapHits = [
+    ...localHits,
+    ...searchResults.filter((hit) => !localHits.some((local) => local.id === hit.id)),
+  ].slice(0, 10);
+
+  // Debounced street and landmark search supplements the offline index.
   useEffect(() => {
     if (!searchOpen) return;
     const q = searchQuery.trim();
-    if (q.length < 2) return;
+    if (q.length < 2 || !navigator.onLine) return;
     let cancelled = false;
     const timer = window.setTimeout(() => {
       setSearching(true);
@@ -313,7 +341,6 @@ export function SalcedoMap({
     };
   }, [searchQuery, searchOpen]);
 
-
   // Initialize Leaflet Map strictly centered & isolated to Salcedo, Ilocos Sur
   useEffect(() => {
     const container = mapContainerRef.current;
@@ -321,7 +348,7 @@ export function SalcedoMap({
 
     const salcedoBounds = L.latLngBounds(
       [SALCEDO_BOUNDS.south, SALCEDO_BOUNDS.west],
-      [SALCEDO_BOUNDS.north, SALCEDO_BOUNDS.east]
+      [SALCEDO_BOUNDS.north, SALCEDO_BOUNDS.east],
     );
 
     const map = L.map(container, {
@@ -331,19 +358,18 @@ export function SalcedoMap({
       maxZoom: 19,
       maxBounds: salcedoBounds.pad(0.22),
       maxBoundsViscosity: 0.9,
-      scrollWheelZoom: true,
+      scrollWheelZoom: mode === "fullscreen",
+      zoomSnap: 0.25,
       zoomControl: false,
       attributionControl: false,
     });
 
-    L.control.attribution({ position: "bottomleft", prefix: false }).addTo(map);
-
-    const initialBase = BASEMAP_CONFIG.osm;
-    const tiles = L.tileLayer(initialBase.url, {
-      attribution: initialBase.attribution,
-      maxZoom: initialBase.maxZoom,
-    }).addTo(map);
-    tileLayerRef.current = tiles;
+    L.control
+      .attribution({ position: "bottomright", prefix: false })
+      .addTo(map)
+      .addAttribution("Boundaries: PSA / NAMRIA");
+    L.control.scale({ imperial: false, position: "bottomleft" }).addTo(map);
+    map.on("zoomend", () => setZoom(map.getZoom()));
 
     const maskPane = map.createPane("salcedoMaskPane");
     maskPane.style.zIndex = "260";
@@ -352,7 +378,6 @@ export function SalcedoMap({
     const boundaryPane = map.createPane("salcedoBoundaryPane");
     boundaryPane.style.zIndex = "340";
 
-
     const labelPane = map.createPane("salcedoLabelPane");
     labelPane.style.zIndex = "360";
     labelPane.style.pointerEvents = "none";
@@ -360,8 +385,8 @@ export function SalcedoMap({
     L.polygon([SALCEDO_MASK_OUTER_RING, SALCEDO_MUNICIPAL_POLYGON], {
       pane: "salcedoMaskPane",
       stroke: false,
-      fillColor: "#F2EFE9",
-      fillOpacity: 0.94,
+      fillColor: "#f1efe5",
+      fillOpacity: 0.49,
       fillRule: "evenodd",
       interactive: false,
     }).addTo(map);
@@ -400,8 +425,8 @@ export function SalcedoMap({
     markersLayerRef.current = markerLayer;
     searchMarkerLayerRef.current = searchMarkerLayer;
 
-    const topPad = mode === "fullscreen" ? 136 : 24;
-    const bottomPad = mode === "fullscreen" ? 116 : 24;
+    const topPad = 36;
+    const bottomPad = 40;
     map.fitBounds(salcedoBounds, {
       paddingTopLeft: [20, topPad],
       paddingBottomRight: [20, bottomPad],
@@ -447,13 +472,23 @@ export function SalcedoMap({
     if (tileLayerRef.current) {
       map.removeLayer(tileLayerRef.current);
     }
+    tileLayerRef.current = null;
+    if (basemap === "atlas") return;
     const cfg = BASEMAP_CONFIG[basemap];
-    tileLayerRef.current = L.tileLayer(cfg.url, {
-      attribution: cfg.attribution,
-      maxZoom: cfg.maxZoom,
-    }).addTo(map);
-    tileLayerRef.current.bringToBack();
-  }, [basemap]);
+    const layer = L.tileLayer(cfg.url, { attribution: cfg.attribution, maxZoom: cfg.maxZoom });
+    const fallback = () => {
+      setBasemap("atlas");
+      showToast("Map tiles are unavailable. Showing local boundaries and places instead.", {
+        tone: "info",
+      });
+    };
+    layer.once("tileerror", fallback).addTo(map);
+    tileLayerRef.current = layer;
+    return () => {
+      layer.off("tileerror", fallback);
+      layer.remove();
+    };
+  }, [basemap, showToast]);
 
   // Render interactive 21 official Salcedo barangays + clean centroid labels
   useEffect(() => {
@@ -462,6 +497,7 @@ export function SalcedoMap({
     const labelLayer = barangayLabelsLayerRef.current;
     if (!map || !brgyLayer || !labelLayer) return;
 
+    if (selectedBarangay === "all") focusedBarangay.current = null;
     brgyLayer.clearLayers();
     labelLayer.clearLayers();
 
@@ -475,8 +511,14 @@ export function SalcedoMap({
           weight: isSelected ? 2.6 : 1.1,
           opacity: isSelected ? 0.98 : basemap === "satellite" ? 0.55 : 0.34,
           dashArray: isSelected ? undefined : "3 4",
-          fillColor: isSelected ? "#1D7874" : "#164237",
-          fillOpacity: isSelected ? 0.2 : 0.015,
+          fillColor: isSelected
+            ? "#55967c"
+            : basemap === "atlas"
+              ? ["#b7cda8", "#d5dcc2", "#c9d9b7", "#c6d6c4", "#e0d9ba"][
+                  Number(brgy.psgc.slice(-3)) % 5
+                ]
+              : "#164237",
+          fillOpacity: basemap === "atlas" ? 0.88 : isSelected ? 0.2 : 0.015,
           lineJoin: "round",
         });
 
@@ -493,25 +535,24 @@ export function SalcedoMap({
 
         poly.addTo(brgyLayer);
 
-        if (isSelected) {
+        if (isSelected && focusedBarangay.current !== brgy.slug) {
+          focusedBarangay.current = brgy.slug;
           map.fitBounds(poly.getBounds(), {
-            paddingTopLeft: [28, mode === "fullscreen" ? 140 : 28],
-            paddingBottomRight: [28, mode === "fullscreen" ? 120 : 28],
+            paddingTopLeft: [28, 36],
+            paddingBottomRight: [28, 40],
             maxZoom: 15,
             animate: true,
           });
         }
       }
 
-      if (showBarangayNames || isSelected) {
+      if ((showBarangayNames && zoom >= 13.5) || isSelected) {
         const center = computeCentroid(brgy.coordinates);
         const labelIcon = L.divIcon({
           className: "salcedo-brgy-label",
           iconSize: [0, 0],
           html: `<span class="salcedo-brgy-label-pill" style="${
-            isSelected
-              ? "background:#164237;color:#FFFFFF;border-color:#164237;"
-              : ""
+            isSelected ? "background:#164237;color:#FFFFFF;border-color:#164237;" : ""
           }">${brgy.name}</span>`,
         });
         L.marker(center, {
@@ -521,7 +562,7 @@ export function SalcedoMap({
         }).addTo(labelLayer);
       }
     }
-  }, [selectedBarangay, showBarangayBorders, showBarangayNames, basemap, mode]);
+  }, [selectedBarangay, showBarangayBorders, showBarangayNames, basemap, mode, zoom]);
 
   // Render Live User GPS Blue Pulse Dot & Accuracy Ring
   useEffect(() => {
@@ -570,7 +611,7 @@ export function SalcedoMap({
       icon: pinIcon,
       zIndexOffset: 850,
     })
-      .bindTooltip(pinnedOsmResult.label, {
+      .bindTooltip(textLabel(pinnedOsmResult.label), {
         permanent: true,
         direction: "top",
         offset: [0, -14],
@@ -593,21 +634,15 @@ export function SalcedoMap({
       const isSelected = activePlace?.id === p.id;
       const rankNum =
         rankMode === "most_visited"
-          ? p.mostVisitedRank ?? listIdx + 1
+          ? (p.mostVisitedRank ?? listIdx + 1)
           : rankMode === "top_rated"
-          ? p.topRatedRank ?? listIdx + 1
-          : listIdx + 1;
+            ? (p.topRatedRank ?? listIdx + 1)
+            : listIdx + 1;
 
       const showRankedBadge = rankMode !== "explore";
       const size = isSelected ? 36 : showRankedBadge && rankNum <= 3 ? 32 : 28;
       const badgeBg =
-        rankNum === 1
-          ? "#B88A44"
-          : rankNum === 2
-          ? "#164237"
-          : rankNum === 3
-          ? "#1D7874"
-          : color;
+        rankNum === 1 ? "#8A6527" : rankNum === 2 ? "#164237" : rankNum === 3 ? "#1D7874" : color;
 
       const innerContent = showRankedBadge
         ? `<span style="font-size:${
@@ -622,10 +657,8 @@ export function SalcedoMap({
           ? `<div style="position:absolute;left:50%;bottom:${
               size + 3
             }px;transform:translateX(-50%);background:rgba(255,255,255,0.96);color:#1A2421;border:1px solid #EAE7E0;border-radius:9999px;padding:1px 6px;font-size:10px;font-weight:700;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,0.15);pointer-events:none;">${
-              p.name.split(" ")[0]
-            }${
-              (p.averageRating ?? 0) > 0 ? ` ★${p.averageRating?.toFixed(1)}` : ""
-            }</div>`
+              textLabel(p.name.split(" ")[0]).innerHTML
+            }${(p.averageRating ?? 0) > 0 ? ` ★${p.averageRating?.toFixed(1)}` : ""}</div>`
           : "";
 
       const icon = L.divIcon({
@@ -634,9 +667,7 @@ export function SalcedoMap({
         iconAnchor: [size / 2, size / 2],
         html: `<div style="position:relative;width:${size}px;height:${size}px;">${ratingBubble}<div style="width:${size}px;height:${size}px;border-radius:9999px;background:${
           showRankedBadge ? badgeBg : color
-        };border:${
-          isSelected ? "3px" : "2.5px"
-        } solid #FFFFFF;box-shadow:0 ${
+        };border:${isSelected ? "3px" : "2.5px"} solid #FFFFFF;box-shadow:0 ${
           isSelected ? "6px 16px" : "3px 10px"
         } rgba(16,50,42,${
           isSelected ? "0.42" : "0.28"
@@ -645,18 +676,22 @@ export function SalcedoMap({
 
       const marker = L.marker([p.latitude, p.longitude], {
         icon,
+        title: p.name,
+        alt: p.name,
         zIndexOffset: isSelected ? 700 : showRankedBadge ? 400 - rankNum : 100,
       });
 
       marker.bindTooltip(
-        `${showRankedBadge ? `#${rankNum} ` : ""}${p.name}${
-          (p.averageRating ?? 0) > 0 ? ` (★${p.averageRating?.toFixed(1)})` : ""
-        }`,
+        textLabel(
+          `${showRankedBadge ? `#${rankNum} ` : ""}${p.name}${
+            (p.averageRating ?? 0) > 0 ? ` (★${p.averageRating?.toFixed(1)})` : ""
+          }`,
+        ),
         {
           direction: "top",
           offset: [0, -14],
           className: "salcedo-map-tooltip",
-        }
+        },
       );
 
       marker.on("click", () => {
@@ -678,11 +713,11 @@ export function SalcedoMap({
     setPinnedOsmResult(null);
     const bounds = L.latLngBounds(
       [SALCEDO_BOUNDS.south, SALCEDO_BOUNDS.west],
-      [SALCEDO_BOUNDS.north, SALCEDO_BOUNDS.east]
+      [SALCEDO_BOUNDS.north, SALCEDO_BOUNDS.east],
     );
     map.fitBounds(bounds, {
-      paddingTopLeft: [20, mode === "fullscreen" ? 136 : 24],
-      paddingBottomRight: [20, mode === "fullscreen" ? 116 : 24],
+      paddingTopLeft: [20, 36],
+      paddingBottomRight: [20, 40],
       animate: true,
     });
   };
@@ -708,10 +743,9 @@ export function SalcedoMap({
         });
         if (inside) {
           mapRef.current?.setView([latitude, longitude], 15, { animate: true });
-          showToast(
-            brgy ? `Located in Brgy. ${brgy.name}` : "Located inside Salcedo",
-            { tone: "info" }
-          );
+          showToast(brgy ? `Located in Brgy. ${brgy.name}` : "Located inside Salcedo", {
+            tone: "info",
+          });
         } else {
           showToast("Located outside Salcedo", {
             tone: "info",
@@ -723,7 +757,7 @@ export function SalcedoMap({
         setLocating(false);
         showToast("Allow location access to see where you are on the map", { tone: "info" });
       },
-      { enableHighAccuracy: true, timeout: 7000 }
+      { enableHighAccuracy: true, timeout: 7000 },
     );
   };
 
@@ -744,6 +778,8 @@ export function SalcedoMap({
     if (hit.kind === "place" && hit.slug) {
       const matched = places.find((p) => p.slug === hit.slug);
       if (matched) {
+        setSelectedType("all");
+        setSelectedBarangay("all");
         handleFocusPlace(matched);
         return;
       }
@@ -769,9 +805,7 @@ export function SalcedoMap({
   };
 
   const selectedBrgyObj =
-    selectedBarangay !== "all"
-      ? barangays.find((b) => b.slug === selectedBarangay)
-      : null;
+    selectedBarangay !== "all" ? barangays.find((b) => b.slug === selectedBarangay) : null;
 
   const selectedBrgyLabel =
     selectedBarangay === "all"
@@ -782,578 +816,330 @@ export function SalcedoMap({
           selectedBarangay
         }`;
 
-  // FULLSCREEN NATIVE APP MAP MODE (/app/map)
+  const resultList = (
+    <ol className="map-result-list">
+      {visiblePlaces.map((p, i) => (
+        <li key={p.id}>
+          <button
+            type="button"
+            onClick={() => handleFocusPlace(p)}
+            aria-pressed={activePlace?.id === p.id}
+          >
+            <Image
+              src={p.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
+              alt=""
+              width={64}
+              height={54}
+            />
+            <span>
+              <small>
+                {rankMode !== "explore" &&
+                  `#${(rankMode === "top_rated" ? p.topRatedRank : p.mostVisitedRank) ?? i + 1} · `}
+                {TYPE_LABELS[p.placeType]}
+              </small>
+              <strong>{p.name.split(" (")[0]}</strong>
+              <small>{p.barangay?.name || "Salcedo"}</small>
+            </span>
+            <ChevronRight size={15} />
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+  const locationSearch = searchOpen && searchQuery.trim().length >= 2;
   if (mode === "fullscreen") {
     return (
-      <div className="relative w-full h-full bg-[#ECE9E0] overflow-hidden select-none">
-        <div ref={mapContainerRef} className="w-full h-full" />
-
-        {/* Floating Top Controls: Municipality Context + Weather + Search + Ranking Mode + Categories */}
-        <div className="absolute top-[max(10px,env(safe-area-inset-top))] left-3 right-3 z-[420] space-y-1.5 pointer-events-none">
-          <div className="pointer-events-auto flex items-center justify-between gap-2 rounded-2xl bg-white/95 backdrop-blur-md border border-[#EAE7E0] px-3 py-2 shadow-sm">
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-[#164237] shrink-0" />
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="font-display text-xs font-bold text-[#1A2421] truncate">
-                    {selectedBrgyLabel}
-                  </p>
-                  {weather && (
-                    <span className="hidden xs:inline-flex items-center gap-1 rounded-full bg-[#F3F2EE] px-2 py-0.5 text-[10px] font-semibold text-[#164237] shrink-0">
-                      <CloudSun className="w-3 h-3 text-[#B88A44]" />
-                      {weather.temperatureC}°C • {weather.condition}
-                    </span>
-                  )}
+      <div className="map-workbench">
+        <section className="map-sidebar" aria-label="Map explorer controls">
+          <div className="map-panel-head">
+            <Kicker>Salcedo field atlas</Kicker>
+            <h1>Map explorer</h1>
+            <p>Explore places across the valley’s 21 barangays.</p>
+          </div>
+          <div className="map-filter-box">
+            <label className="directory-search">
+              <Search size={16} />
+              <input
+                type="search"
+                aria-label="Search map places and roads"
+                placeholder="Search places, roads, or barangays…"
+                value={searchQuery}
+                onFocus={() => setSearchOpen(true)}
+                onChange={(e) => {
+                  setSearchOpen(true);
+                  setSearching(navigator.onLine && e.target.value.trim().length >= 2);
+                  setSearchQuery(e.target.value);
+                  setSearchResults([]);
+                }}
+              />
+            </label>
+            {locationSearch && (
+              <div className="map-search-hits">
+                <div>
+                  <span role="status">
+                    {mapHits.length
+                      ? "Search results"
+                      : searching
+                        ? "Searching…"
+                        : navigator.onLine
+                          ? "No matching places or roads."
+                          : "No saved map matches. Reconnect to search roads."}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchOpen(false);
+                      setSearchQuery("");
+                    }}
+                    aria-label="Close search results"
+                  >
+                    <X size={15} />
+                  </button>
                 </div>
-                <p className="text-[10px] text-[#616E69] tabular-nums truncate">
-                  {visiblePlaces.length} spots • {BASEMAP_CONFIG[basemap].label} layer
-                  {weather ? ` • ${weather.temperatureC}°C` : ""}
-                </p>
+                {mapHits.map((hit) => (
+                  <button key={hit.id} type="button" onClick={() => handleSelectSearchHit(hit)}>
+                    <MapPin size={15} />
+                    <span>
+                      {hit.label}
+                      <small>{hit.subtitle}</small>
+                    </span>
+                  </button>
+                ))}
               </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setSearchOpen((v) => !v)}
-                aria-label="Search Salcedo places and OpenStreetMap roads"
-                className={`w-8 h-8 rounded-full border flex items-center justify-center transition cursor-pointer ${
-                  searchOpen
-                    ? "bg-[#164237] text-white border-[#164237]"
-                    : "bg-[#FAF9F6] text-[#1A2421] border-[#EAE7E0]"
-                }`}
-              >
-                <Search className="w-3.5 h-3.5" />
-              </button>
-
+            )}
+            <div className="map-selects">
               <select
+                aria-label="Filter by barangay"
                 value={selectedBarangay}
                 onChange={(e) => {
-                  const val = e.target.value;
-                  setSelectedBarangay(val);
-                  setActivePlace(null);
-                  if (val === "all") {
-                    const bounds = L.latLngBounds(
-                      [SALCEDO_BOUNDS.south, SALCEDO_BOUNDS.west],
-                      [SALCEDO_BOUNDS.north, SALCEDO_BOUNDS.east]
-                    );
-                    mapRef.current?.fitBounds(bounds, {
-                      paddingTopLeft: [20, 136],
-                      paddingBottomRight: [20, 116],
-                      animate: true,
-                    });
+                  if (e.target.value === "all") handleRecenter();
+                  else {
+                    setSelectedBarangay(e.target.value);
+                    setActivePlace(null);
                   }
                 }}
-                aria-label="Select Salcedo Barangay"
-                className="rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-2.5 py-1 text-[11px] font-semibold text-[#1A2421] max-w-[126px] truncate cursor-pointer"
               >
-                <option value="all">All 21 Brgys</option>
+                <option value="all">All barangays</option>
                 {SALCEDO_BARANGAY_POLYGONS.map((b) => (
                   <option key={b.slug} value={b.slug}>
-                    Brgy. {b.name}
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Filter by place type"
+                value={selectedType}
+                onChange={(e) => {
+                  setSelectedType(e.target.value);
+                  setActivePlace(null);
+                }}
+              >
+                {TYPE_OPTIONS.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.id === "all" ? "All place types" : t.label}
                   </option>
                 ))}
               </select>
             </div>
           </div>
-
-          {/* Expandable Free OSM Nominatim Salcedo-Bounded Search Drawer */}
-          {searchOpen && (
-            <div className="pointer-events-auto rounded-2xl bg-white/98 backdrop-blur-md border border-[#EAE7E0] p-2.5 shadow-lg space-y-2">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[#616E69] absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="search"
-                  autoFocus
-                  value={searchQuery}
-                  onChange={(e) => {
-                    const next = e.target.value;
-                    setSearchQuery(next);
-                    if (next.trim().length < 2) {
-                      setSearchResults([]);
-                      setSearching(false);
-                    }
-                  }}
-                  placeholder="Search spots, roads, sitios in Salcedo..."
-                  className="w-full rounded-full border border-[#EAE7E0] bg-[#FAF9F6] pl-8 pr-8 py-1.5 text-xs text-[#1A2421] focus:outline-none"
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchResults([]);
-                    }}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#616E69] cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-
-              {searching && (
-                <p className="text-[11px] text-[#616E69] px-2">
-                  Searching Salcedo &amp; OpenStreetMap...
-                </p>
-              )}
-
-              {!searching && searchResults.length > 0 && (
-                <ul className="max-h-48 overflow-y-auto divide-y divide-[#EAE7E0] text-xs">
-                  {searchResults.map((hit) => (
-                    <li key={hit.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleSelectSearchHit(hit)}
-                        className="w-full text-left py-2 px-2 hover:bg-[#FAF9F6] rounded-lg flex items-center justify-between gap-2 cursor-pointer"
-                      >
-                        <div className="min-w-0">
-                          <p className="font-semibold text-[#1A2421] truncate">{hit.label}</p>
-                          <p className="text-[10px] text-[#616E69] truncate">{hit.subtitle}</p>
-                        </div>
-                        <MapPin className="w-3.5 h-3.5 text-[#164237] shrink-0" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {!searching && searchQuery.trim().length >= 2 && searchResults.length === 0 && (
-                <p className="text-[11px] text-[#616E69] px-2">
-                  No matches found inside Salcedo.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Segmented Ranking Mode Toggle */}
-          <div className="pointer-events-auto flex items-center gap-1.5">
-            <div className="flex-1 grid grid-cols-3 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] p-0.5 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setRankMode("most_visited")}
-                className={`rounded-full py-1 text-[10px] font-bold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
-                  rankMode === "most_visited"
-                    ? "bg-[#164237] text-white"
-                    : "text-[#616E69]"
-                }`}
-              >
-                <Flame className="w-3 h-3" />
-                Most Visited
-              </button>
-              <button
-                type="button"
-                onClick={() => setRankMode("top_rated")}
-                className={`rounded-full py-1 text-[10px] font-bold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
-                  rankMode === "top_rated"
-                    ? "bg-[#B88A44] text-white"
-                    : "text-[#616E69]"
-                }`}
-              >
-                <Star className="w-3 h-3" />
-                Top Rated
-              </button>
-              <button
-                type="button"
-                onClick={() => setRankMode("explore")}
-                className={`rounded-full py-1 text-[10px] font-bold inline-flex items-center justify-center gap-1 transition cursor-pointer ${
-                  rankMode === "explore"
-                    ? "bg-[#1D7874] text-white"
-                    : "text-[#616E69]"
-                }`}
-              >
-                <Tag className="w-3 h-3" />
-                Categories
-              </button>
-            </div>
+          <div className="map-list-heading">
+            <b>{visiblePlaces.length} places</b>
+            <select
+              aria-label="Rank map places"
+              value={rankMode}
+              onChange={(e) => setRankMode(e.target.value as MapRankMode)}
+            >
+              <option value="most_visited">Most visited</option>
+              <option value="top_rated">Top rated</option>
+              <option value="explore">By category</option>
+            </select>
           </div>
-
-          {/* Horizontal Category Filter Pills */}
-          <div className="pointer-events-auto flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-            {TYPE_OPTIONS.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => {
-                  setSelectedType(t.id);
-                  setActivePlace(null);
-                }}
-                className={`shrink-0 px-3 py-1 rounded-full text-[11px] font-semibold shadow-2xs transition active:scale-95 cursor-pointer ${
-                  selectedType === t.id
-                    ? "bg-[#164237] text-white"
-                    : "bg-white/95 backdrop-blur-md text-[#1A2421] border border-[#EAE7E0]"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
+          <div className="map-desktop-results">
+            {resultList}
+            {!visiblePlaces.length && <p className="empty-note">No places match these filters.</p>}
           </div>
-        </div>
-
-        {/* Floating Right Map Tool Dock (Recenter, GPS, Basemap Style, Borders) */}
-        <div className="absolute right-3 top-44 z-[420] flex flex-col gap-1.5">
-          <button
-            type="button"
-            onClick={handleRecenter}
-            aria-label="Center on Salcedo"
-            title="Fit Salcedo"
-            className="w-9 h-9 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] flex items-center justify-center text-[#164237] shadow-sm active:scale-90 transition cursor-pointer"
-          >
-            <Crosshair className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={handleLocateMe}
-            disabled={locating}
-            aria-label="My current GPS location"
-            title="Near Me"
-            className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center shadow-sm active:scale-90 transition cursor-pointer disabled:opacity-50 ${
-              userLocation
-                ? "bg-blue-600 text-white border-blue-600"
-                : "bg-white/95 text-[#1D7874] border-[#EAE7E0]"
-            }`}
-          >
-            <Navigation className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            onClick={cycleBasemap}
-            aria-label="Switch map style"
-            title={`Style: ${BASEMAP_CONFIG[basemap].label}`}
-            className="h-9 px-2.5 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] flex items-center justify-center text-[10px] font-bold text-[#1A2421] shadow-sm active:scale-90 transition cursor-pointer"
-          >
-            {BASEMAP_CONFIG[basemap].label}
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setShowBarangayBorders((v) => !v);
-              setShowBarangayNames((v) => !v);
-            }}
-            aria-label="Toggle barangay boundaries and names"
-            title="Barangays"
-            className={`w-9 h-9 rounded-full backdrop-blur-md border flex items-center justify-center shadow-sm active:scale-90 transition cursor-pointer ${
-              showBarangayBorders
-                ? "bg-[#164237] text-white border-[#164237]"
-                : "bg-white/95 text-[#616E69] border-[#EAE7E0]"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Bottom Overlay: Active Spot Sheet (with Route & DEM Elevation) OR Ranked Carousel */}
-        <div className="absolute bottom-3 left-3 right-3 z-[440] space-y-2">
+        </section>
+        <div className="map-stage">
+          <div
+            ref={mapContainerRef}
+            className={`map-surface ${basemap === "atlas" ? "atlas-surface" : ""}`}
+            aria-label="Interactive map of Salcedo"
+          />
+          <div className="map-style-picker">
+            <Layers size={15} />
+            <select
+              aria-label="Map style"
+              value={basemap}
+              onChange={(e) => setBasemap(e.target.value as BasemapStyle)}
+            >
+              {BASEMAP_ORDER.map((key) => (
+                <option key={key} value={key}>
+                  {BASEMAP_CONFIG[key].label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="map-tool-dock">
+            <button title="Zoom in" aria-label="Zoom in" onClick={() => mapRef.current?.zoomIn()}>
+              <Plus size={17} />
+            </button>
+            <button
+              title="Zoom out"
+              aria-label="Zoom out"
+              onClick={() => mapRef.current?.zoomOut()}
+            >
+              <Minus size={17} />
+            </button>
+            <button title="Fit Salcedo" aria-label="Center on Salcedo" onClick={handleRecenter}>
+              <Crosshair size={17} />
+            </button>
+            <button
+              title="My location"
+              aria-label="Find my location"
+              disabled={locating}
+              onClick={handleLocateMe}
+            >
+              <Navigation size={16} />
+            </button>
+            <button
+              title="Barangay boundaries"
+              aria-label="Toggle barangay boundaries"
+              aria-pressed={showBarangayBorders}
+              onClick={() => {
+                setShowBarangayBorders(!showBarangayBorders);
+                setShowBarangayNames(!showBarangayNames);
+              }}
+            >
+              <Layers size={16} />
+            </button>
+          </div>
+          <div className="map-coordinate-note">
+            <span>{selectedBrgyLabel}</span>
+            {weather && (
+              <span>
+                <CloudSun size={12} />
+                {weather.temperatureC}°C · {weather.condition}
+              </span>
+            )}
+          </div>
           {activePlace ? (
-            <div className="bg-white/98 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-3 shadow-xl space-y-2.5 animate-in fade-in slide-in-from-bottom-3 duration-150">
-              <div className="flex items-center gap-3">
-                <img
-                  src={
-                    activePlace.featuredImageUrl ||
-                    "/images/salcedo/hero-salcedo-valley.png"
-                  }
-                  alt={activePlace.name}
-                  className="w-18 h-18 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
+            <div className="map-preview">
+              <button
+                className="preview-close"
+                aria-label="Close place preview"
+                onClick={() => setActivePlace(null)}
+              >
+                <X size={16} />
+              </button>
+              <div className="preview-top">
+                <Image
+                  src={activePlace.featuredImageUrl || "/images/salcedo/hero-salcedo-valley.png"}
+                  alt=""
+                  width={80}
+                  height={66}
                 />
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex items-start justify-between gap-1">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-semibold">
-                        <span className="rounded-full bg-[#164237]/10 text-[#164237] px-2 py-0.5 tabular-nums">
-                          #
-                          {rankMode === "top_rated"
-                            ? activePlace.topRatedRank ?? 1
-                            : activePlace.mostVisitedRank ?? 1}{" "}
-                          {rankMode === "top_rated" ? "Rated" : "Visited"}
-                        </span>
-                        {(activePlace.ratingCount ?? 0) > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-[#1A2421] tabular-nums">
-                            <Star className="w-3 h-3 text-[#B88A44]" fill="currentColor" />
-                            {activePlace.averageRating?.toFixed(1)} ({activePlace.ratingCount})
-                          </span>
-                        )}
-                        {elevationCache[activePlace.id] !== undefined && (
-                          <span className="inline-flex items-center gap-0.5 text-[#1D7874] tabular-nums">
-                            <Mountain className="w-3 h-3" />
-                            {elevationCache[activePlace.id]}m ASL
-                          </span>
-                        )}
-                      </div>
-                      <p className="font-display font-bold text-sm text-[#1A2421] truncate mt-0.5">
-                        {activePlace.name}
-                      </p>
-                      <p className="text-[10px] text-[#616E69] truncate">
-                        {TYPE_LABELS[activePlace.placeType] || "Salcedo"}
-                        {activePlace.barangay ? ` • Brgy. ${activePlace.barangay.name}` : ""}
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActivePlace(null);
-                      }}
-                      aria-label="Close spot preview"
-                      className="w-6 h-6 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] shrink-0 cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
-                    <Link
-                      href={`/app/places/${activePlace.slug}`}
-                      className="rounded-full bg-[#164237] text-white px-3 py-1.5 text-[11px] font-semibold active:scale-95 transition"
-                    >
-                      Open &amp; Rate
-                    </Link>
-                    {activePlace.latitude != null && activePlace.longitude != null && (
-                      <a
-                        href={`https://www.google.com/maps/dir/?api=1&destination=${activePlace.latitude},${activePlace.longitude}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-1.5 text-[11px] font-semibold text-[#164237] active:scale-95 transition"
-                      >
-                        <Navigation className="w-3 h-3" />
-                        Google Maps
-                      </a>
+                <div>
+                  <small>
+                    {TYPE_LABELS[activePlace.placeType]} · {activePlace.barangay?.name || "Salcedo"}
+                  </small>
+                  <h2>{activePlace.name.split(" (")[0]}</h2>
+                  <span>
+                    {!!activePlace.ratingCount && (
+                      <>
+                        <Star size={12} />
+                        {activePlace.averageRating?.toFixed(1)} ({activePlace.ratingCount})
+                      </>
                     )}
-                    <button
-                      type="button"
-                      onClick={() =>
-                        void addPlaceToActiveDraft({
-                          id: activePlace.id,
-                          name: activePlace.name,
-                          slug: activePlace.slug,
-                          placeType: activePlace.placeType,
-                          barangayName: activePlace.barangay?.name ?? null,
-                          featuredImageUrl: activePlace.featuredImageUrl ?? null,
-                          latitude: activePlace.latitude ?? null,
-                          longitude: activePlace.longitude ?? null,
-                        })
-                      }
-                      className="inline-flex items-center gap-1 rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-2.5 py-1.5 text-[11px] font-semibold text-[#1A2421] active:scale-95 transition cursor-pointer"
-                    >
-                      <Plus className="w-3 h-3" />
-                      Trip
-                    </button>
-                  </div>
+                    {elevationCache[activePlace.id] !== undefined && (
+                      <>
+                        <Mountain size={13} />
+                        {elevationCache[activePlace.id]} m
+                      </>
+                    )}
+                  </span>
                 </div>
               </div>
-
+              <div className="map-preview-actions">
+                <Link className="primary-button" href={`/app/places/${activePlace.slug}`}>
+                  View place
+                  <ArrowUpRight size={14} />
+                </Link>
+                <button
+                  className="secondary-button"
+                  onClick={() =>
+                    void addPlaceToActiveDraft({
+                      ...activePlace,
+                      barangayName: activePlace.barangay?.name,
+                    })
+                  }
+                >
+                  {draftStopIds.includes(activePlace.id) ? (
+                    <>
+                      <Check size={14} />
+                      Added
+                    </>
+                  ) : (
+                    <>
+                      <Plus size={14} />
+                      Trip
+                    </>
+                  )}
+                </button>
+                <a
+                  className="text-link"
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${activePlace.latitude},${activePlace.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Directions
+                </a>
+              </div>
             </div>
           ) : pinnedOsmResult ? (
-            <div className="bg-white/98 backdrop-blur-md rounded-2xl border border-[#EAE7E0] p-3 shadow-xl flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-700">
-                  OpenStreetMap Pin
-                </span>
-                <p className="font-display text-sm font-bold text-[#1A2421] truncate">
-                  {pinnedOsmResult.label}
-                </p>
-                <p className="text-[11px] text-[#616E69] truncate">
-                  {pinnedOsmResult.subtitle}
-                </p>
-              </div>
+            <div className="map-preview">
               <button
-                type="button"
+                className="preview-close"
+                aria-label="Close search pin"
                 onClick={() => setPinnedOsmResult(null)}
-                className="w-7 h-7 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] shrink-0 cursor-pointer"
               >
-                <X className="w-3.5 h-3.5" />
+                <X size={16} />
               </button>
+              <Kicker>Map pin</Kicker>
+              <h2>{pinnedOsmResult.label}</h2>
+              <p>{pinnedOsmResult.subtitle}</p>
             </div>
           ) : (
-            visiblePlaces.length > 0 && (
-              <>
-                <div className="flex justify-center">
-                  <button
-                    type="button"
-                    onClick={() => setRankingDrawerOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-white/95 backdrop-blur-md border border-[#EAE7E0] px-3.5 py-1.5 text-[11px] font-bold text-[#1A2421] shadow-md active:scale-95 transition cursor-pointer"
-                  >
-                    <ChevronUp className="w-3.5 h-3.5 text-[#164237]" />
-                    Rankings Leaderboard ({visiblePlaces.length})
-                  </button>
-                </div>
-
-                <div className="flex gap-2 overflow-x-auto snap-x snap-mandatory no-scrollbar pb-0.5">
-                  {visiblePlaces.map((p, idx) => {
-                    const rankNum =
-                      rankMode === "most_visited"
-                        ? p.mostVisitedRank ?? idx + 1
-                        : rankMode === "top_rated"
-                        ? p.topRatedRank ?? idx + 1
-                        : idx + 1;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => handleFocusPlace(p)}
-                        className="w-[238px] shrink-0 snap-start rounded-2xl bg-white/95 backdrop-blur-md border border-[#EAE7E0] p-2 shadow-md flex items-center gap-2.5 text-left active:scale-[0.97] transition cursor-pointer"
-                      >
-                        <div className="relative w-12 h-12 shrink-0">
-                          <img
-                            src={
-                              p.featuredImageUrl ||
-                              "/images/salcedo/hero-salcedo-valley.png"
-                            }
-                            alt={p.name}
-                            className="w-full h-full rounded-xl object-cover bg-[#F3F2EE]"
-                          />
-                          <span
-                            className={`absolute -top-1 -left-1 rounded-full px-1.5 py-0.5 text-[9px] font-bold text-white shadow-2xs tabular-nums ${
-                              rankNum === 1
-                                ? "bg-[#B88A44]"
-                                : rankNum === 2
-                                ? "bg-[#164237]"
-                                : rankNum === 3
-                                ? "bg-[#1D7874]"
-                                : "bg-[#1A2421]"
-                            }`}
-                          >
-                            #{rankNum}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <p className="font-display font-bold text-xs text-[#1A2421] truncate">
-                            {p.name}
-                          </p>
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#616E69]">
-                            {(p.ratingCount ?? 0) > 0 && (
-                              <span className="inline-flex items-center gap-0.5 font-semibold text-[#1A2421] tabular-nums">
-                                <Star
-                                  className="w-2.5 h-2.5 text-[#B88A44]"
-                                  fill="currentColor"
-                                />
-                                {p.averageRating?.toFixed(1)}
-                              </span>
-                            )}
-                            {(p.visitCount ?? 0) > 0 && (
-                              <span className="tabular-nums">• {p.visitCount} visits</span>
-                            )}
-                          </div>
-                          <p className="text-[10px] text-[#616E69] truncate">
-                            {TYPE_LABELS[p.placeType]}
-                            {p.barangay ? ` • Brgy. ${p.barangay.name}` : ""}
-                          </p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )
+            <button
+              className="map-browse-button primary-button"
+              onClick={() => setRankingDrawerOpen(true)}
+            >
+              <List size={16} />
+              Browse {visiblePlaces.length} places
+            </button>
           )}
         </div>
-
-        {/* Slide-Up Categorized & Ranked Spots Leaderboard Drawer */}
         {rankingDrawerOpen && (
-          <div className="absolute inset-0 z-[480] flex items-end bg-black/40 backdrop-blur-[1px]">
-            <div className="w-full max-h-[74%] bg-white rounded-t-[28px] border-t border-[#EAE7E0] p-4 pb-5 flex flex-col gap-3 shadow-2xl animate-in slide-in-from-bottom-6 duration-200">
-              <div className="w-10 h-1 rounded-full bg-[#D8D3C8] mx-auto shrink-0" />
-
-              <div className="flex items-center justify-between gap-2">
+          <Modal label="Places on the map" onClose={() => setRankingDrawerOpen(false)}>
+            <div className="map-results-dialog">
+              <div className="dialog-heading">
                 <div>
-                  <h2 className="font-display text-base font-bold text-[#1A2421]">
-                    {rankMode === "top_rated"
-                      ? "Top Rated Spots"
-                      : rankMode === "most_visited"
-                      ? "Most Visited Spots"
-                      : "Categorized Rankings"}
-                  </h2>
-                  <p className="text-[11px] text-[#616E69]">
-                    {selectedBrgyLabel} • {visiblePlaces.length} spots
-                  </p>
+                  <Kicker>Map explorer</Kicker>
+                  <h2>Places on the map</h2>
                 </div>
                 <button
-                  type="button"
+                  className="icon-button"
+                  aria-label="Close places"
                   onClick={() => setRankingDrawerOpen(false)}
-                  aria-label="Close leaderboard"
-                  className="w-8 h-8 rounded-full bg-[#F3F2EE] flex items-center justify-center text-[#616E69] cursor-pointer"
                 >
-                  <X className="w-4 h-4" />
+                  <X size={18} />
                 </button>
               </div>
-
-              <div className="flex-1 overflow-y-auto divide-y divide-[#EAE7E0]">
-                {visiblePlaces.map((p, idx) => {
-                  const rankNum =
-                    rankMode === "most_visited"
-                      ? p.mostVisitedRank ?? idx + 1
-                      : rankMode === "top_rated"
-                      ? p.topRatedRank ?? idx + 1
-                      : idx + 1;
-                  return (
-                    <div key={p.id} className="py-3 flex items-center gap-3">
-                      <span
-                        className={`w-7 h-7 rounded-full text-[11px] font-bold flex items-center justify-center shrink-0 tabular-nums ${
-                          rankNum === 1
-                            ? "bg-[#B88A44] text-white"
-                            : rankNum === 2
-                            ? "bg-[#164237] text-white"
-                            : rankNum === 3
-                            ? "bg-[#1D7874] text-white"
-                            : "bg-[#F3F2EE] text-[#1A2421]"
-                        }`}
-                      >
-                        #{rankNum}
-                      </span>
-
-                      <img
-                        src={
-                          p.featuredImageUrl ||
-                          "/images/salcedo/hero-salcedo-valley.png"
-                        }
-                        alt={p.name}
-                        className="w-11 h-11 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                      />
-
-                      <div className="flex-1 min-w-0">
-                        <p className="font-display font-bold text-xs text-[#1A2421] truncate">
-                          {p.name}
-                        </p>
-                        <div className="flex items-center gap-2 text-[10px] text-[#616E69] mt-0.5">
-                          <span className="font-medium text-[#164237]">
-                            {TYPE_LABELS[p.placeType]}
-                          </span>
-                          {(p.ratingCount ?? 0) > 0 && (
-                            <span className="inline-flex items-center gap-0.5 font-semibold text-[#1A2421] tabular-nums">
-                              <Star
-                                className="w-2.5 h-2.5 text-[#B88A44]"
-                                fill="currentColor"
-                              />
-                              {p.averageRating?.toFixed(1)} ({p.ratingCount})
-                            </span>
-                          )}
-                          {(p.visitCount ?? 0) > 0 && (
-                            <span className="inline-flex items-center gap-0.5 tabular-nums">
-                              <Eye className="w-2.5 h-2.5" />
-                              {p.visitCount}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleFocusPlace(p)}
-                          className="rounded-full border border-[#EAE7E0] bg-[#FAF9F6] px-2.5 py-1 text-[10px] font-semibold text-[#1A2421] cursor-pointer"
-                        >
-                          Pin
-                        </button>
-                        <Link
-                          href={`/app/places/${p.slug}`}
-                          className="rounded-full bg-[#164237] text-white px-2.5 py-1 text-[10px] font-semibold"
-                        >
-                          View
-                        </Link>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+              {resultList}
+              {!visiblePlaces.length && (
+                <p className="empty-note">No places match. Try another barangay or place type.</p>
+              )}
             </div>
-          </div>
+          </Modal>
         )}
       </div>
     );
@@ -1385,7 +1171,10 @@ export function SalcedoMap({
       </div>
 
       <div className="relative rounded-2xl overflow-hidden border border-[#EAE7E0] bg-[#ECE9E0]">
-        <div ref={mapContainerRef} className={`w-full ${heightClass}`} />
+        <div
+          ref={mapContainerRef}
+          className={`w-full ${heightClass} ${basemap === "atlas" ? "atlas-surface" : ""}`}
+        />
 
         <div className="absolute top-2.5 right-2.5 z-[400] flex flex-col gap-1.5">
           <button
@@ -1447,7 +1236,9 @@ export function SalcedoMap({
               <p className="inline-flex items-center gap-1.5 text-[11px] text-[#616E69] truncate">
                 <MapPin className="w-3 h-3 text-[#1D7874]" />
                 <span>
-                  {activePlace.barangay ? `Brgy. ${activePlace.barangay.name}` : activePlace.address}
+                  {activePlace.barangay
+                    ? `Brgy. ${activePlace.barangay.name}`
+                    : activePlace.address}
                 </span>
                 {(activePlace.ratingCount ?? 0) > 0 && (
                   <span className="inline-flex items-center gap-0.5 font-semibold text-[#1A2421]">

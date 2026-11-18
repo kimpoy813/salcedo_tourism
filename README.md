@@ -19,3 +19,9 @@ npm run build         # Production Next.js build
 ```
 
 See `docs/DEPLOYMENT_AND_PWABUILDER.md` for Neon Postgres, Vercel Blob, PWABuilder, and Android TWA / Play Store instructions.
+
+## Using the visitor guide
+- **Discover**: Search by place, activity, or barangay, or start with one of the four interests on the home page. Filters, sorting, and grid/map view are reflected in the URL for sharing and returning to results.
+- **Map explorer**: The field map uses bundled municipal boundaries and directory pins without a tile connection. Select a street, terrain, or satellite layer when online. On smaller screens, **Browse places** opens the same ranked place index as the desktop sidebar.
+- **My trip**: Bookmark places for later, add stops to a draft, or start with a suggested route. Dates, multi-day scheduling, printing, and text downloads require no account. Registration is optional; save the one-time private code if you register.
+- The production PWA caches its public shell and opened/saved place pages. Staff pages and API responses are never cached. Service-worker registration is disabled during development so stale builds do not hide UI changes.

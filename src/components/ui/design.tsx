@@ -26,13 +26,13 @@ export const PALETTE = {
 /** Small uppercase label that sits above every section title. */
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1D7874]">
+    <p className="guide-kicker">
       {children}
     </p>
   );
 }
 
-/** The one section header used everywhere: eyebrow + Fraunces title. */
+/** The one section header used everywhere: eyebrow + display title. */
 export function SectionHeader({
   eyebrow,
   title,
@@ -51,7 +51,7 @@ export function SectionHeader({
       <div className="space-y-0.5 min-w-0">
         {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
         <h2
-          className={`font-display text-lg font-bold leading-tight ${
+          className={`font-display text-[26px] font-medium tracking-tight leading-tight ${
             tone === "light" ? "text-white" : "text-[#1A2421]"
           }`}
         >
@@ -228,7 +228,7 @@ export function PlaceListSkeleton({ rows = 5 }: { rows?: number }) {
 
 /**
  * The one header for every numbered step section (Trip planner Steps 1–3).
- * Number badge + eyebrow + Fraunces title + description, identical metrics
+ * Number badge + eyebrow + display title + description, identical metrics
  * everywhere so the steps read as one matched set.
  */
 export function StepHeader({
@@ -252,7 +252,7 @@ export function StepHeader({
         </span>
         <div className="space-y-0.5 min-w-0 pt-0.5">
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 className="font-display text-lg font-bold leading-tight text-[#1A2421]">{title}</h2>
+          <h2 className="font-display text-[24px] font-medium tracking-tight leading-tight text-[#1A2421]">{title}</h2>
           {description && <p className="text-xs leading-relaxed text-[#616E69]">{description}</p>}
         </div>
       </div>

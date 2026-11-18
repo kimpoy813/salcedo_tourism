@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AppShell } from "@/components/app/AppShell";
 
 export const metadata: Metadata = {
-  title: "Project CEDO: Turi — Discover Salcedo, Ilocos Sur",
+  title: { absolute: "Salcedo Tourism Guide — Ilocos Sur", template: "%s | Salcedo Tourism Guide" },
   manifest: "/app/manifest.webmanifest",
 };
 

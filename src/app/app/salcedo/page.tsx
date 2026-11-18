@@ -7,6 +7,11 @@ import {
 } from "@/lib/queries/public-tourism";
 import { SalcedoInfoClient } from "@/components/app/SalcedoInfoClient";
 
+import { PageIntro } from "@/components/ui/FieldGuide";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
+
+export const metadata = { title: "Salcedo visitor information" };
 export const dynamic = "force-dynamic";
 
 export default async function SalcedoInfoPage() {
@@ -18,23 +23,24 @@ export default async function SalcedoInfoPage() {
   ]);
 
   return (
-    <div className="py-4 space-y-3">
-      <div className="px-4 flex items-center gap-3">
-        <img
-          src="/images/salcedo/seal-of-salcedo.png"
-          alt="Official Seal of Salcedo, Ilocos Sur"
-          className="w-11 h-11 rounded-full object-cover border border-[#EAE7E0] bg-white shrink-0"
-        />
-        <div className="space-y-0.5 min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-[#616E69]">
-            Municipality Profile
-          </p>
-          <h1 className="font-display text-xl font-bold text-[#1A2421] truncate">
-            Salcedo, Ilocos Sur
-          </h1>
-        </div>
-      </div>
-
+    <div className="guide-wrap profile-page">
+      <Link href="/app/more" className="back-link">
+        <ArrowLeft size={15} />
+        Local guide
+      </Link>
+      <PageIntro
+        eyebrow="Municipality profile"
+        title="Salcedo, Ilocos Sur"
+        description="A closer look at the communities, culture, and visitor services of Salcedo."
+        aside={
+          <img
+            src="/images/salcedo/seal-of-salcedo.png"
+            width="78"
+            height="78"
+            alt="Official seal of Salcedo"
+          />
+        }
+      />
       <Suspense
         fallback={
           <div className="px-4">

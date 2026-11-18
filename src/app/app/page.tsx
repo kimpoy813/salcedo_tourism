@@ -1,19 +1,34 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ChevronRight, Map as MapIcon } from "lucide-react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  ChevronRight,
+  Coffee,
+  Landmark,
+  Mountain,
+  Route,
+  Waves,
+} from "lucide-react";
 import {
   getCategoriesWithCounts,
   getPublishedEvents,
   getPublishedPlaces,
   getPublishedProducts,
 } from "@/lib/queries/public-tourism";
-import { HomeSearchBar } from "@/components/app/HomeSearchBar";
-import { JourneySteps } from "@/components/app/JourneySteps";
-import { HomeRankingsCard } from "@/components/app/HomeRankingsCard";
+import { interests } from "@/lib/guide-interests";
+import { HomeHero } from "@/components/app/HomeHero";
 import { PlaceCard } from "@/components/app/PlaceCard";
-import { SectionHeader } from "@/components/ui/design";
+import { HomeRankingsCard } from "@/components/app/HomeRankingsCard";
+import { Kicker } from "@/components/ui/FieldGuide";
 
 export const dynamic = "force-dynamic";
+const interestIcons = [Mountain, Waves, Coffee, Landmark];
+const shortlist = [
+  "baluarte-falls-agila-falls",
+  "bago-resort-spring-water",
+  "salcedo-town-plaza-del-pilar-shrine",
+];
 
 export default async function TouristHomePage() {
   const [places, categories, events, products] = await Promise.all([
@@ -22,165 +37,133 @@ export default async function TouristHomePage() {
     getPublishedEvents(),
     getPublishedProducts(),
   ]);
-
-  const nonEmptyCategories = categories.filter((c) => c.publishedCount > 0);
-  const spotlightPlaces = places.filter((p) => p.isFeatured).slice(0, 5);
-  const nextEvent = events[0] ?? null;
-  const featuredProduct = products[0] ?? null;
-
+  const featured = places.filter((p) => p.isFeatured);
+  const picks = [...featured]
+    .sort(
+      (a, b) =>
+        (shortlist.includes(a.slug) ? shortlist.indexOf(a.slug) : 99) -
+        (shortlist.includes(b.slug) ? shortlist.indexOf(b.slug) : 99),
+    )
+    .slice(0, 3);
+  const event = events[0];
+  const product = products[0];
   return (
-    <div className="w-full max-w-full min-w-0 pt-[max(16px,env(safe-area-inset-top))] pb-7 space-y-6">
-      {/* 1. Clean App Header, Brand & Search */}
-      <section className="px-4 space-y-3.5">
-        <div className="flex items-center justify-between gap-2.5">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Image
-              src="/images/salcedo/turi-logo.png"
-              alt="Project CEDO: Turi Logo"
-              width={40}
-              height={40}
-              className="w-10 h-10 rounded-xl object-cover shrink-0 shadow-xs border border-[#164237]/15"
-            />
-            <div className="min-w-0">
-              <h1 className="font-display text-lg font-bold tracking-tight text-[#1A2421] truncate leading-tight">
-                Project CEDO: Turi
-              </h1>
-              <p className="text-[11px] font-semibold text-[#164237] truncate">
-                Salcedo, Ilocos Sur
-              </p>
+    <>
+      <HomeHero />
+      <nav className="interest-bar" aria-label="Browse by interest">
+        <div className="guide-wrap interest-layout">
+          {interests.map((interest, i) => {
+            const Icon = interestIcons[i];
+            return (
+              <Link
+                key={interest.key}
+                href={`/app/discover?interest=${interest.key}`}
+                className={`interest-link interest-${interest.key}`}
+              >
+                <span className="interest-icon">
+                  <Icon size={24} strokeWidth={1.5} />
+                </span>
+                <span>
+                  <strong>{interest.label}</strong>
+                  <small>{interest.note}</small>
+                </span>
+                <ChevronRight className="interest-arrow" size={14} />
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+      <div className="guide-wrap home-sections">
+        <section aria-labelledby="featured-title">
+          <div className="section-heading">
+            <div>
+              <Kicker>The local shortlist</Kicker>
+              <h2 id="featured-title">Featured destinations</h2>
             </div>
-          </div>
-          <Link
-            href="/app/map"
-            className="inline-flex items-center gap-1 rounded-full bg-white border border-[#EAE7E0] px-3 py-1.5 text-[11px] font-semibold text-[#164237] active:scale-95 transition shrink-0"
-          >
-            <MapIcon className="w-3.5 h-3.5" />
-            Map
-          </Link>
-        </div>
-
-        <HomeSearchBar />
-        <JourneySteps />
-      </section>
-
-      {/* 2. Top Ranked Places Immediately Visible Above the Fold */}
-      {places.length > 0 && (
-        <div className="px-4">
-          <HomeRankingsCard places={places} categories={categories} />
-        </div>
-      )}
-
-      {/* 3. Featured Spotlight Carousel (Full-Width Track With Symmetric 16px Ends) */}
-      {spotlightPlaces.length > 0 && (
-        <section className="w-full min-w-0 space-y-3">
-          <div className="px-4 flex items-center justify-between gap-2">
-            <SectionHeader eyebrow="Spotlight" title="Featured Spots" />
-            <Link
-              href="/app/discover"
-              className="text-xs font-semibold text-[#164237] inline-flex items-center gap-0.5 shrink-0"
-            >
-              All <ChevronRight className="w-3.5 h-3.5" />
+            <Link className="text-link" href="/app/discover">
+              Explore all places <ArrowRight size={16} />
             </Link>
           </div>
-          <div className="w-full flex gap-3 overflow-x-auto snap-x snap-mandatory no-scrollbar px-4 scroll-px-4 pb-1 after:content-[''] after:w-1 after:shrink-0">
-            {spotlightPlaces.map((place) => (
-              <PlaceCard
-                key={place.id}
-                place={place}
-                variant="spotlight"
-                rankBadge={{ rank: place.mostVisitedRank }}
-              />
-            ))}
-          </div>
+          {picks.length || places.length ? (
+            <div className="places-grid">
+              {(picks.length ? picks : places.slice(0, 3)).map((place) => (
+                <PlaceCard key={place.id} place={place} variant="spotlight" />
+              ))}
+            </div>
+          ) : (
+            <p className="empty-note">
+              New destinations will appear here as the local directory grows.
+            </p>
+          )}
         </section>
-      )}
-
-      {/* 4. Clean 2-Column Category Grid */}
-      {nonEmptyCategories.length > 0 && (
-        <section className="px-4 space-y-3">
-          <SectionHeader
-            eyebrow="Browse"
-            title="Categories"
-            action={
-              <Link href="/app/discover?sort=by_category" className="text-xs font-semibold text-[#164237] inline-flex items-center gap-0.5 shrink-0 py-2">
-                Browse <ChevronRight className="w-3.5 h-3.5" />
+        <div className="home-secondary">
+          {places.length > 0 && <HomeRankingsCard places={places} categories={categories} />}
+          <aside className="notebook-callout">
+            <Image
+              src="/images/salcedo/gallery-mountain-viewpoint.jpg"
+              alt=""
+              fill
+              sizes="(max-width: 780px) 100vw, 40vw"
+            />
+            <div className="notebook-shade" />
+            <div className="notebook-content">
+              <Kicker>Your trip notebook</Kicker>
+              <h2>
+                Make a day
+                <br />
+                of <em>Salcedo.</em>
+              </h2>
+              <p>
+                Pick your stops, plan your days, and take your itinerary with you. No account
+                needed.
+              </p>
+              <Link className="cream-button" href="/app/trips">
+                <Route size={16} /> Plan my trip <ArrowRight size={15} />
               </Link>
-            }
-          />
-          <div className="grid grid-cols-2 gap-2.5">
-            {nonEmptyCategories.slice(0, 6).map((cat) => (
-              <Link
-                key={cat.id}
-                href={`/app/discover?category=${encodeURIComponent(cat.slug)}`}
-                className="bg-white rounded-2xl border border-[#EAE7E0] p-3.5 flex flex-col justify-between gap-1 active:bg-[#F3F2EE] transition min-w-0"
-              >
-                <p className="font-display font-bold text-xs text-[#1A2421] truncate">
-                  {cat.name}
-                </p>
-                <p className="text-[11px] text-[#616E69] tabular-nums">
-                  {cat.publishedCount} {cat.publishedCount === 1 ? "spot" : "spots"}
-                </p>
+            </div>
+          </aside>
+        </div>
+        {(event || product) && (
+          <section>
+            <div className="section-heading">
+              <div>
+                <Kicker>Local life</Kicker>
+                <h2>From the community</h2>
+              </div>
+              <Link className="text-link" href="/app/more">
+                Local guide <ArrowRight size={16} />
               </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* 5. Minimal Local Culture & Harvest Strip */}
-      {(nextEvent || featuredProduct) && (
-        <section className="px-4 space-y-3">
-          <SectionHeader
-            eyebrow="Local life"
-            title="Events & Harvest"
-            action={
-              <Link href="/app/salcedo?tab=events" className="text-xs font-semibold text-[#164237] inline-flex items-center gap-0.5 shrink-0 py-2">
-                Guide <ChevronRight className="w-3.5 h-3.5" />
-              </Link>
-            }
-          />
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
-            {nextEvent && (
-              <Link
-                href="/app/salcedo?tab=events"
-                className="flex items-center justify-between gap-3 p-3.5 active:bg-[#F3F2EE] transition"
-              >
-                <div className="min-w-0 space-y-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
-                    Event • {nextEvent.startDate}
-                  </p>
-                  <p className="font-display font-bold text-sm text-[#1A2421] truncate">
-                    {nextEvent.title}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#616E69] shrink-0" />
-              </Link>
-            )}
-            {featuredProduct && (
-              <Link
-                href="/app/salcedo?tab=products"
-                className="flex items-center gap-3 p-3.5 active:bg-[#F3F2EE] transition"
-              >
-                <Image
-                  src={featuredProduct.imageUrl || "/images/salcedo/rambutan-cacao-harvest.png"}
-                  alt={featuredProduct.name}
-                  width={40}
-                  height={40}
-                  className="w-10 h-10 rounded-xl object-cover shrink-0 bg-[#F3F2EE]"
-                />
-                <div className="flex-1 min-w-0 space-y-0.5">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
-                    Local Harvest
-                  </p>
-                  <p className="font-display font-bold text-sm text-[#1A2421] truncate">
-                    {featuredProduct.name}
-                  </p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-[#616E69] shrink-0" />
-              </Link>
-            )}
-          </div>
-        </section>
-      )}
-    </div>
+            </div>
+            <div className="local-notes">
+              {event && (
+                <Link href="/app/salcedo?tab=events">
+                  <Image src="/images/salcedo/plaza-heritage.png" alt="" width={112} height={96} />
+                  <div>
+                    <small>Festivals & events</small>
+                    <h3>{event.title}</h3>
+                  </div>
+                  <ArrowUpRight size={17} />
+                </Link>
+              )}
+              {product && (
+                <Link href="/app/salcedo?tab=products">
+                  <Image
+                    src={product.imageUrl || "/images/salcedo/rambutan-cacao-harvest.png"}
+                    alt=""
+                    width={112}
+                    height={96}
+                  />
+                  <div>
+                    <small>Local harvest</small>
+                    <h3>{product.name}</h3>
+                  </div>
+                  <ArrowUpRight size={17} />
+                </Link>
+              )}
+            </div>
+          </section>
+        )}
+      </div>
+    </>
   );
 }
