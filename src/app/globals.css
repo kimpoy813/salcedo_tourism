@@ -68,47 +68,6 @@ a,
   filter: saturate(0.86) contrast(0.97) brightness(1.01);
 }
 
-.leaflet-tooltip.salcedo-map-tooltip {
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid #EAE7E0;
-  border-radius: 9999px;
-  color: #1A2421;
-  font-size: 11px;
-  font-weight: 600;
-  padding: 3px 9px;
-  box-shadow: 0 4px 12px rgba(22, 66, 55, 0.12);
-}
-
-.leaflet-tooltip.salcedo-map-tooltip::before {
-  display: none;
-}
-
-.salcedo-div-pin {
-  background: transparent;
-  border: none;
-}
-
-.salcedo-brgy-label {
-  background: transparent;
-  border: none;
-  pointer-events: none;
-}
-
-.salcedo-brgy-label-pill {
-  display: inline-block;
-  padding: 1px 6px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.84);
-  border: 1px solid rgba(22, 66, 55, 0.16);
-  color: #164237;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  transform: translate(-50%, -50%);
-}
-
 /* Clean print view for standalone itineraries */
 @media print {
   .no-print {

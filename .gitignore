@@ -27,3 +27,7 @@ yarn-error.log*
 # OS & editor
 .DS_Store
 Thumbs.db
+
+# Browser verification artifacts
+/test-results/
+/playwright-report/

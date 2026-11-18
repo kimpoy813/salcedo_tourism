@@ -22,6 +22,6 @@ See `docs/DEPLOYMENT_AND_PWABUILDER.md` for Neon Postgres, Vercel Blob, PWABuild
 
 ## Using the visitor guide
 - **Discover**: Search by place, activity, or barangay, or start with one of the four interests on the home page. Filters, sorting, and grid/map view are reflected in the URL for sharing and returning to results.
-- **Map explorer**: The field map uses bundled municipal boundaries and directory pins without a tile connection. Select a street, terrain, or satellite layer when online. On smaller screens, **Browse places** opens the same ranked place index as the desktop sidebar.
+- **Map explorer**: Explore Salcedo’s local roads, waterways, 21 barangays and directory places without online tiles. Select a numbered group to zoom in, or browse/search the place index; save a pin, add it to your trip, or open directions. Discover’s map uses the same controls and respects the directory filters. See [field-map sources, licensing and browser tests](docs/FIELD_MAP.md).
 - **My trip**: Bookmark places for later, add stops to a draft, or start with a suggested route. Dates, multi-day scheduling, printing, and text downloads require no account. Registration is optional; save the one-time private code if you register.
 - The production PWA caches its public shell and opened/saved place pages. Staff pages and API responses are never cached. Service-worker registration is disabled during development so stale builds do not hide UI changes.
