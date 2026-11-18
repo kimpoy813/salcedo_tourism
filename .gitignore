@@ -31,3 +31,7 @@ Thumbs.db
 # Browser verification artifacts
 /test-results/
 /playwright-report/
+
+# Local Python caches from the map asset scripts
+__pycache__/
+*.pyc

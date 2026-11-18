@@ -15,14 +15,6 @@ export const MAP_LAYERS = {
       '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>',
     max: 19,
   },
-  clean: {
-    name: "Light",
-    note: "Muted streets by CARTO",
-    url: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    credit:
-      '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> · © <a href="https://carto.com/attributions">CARTO</a>',
-    max: 19,
-  },
   terrain: {
     name: "Terrain",
     note: "Contours & elevation",

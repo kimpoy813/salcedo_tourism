@@ -49,6 +49,10 @@
 .atlas-stage { position:relative; isolation:isolate; overflow:hidden; min-height:0; background:#e9ebdf; }
 .atlas-stage>.atlas-surface { position:absolute; inset:0; z-index:0; font-family:var(--font-sans); }
 .atlas-stage>.atlas-surface[data-basemap="field"] { background:#f1f0e7; }
+.atlas-municipal-edge { filter:drop-shadow(0 1px 2px #17291d66); }
+@media(max-width:780px) { .atlas-municipal-edge { stroke-width:2.6px; } .atlas-municipal-halo { stroke-width:6.5px; } }
+.atlas-surface .atlas-hillshade { display:none; }
+@supports (mix-blend-mode:soft-light) { .atlas-surface .atlas-hillshade { display:block; mix-blend-mode:soft-light; pointer-events:none; } }
 .atlas-surface .leaflet-control-attribution { font:500 9px/1.5 var(--font-sans); color:#425443; background:#fffef3e6; border-top-left-radius:5px; }
 .atlas-surface .leaflet-control-attribution a { color:#295850; text-decoration:underline; }
 .atlas-surface .leaflet-control-scale { margin:0 0 5px 12px; }
@@ -78,7 +82,6 @@
 .atlas-layers-button small { display:block; font-size:9px; line-height:1.35; color:#5b6b55; }
 .layer-swatch { width:34px; height:34px; border-radius:5px; display:grid; place-items:center; flex:none; background:linear-gradient(117deg,transparent 48%,#f8e8bb 48% 56%,transparent 56%),linear-gradient(24deg,#c4d6b8 40%,#a0bac1 40% 45%,#e2e6d1 45%); color:#36563c; border:1px solid #a8b8a479; }
 .layer-swatch.street { background:repeating-linear-gradient(27deg,#e7e6d6 0 7px,#fffcec 7px 9px); }
-.layer-swatch.clean { background:linear-gradient(36deg,#d4ded2 28%,#f0f1e8 29% 74%,#c3cfc5 75%); }
 .layer-swatch.terrain { background:repeating-radial-gradient(ellipse at bottom right,#c6d4a9 2px 6px,#dce2c8 7px 10px); }
 .layer-swatch.satellite { color:#fff; background:linear-gradient(48deg,#345447 35%,#577055 36% 57%,#576e73 58%); }
 .atlas-north { top:18px; right:23px; display:grid; justify-items:center; gap:1px; pointer-events:none; }

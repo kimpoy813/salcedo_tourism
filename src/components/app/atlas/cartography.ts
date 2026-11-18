@@ -79,13 +79,25 @@ export function addBoundaries(
     if (onArea) poly.on("click", () => onArea(chosen ? "" : p.slug));
     poly.addTo(layer);
   });
+  // A pale casing and a dark core keep the municipal edge legible over both
+  // the tinted relief and full-colour raster tiles.
   L.polygon(SALCEDO_MUNICIPAL_POLYGON, {
     pane: "atlasBoundary",
     fill: false,
-    color: field ? "#7a8b6c" : "#42654c",
-    weight: 2,
-    opacity: 0.85,
+    color: "#fbf7e4",
+    weight: 8,
+    opacity: field ? 0.9 : 0.82,
     interactive: false,
+    className: "atlas-municipal-halo",
+  }).addTo(layer);
+  L.polygon(SALCEDO_MUNICIPAL_POLYGON, {
+    pane: "atlasBoundary",
+    fill: false,
+    color: field ? "#294832" : "#163324",
+    weight: 3.2,
+    opacity: 1,
+    interactive: false,
+    className: "atlas-municipal-edge",
   }).addTo(layer);
   return layer;
 }

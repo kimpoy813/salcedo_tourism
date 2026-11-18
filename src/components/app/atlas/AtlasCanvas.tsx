@@ -166,6 +166,7 @@ export function AtlasCanvas({
     [style, setStyle] = useState<LayerId>("field"),
     [borders, setBorders] = useState(true),
     [labels, setLabels] = useState(true),
+    [shade, setShade] = useState(true),
     [options, setOptions] = useState(false),
     [locating, setLocating] = useState(false),
     [tileNotice, setTileNotice] = useState("");
@@ -266,7 +267,8 @@ export function AtlasCanvas({
       maxNativeZoom: cfg.max,
       maxZoom: 19,
       attribution: cfg.credit,
-      bounds: municipalBounds().pad(0.65),
+      // maxBounds already limits panning; a tight tile bounds left grey gaps
+      // around the municipality at the overview zoom.
       keepBuffer: 3,
       updateWhenIdle: false,
       // Keep the previous frame while a pinch settles, then fetch the new zoom.
@@ -360,6 +362,53 @@ export function AtlasCanvas({
   useEffect(() => {
     reliefRef.current?.setOpacity(reliefOpacity);
   }, [reliefOpacity]);
+  // Soft-light shading gives the raster basemaps a terrain-like depth at the
+  // scales where the GEBCO grid is meaningful. The field map gets a lighter
+  // layer because its printed relief already carries its own illumination.
+  const shadeOpacity = !shade
+    ? 0
+    : zoom <= 13.5
+      ? isField
+        ? 0.42
+        : 0.62
+      : zoom <= 14.5
+        ? isField
+          ? 0.26
+          : 0.42
+        : 0;
+  const hillshadeRef = useRef<L.ImageOverlay | null>(null),
+    showShade = shadeOpacity > 0;
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !showShade) return;
+    const hill = L.imageOverlay(
+      "/app/maps/salcedo-hillshade.webp",
+      [
+        [RELIEF.south, RELIEF.west],
+        [RELIEF.north, RELIEF.east],
+      ],
+      {
+        pane: "tilePane",
+        opacity: shadeOpacity,
+        interactive: false,
+        alt: "",
+        zIndex: 2,
+        className: "atlas-hillshade",
+        attribution:
+          '<a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">GEBCO 2020</a>',
+      },
+    ).addTo(map);
+    hillshadeRef.current = hill;
+    return () => {
+      hillshadeRef.current = null;
+      hill.remove();
+    };
+    // Opacity is applied by the effect below; only mounting changes here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showShade]);
+  useEffect(() => {
+    hillshadeRef.current?.setOpacity(shadeOpacity);
+  }, [shadeOpacity]);
   const detail = zoom >= 14.5,
     fieldLinesRef = useRef<ReturnType<typeof addFieldLines> | null>(null);
   useEffect(() => {
@@ -638,6 +687,14 @@ export function AtlasCanvas({
                   onChange={(e) => setLabels(e.target.checked)}
                 />
                 Map labels
+              </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={shade}
+                  onChange={(e) => setShade(e.target.checked)}
+                />
+                3D relief
               </label>
             </div>
             <MapKey />
