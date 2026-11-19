@@ -50,30 +50,33 @@ def relief(bounds, size, engraved=False):
 
 
 def hillshade(bounds=BOUNDS, size=(1024, 1128)):
-    """Neutral shaded relief for the interactive basemaps.
+    """Transparent shaded relief for the interactive basemaps.
 
-    Mid-grey is flat ground; the app blends this with CSS soft-light so raster
-    tiles gain depth without acquiring a colour cast or contour ink. Same GEBCO
-    sample and registration as the printed relief.
+    Flat ground is fully transparent, northwest-facing slopes are white and
+    lee slopes black, so ordinary alpha compositing gives raster tiles depth
+    without a blend mode, colour cast, contour ink or a second blend group
+    over Leaflet's tiles. Same GEBCO sample and registration as the plate.
     """
     w, s, e, n = bounds
     W, H = size
     x, y = np.linspace(w, e, W), np.linspace(s, n, H)
     z = np.maximum(SURFACE(y, x)[::-1], 0)
     dy, dx = np.gradient(z, (n-s)*111200/H, (e-w)*106300/W)
-    # Light from the northwest, like the printed plate; keep the range narrow
-    # because the atlas applies this at low opacity over other cartography.
-    shade = np.clip(0.5 + (dx - dy) * 0.8, 0.28, 0.72)
-    # Keep the plate's average neutral so soft-light does not tint the whole
-    # viewport, then feather the sample edge so no rectangle appears on tiles.
-    shade = np.clip(shade + 0.5 - shade.mean(), 0.2, 0.8)
+    # Light from the northwest, like the printed plate. Keep the range narrow
+    # because the atlas applies this over other cartography.
+    tone = np.clip((dx - dy) * 1.4, -.5, .5)
+    alpha = np.clip(np.abs(tone) * .75, 0, .32)
+    # Feather the sample edge so no rectangle appears on the tiles.
     iy, ix = np.mgrid[:H, :W]
     edge = np.minimum.reduce([ix, iy, W - 1 - ix, H - 1 - iy])
-    alpha = np.clip(edge / 56, 0, 1)
-    im = Image.fromarray(np.uint8(shade * 255))
-    im = im.filter(ImageFilter.GaussianBlur(2)).convert('RGBA')
-    im.putalpha(Image.fromarray(np.uint8(alpha * 255)))
-    im.save(OUT / 'salcedo-hillshade.webp', quality=82, method=6)
+    alpha = alpha * np.clip(edge / 48, 0, 1)
+    mask = Image.fromarray(np.uint8(alpha * 255))
+    mask = mask.filter(ImageFilter.GaussianBlur(1.5))
+    rgb = np.full((H, W, 3), 255, np.uint8)
+    rgb[tone < 0] = 0
+    im = Image.fromarray(rgb).convert('RGBA')
+    im.putalpha(mask)
+    im.save(OUT / 'salcedo-hillshade.webp', quality=74, method=6)
 
 
 def drape(im, bounds):

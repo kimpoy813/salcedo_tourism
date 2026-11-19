@@ -190,9 +190,23 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   await expect
     .poll(() => tile.evaluate((el) => el.getBoundingClientRect().width))
     .toBeGreaterThan(100);
-  await expect(page.locator(".atlas-hillshade")).toBeAttached();
+  const shade = page.locator(".atlas-hillshade");
+  await expect(shade).toBeAttached();
+  // The 3D plate is plain alpha compositing in its own pane: a blend mode or
+  // filter over Leaflet's plus-lighter tiles flickered while panning.
+  await expect(shade).toHaveCSS("mix-blend-mode", "normal");
+  const panes = await page.evaluate(() => {
+    const z = (sel: string) =>
+      Number(getComputedStyle(document.querySelector(sel)!).zIndex);
+    return {
+      shade: z(".leaflet-atlasShade-pane"),
+      tile: z(".leaflet-tile-pane"),
+    };
+  });
+  expect(panes.shade).toBeGreaterThan(panes.tile);
   const edge = page.locator(".atlas-municipal-edge").first();
   await expect(edge).toBeAttached();
+  await expect(edge).toHaveCSS("filter", "none");
   await expect
     .poll(() =>
       edge.evaluate((el) => parseFloat(getComputedStyle(el).strokeWidth)),

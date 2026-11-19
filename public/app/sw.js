@@ -1,5 +1,5 @@
 /* Only public guide content is cached. Submissions and all admin/API routes bypass this worker. */
-const CACHE = "turi-salcedo-v8";
+const CACHE = "turi-salcedo-v9";
 const SHELL = ["/app/", "/app/trips", "/app/offline", "/app/discover", "/app/map", "/app/more"];
 
 // Collect only this build's public static resources; never store API payloads.

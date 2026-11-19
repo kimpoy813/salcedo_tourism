@@ -74,6 +74,28 @@ function frame(map: L.Map, camera: CameraTarget, compact: boolean) {
     animate: false,
   });
 }
+const GEBCO_CREDIT =
+  '<a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">GEBCO 2020</a>';
+// The generalized surface is useful at valley scale, not street or trail scale.
+// Ramp opacity instead of switching it at a threshold: a hard cut reads as a
+// flash of the whole map when a pinch crosses it.
+function ramp(zoom: number, from: number, to: number, a: number, b: number) {
+  if (zoom <= from) return a;
+  if (zoom >= to) return b;
+  return a + ((b - a) * (zoom - from)) / (to - from);
+}
+const reliefOpacityAt = (zoom: number) =>
+  zoom <= 13.5
+    ? 0.88
+    : zoom <= 14.5
+      ? ramp(zoom, 13.5, 14.5, 0.88, 0.6)
+      : ramp(zoom, 14.5, 15.5, 0.6, 0);
+// The plate is transparent on flat ground, so ordinary alpha compositing can
+// carry it: a blend mode here would form a second blend group beside Leaflet's
+// plus-lighter tiles and flicker while the map is panned or zoomed.
+const shadeOpacityAt = (zoom: number, field: boolean) =>
+  ramp(zoom, 13.5, 14.5, field ? 0.25 : 0.8, field ? 0.16 : 0.5) *
+  ramp(zoom, 14.5, 15.5, 1, 0);
 function CompassRose() {
   return (
     <div className="atlas-north" aria-label="North is up">
@@ -181,6 +203,9 @@ export function AtlasCanvas({
   }, [onPlace, onStack, onArea, onLocate]);
   useEffect(() => {
     const el = container.current!;
+    const reducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
     const map = L.map(el, {
       center: SALCEDO_CENTER,
       zoom: 13,
@@ -193,12 +218,17 @@ export function AtlasCanvas({
       dragging: !window.matchMedia("(pointer: coarse)").matches,
       zoomControl: false,
       attributionControl: false,
-      zoomAnimation: false,
-      markerZoomAnimation: false,
+      // Scaled old tiles during the zoom animation keep the map from going
+      // blank while the new level loads; without it every wheel step flashed
+      // an empty background until the tiles arrived.
+      zoomAnimation: !reducedMotion,
+      markerZoomAnimation: !reducedMotion,
     });
     mapRef.current = map;
     previousExtent.current = undefined;
     for (const [name, z] of [
+      ["atlasRelief", 220],
+      ["atlasShade", 240],
       ["atlasAreas", 260],
       ["atlasLines", 295],
       ["atlasBoundary", 315],
@@ -271,8 +301,9 @@ export function AtlasCanvas({
       // around the municipality at the overview zoom.
       keepBuffer: 3,
       updateWhenIdle: false,
-      // Keep the previous frame while a pinch settles, then fetch the new zoom.
-      updateWhenZooming: false,
+      // Fetch the incoming zoom during the animation too, so the scaled old
+      // tiles are never left covering only part of the viewport.
+      updateWhenZooming: true,
     });
     let loaded = 0,
       errors = 0,
@@ -326,14 +357,13 @@ export function AtlasCanvas({
       part.remove();
     };
   }, [isField, borders, area, compact]);
-  // The generalized surface is useful at valley scale, not street or trail scale.
-  const reliefOpacity =
-    zoom <= 13.5 ? 0.88 : zoom <= 14.5 ? 0.6 : zoom < 15.5 ? 0.25 : 0;
   const reliefRef = useRef<L.ImageOverlay | null>(null),
-    showRelief = isField && reliefOpacity > 0;
+    // Stop at deep zoom where the plate is already invisible: a 1024 px image
+    // blown up to tens of thousands of pixels is a needless compositor layer.
+    mountedRelief = isField && zoom < 17;
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !showRelief) return;
+    if (!map || !mountedRelief) return;
     const relief = L.imageOverlay(
       "/app/maps/salcedo-relief.webp",
       [
@@ -341,46 +371,35 @@ export function AtlasCanvas({
         [RELIEF.north, RELIEF.east],
       ],
       {
-        pane: "tilePane",
-        opacity: reliefOpacity,
+        pane: "atlasRelief",
+        opacity: reliefOpacityAt(map.getZoom()),
         interactive: false,
         alt: "",
-        attribution:
-          '<a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">GEBCO 2020</a>',
+        attribution: GEBCO_CREDIT,
       },
     ).addTo(map);
     reliefRef.current = relief;
+    // Follow the live zoom, not React state that only settles on zoomend: a
+    // pinch must not leave the plate enlarged after it stops being meaningful.
+    const sync = () => {
+      const opacity = reliefOpacityAt(map.getZoom());
+      relief.setOpacity(opacity);
+      const el = relief.getElement();
+      if (el) el.style.display = opacity ? "" : "none";
+    };
+    sync();
+    map.on("zoom zoomend viewreset", sync);
     return () => {
+      map.off("zoom zoomend viewreset", sync);
       reliefRef.current = null;
       relief.remove();
     };
-    // Opacity changes are applied by the effect below, so the hillshade is not
-    // re-fetched and re-mounted at every zoom threshold. It still unmounts at
-    // street scale, when its source credit no longer applies.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showRelief]);
-  useEffect(() => {
-    reliefRef.current?.setOpacity(reliefOpacity);
-  }, [reliefOpacity]);
-  // Soft-light shading gives the raster basemaps a terrain-like depth at the
-  // scales where the GEBCO grid is meaningful. The field map gets a lighter
-  // layer because its printed relief already carries its own illumination.
-  const shadeOpacity = !shade
-    ? 0
-    : zoom <= 13.5
-      ? isField
-        ? 0.42
-        : 0.62
-      : zoom <= 14.5
-        ? isField
-          ? 0.26
-          : 0.42
-        : 0;
+  }, [mountedRelief]);
   const hillshadeRef = useRef<L.ImageOverlay | null>(null),
-    showShade = shadeOpacity > 0;
+    mountedShade = shade && zoom <= 16;
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !showShade) return;
+    if (!map || !mountedShade) return;
     const hill = L.imageOverlay(
       "/app/maps/salcedo-hillshade.webp",
       [
@@ -388,27 +407,31 @@ export function AtlasCanvas({
         [RELIEF.north, RELIEF.east],
       ],
       {
-        pane: "tilePane",
-        opacity: shadeOpacity,
+        pane: "atlasShade",
+        opacity: shadeOpacityAt(map.getZoom(), isField),
         interactive: false,
         alt: "",
-        zIndex: 2,
         className: "atlas-hillshade",
-        attribution:
-          '<a href="https://doi.org/10.5285/a29c5465-b138-234d-e053-6c86abc040b9">GEBCO 2020</a>',
+        attribution: GEBCO_CREDIT,
       },
     ).addTo(map);
     hillshadeRef.current = hill;
+    const sync = () => {
+      const opacity = shadeOpacityAt(map.getZoom(), isField);
+      hill.setOpacity(opacity);
+      const el = hill.getElement();
+      if (el) el.style.display = opacity ? "" : "none";
+    };
+    sync();
+    map.on("zoom zoomend viewreset", sync);
     return () => {
+      map.off("zoom zoomend viewreset", sync);
       hillshadeRef.current = null;
       hill.remove();
     };
-    // Opacity is applied by the effect below; only mounting changes here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showShade]);
-  useEffect(() => {
-    hillshadeRef.current?.setOpacity(shadeOpacity);
-  }, [shadeOpacity]);
+    // Keep the layer mounted across zoom thresholds so it never pops in and
+    // out mid-pinch; only a deliberate turn-off or deep zoom removes it.
+  }, [mountedShade, isField]);
   const detail = zoom >= 14.5,
     fieldLinesRef = useRef<ReturnType<typeof addFieldLines> | null>(null);
   useEffect(() => {
