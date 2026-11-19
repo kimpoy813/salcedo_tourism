@@ -44,6 +44,15 @@ a,
   font-family: var(--font-display);
 }
 
+/* The italic serif face is deliberately not preloaded; it is fetched only
+   when an editorial italic (scientific names, citations) is rendered. */
+i,
+em,
+cite {
+  font-family: var(--guide-serif-italic), var(--guide-serif), Georgia, serif;
+  font-style: italic;
+}
+
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }

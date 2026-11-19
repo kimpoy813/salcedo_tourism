@@ -1,6 +1,5 @@
 import Form from "next/form";
 import Link from "next/link";
-import Image from "next/image";
 import { ArrowRight, MapPin, Search } from "lucide-react";
 import { interests } from "@/lib/guide-interests";
 
@@ -14,7 +13,26 @@ export function HomeHero() {
         <Link href="/app/map">Explore the map <ArrowRight size={16}/></Link>
       </div>
       <figure className="welcome-art">
-        <Image src="/images/salcedo/guide-valley.webp" alt="Illustrated river valley with rice fields and wooded slopes" width={1408} height={768} unoptimized priority />
+        <picture>
+          <source
+            type="image/avif"
+            srcSet="/images/salcedo/guide-valley-640.avif 640w, /images/salcedo/guide-valley-960.avif 960w, /images/salcedo/guide-valley-1408.avif 1408w"
+            sizes="(max-width: 900px) 100vw, 60vw"
+          />
+          <source
+            type="image/webp"
+            srcSet="/images/salcedo/guide-valley-640.webp 640w, /images/salcedo/guide-valley-960.webp 960w, /images/salcedo/guide-valley-1408.webp 1408w"
+            sizes="(max-width: 900px) 100vw, 60vw"
+          />
+          <img
+            src="/images/salcedo/guide-valley-960.webp"
+            alt="Illustrated river valley with rice fields and wooded slopes"
+            width={1408}
+            height={768}
+            fetchPriority="high"
+            decoding="async"
+          />
+        </picture>
         <figcaption>Valley illustration</figcaption>
       </figure>
     </div>

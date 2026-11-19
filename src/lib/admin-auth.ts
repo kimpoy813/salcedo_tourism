@@ -3,6 +3,7 @@ import { SignJWT, jwtVerify } from "jose";
 import { eq, or, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import { verifyPassword } from "./crypto";
+import { isKnownSetupPassword, isProductionRuntime } from "./admin-security";
 
 export const ADMIN_COOKIE_NAME = "cedo_admin_session";
 const SESSION_DURATION_SECONDS = 60 * 60 * 12; // 12 hours
@@ -120,6 +121,12 @@ export async function authenticateAdminCredentials(
 
   if (!user || !user.isActive) return null;
   if (!verifyPassword(password, user.passwordHash)) return null;
+  if (isProductionRuntime() && isKnownSetupPassword(password)) {
+    console.warn(
+      `[admin] Rejected a published setup password for '${user.username}'. Rotate it with npm run admin:rotate.`
+    );
+    return null;
+  }
 
   await db
     .update(schema.adminUsers)

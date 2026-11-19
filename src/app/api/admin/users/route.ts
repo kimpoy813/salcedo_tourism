@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getDb, schema } from "@/db";
 import { hashPassword } from "@/lib/crypto";
 import { recordAuditLog, requireAdminApiAuth } from "@/lib/admin-auth";
+import { isKnownSetupPassword } from "@/lib/admin-security";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +54,16 @@ const createAdminSchema = z.object({
   username: z.string().trim().min(3).max(60),
   email: z.string().trim().email(),
   fullName: z.string().trim().min(2).max(120),
-  password: z.string().min(8).max(100),
+  password: z.string().min(12).max(100),
   roleSlug: z.enum(["super_admin", "tourism_admin", "content_editor", "visitor_data_officer"]),
+}).superRefine((value, ctx) => {
+  if (isKnownSetupPassword(value.password)) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["password"],
+      message: "Choose a password that is not used by the default setup accounts.",
+    });
+  }
 });
 
 export async function POST(req: Request) {

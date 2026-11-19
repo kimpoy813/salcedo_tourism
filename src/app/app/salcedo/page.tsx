@@ -10,8 +10,13 @@ import { SalcedoInfoClient } from "@/components/app/SalcedoInfoClient";
 import { PageIntro } from "@/components/ui/FieldGuide";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Salcedo visitor information" };
+export const metadata = pageMetadata({
+  title: "Salcedo visitor information",
+  description: "History, festivals, harvests and municipal information for visitors to Salcedo, Ilocos Sur.",
+  path: "/app/salcedo",
+});
 export const dynamic = "force-dynamic";
 
 export default async function SalcedoInfoPage() {

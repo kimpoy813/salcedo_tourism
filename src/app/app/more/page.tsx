@@ -11,8 +11,13 @@ import {
   ShoppingBasket,
 } from "lucide-react";
 import { PageIntro } from "@/components/ui/FieldGuide";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "Local guide" };
+export const metadata = pageMetadata({
+  title: "Local guide",
+  description: "Barangay information, festivals, practical travel advice and emergency contacts for Salcedo.",
+  path: "/app/more",
+});
 const essentials = [
   {
     tab: "barangays",

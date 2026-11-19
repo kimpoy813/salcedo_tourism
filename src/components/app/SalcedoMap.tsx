@@ -351,7 +351,9 @@ export function SalcedoMap({
             <header className="atlas-intro">
               <h1>Map explorer</h1>
               <p>
-                Salcedo, Ilocos Sur <i /> {barangays.length} barangays
+                <span className="atlas-muni">Salcedo, Ilocos Sur</span>
+                <i />
+                <span>{barangays.length} barangays</span>
               </p>
             </header>
             <div className="atlas-find">

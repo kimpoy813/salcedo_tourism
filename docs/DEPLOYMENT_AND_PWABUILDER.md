@@ -30,7 +30,8 @@
    - `DATABASE_URL` — Neon pooled connection string
    - `AUTH_SECRET` — Minimum 32-character random secret for Admin JWT (`openssl rand -hex 32`)
    - `BLOB_READ_WRITE_TOKEN` — Vercel Blob read/write token
-   - `ADMIN_SEED_PASSWORD` / `TOURISM_ADMIN_SEED_PASSWORD` / `EDITOR_SEED_PASSWORD` / `DATA_OFFICER_SEED_PASSWORD` — Override default seed passwords before running `npm run db:seed` in production!
+   - `ADMIN_PASSWORD` / `TOURISM_ADMIN_PASSWORD` / `EDITOR_PASSWORD` / `DATA_OFFICER_PASSWORD` — **required** before seeding an empty production database (12+ characters each). See [ADMIN_SECURITY.md](./ADMIN_SECURITY.md).
+   - `NEXT_PUBLIC_APP_URL` — Canonical origin used in Open Graph metadata and the sitemap.
 5. **Custom Domain:**
    - Bind your official municipal domain (e.g., `turi.salcedoilocossur.gov.ph`). HTTPS is automatic on Vercel and required by PWABuilder & Android TWA.
 

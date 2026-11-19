@@ -1,5 +1,5 @@
 /* Only public guide content is cached. Submissions and all admin/API routes bypass this worker. */
-const CACHE = "turi-salcedo-v9";
+const CACHE = "turi-salcedo-v10";
 const SHELL = ["/app/", "/app/trips", "/app/offline", "/app/discover", "/app/map", "/app/more"];
 
 // Collect only this build's public static resources; never store API payloads.
@@ -22,7 +22,7 @@ self.addEventListener("install", (event) => {
       const assets = new Set([
         "/app/icons/icon-192x192.png",
         "/app/icons/icon-512x512.png",
-        "/images/salcedo/guide-valley.webp",
+        "/images/salcedo/guide-valley-640.webp",
         "/images/salcedo/municipal-seal.webp",
         "/images/salcedo/cacao-plate.webp",
         "/app/maps/valley-plate.webp",
@@ -34,9 +34,19 @@ self.addEventListener("install", (event) => {
       // Keep every directory thumbnail, but only the full covers used by the shell.
       const artList = await fetch("/app/art/sources.json", { cache: "reload" });
       if (!artList.ok) throw new Error("Guide artwork is unavailable");
-      for (const file of await artList.json()) assets.add(`/app/art/${file.replace(/\.[^.]+$/, "-thumb.webp")}`);
+      for (const file of await artList.json()) {
+        const stem = file.replace(/\.[^.]+$/, "");
+        assets.add(`/app/art/${stem}-thumb.webp`);
+        assets.add(`/app/art/${stem}-thumb.avif`);
+      }
       await Promise.all(SHELL.map((path) => cachePage(cache, path, assets)));
-      await cache.addAll([...assets]);
+      // One missing optional image must not abort the whole offline install.
+      await Promise.allSettled(
+        [...assets].map(async (src) => {
+          if (await cache.match(src)) return;
+          await cache.add(src);
+        })
+      );
       await self.skipWaiting();
     })(),
   );
@@ -98,9 +108,22 @@ self.addEventListener("fetch", (event) => {
           if (response.ok) await cache.put(request, response.clone()).catch(() => undefined);
           return response;
         } catch {
-          if (path.startsWith("/app/art/") && path.endsWith("-cover.webp")) {
-            const thumb = await cache.match(path.replace(/-cover\.webp$/, "-thumb.webp"));
-            if (thumb) return thumb;
+          // GuideImage prefers AVIF. Offline, accept the WebP or thumbnail
+          // derivative that was precached instead of showing a placeholder.
+          const fallbacks = [];
+          if (path.endsWith("-cover.avif")) {
+            fallbacks.push(path.replace(/-cover\.avif$/, "-cover.webp"));
+            fallbacks.push(path.replace(/-cover\.avif$/, "-thumb.avif"));
+            fallbacks.push(path.replace(/-cover\.avif$/, "-thumb.webp"));
+          } else if (path.endsWith("-cover.webp")) {
+            fallbacks.push(path.replace(/-cover\.webp$/, "-thumb.webp"));
+            fallbacks.push(path.replace(/-cover\.webp$/, "-thumb.avif"));
+          } else if (path.endsWith(".avif")) {
+            fallbacks.push(path.replace(/\.avif$/, ".webp"));
+          }
+          for (const candidate of fallbacks) {
+            const cached = await cache.match(candidate);
+            if (cached) return cached;
           }
           if (request.destination !== "image") return Response.error();
           // Do not cache this placeholder: the real photo loads when the connection returns.
