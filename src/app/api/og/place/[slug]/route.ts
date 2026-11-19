@@ -33,7 +33,8 @@ export async function GET(
   _request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
-  const place = await getPublishedPlaceByIdOrSlug((await params).slug);
+  const slug = (await params).slug;
+  const place = await getPublishedPlaceByIdOrSlug(slug).catch(() => null);
   if (!place) return new NextResponse("Not found", { status: 404 });
 
   const media = placeMedia(place.featuredImageUrl, place.featuredImageCaption, place.images);
