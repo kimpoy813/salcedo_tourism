@@ -65,3 +65,15 @@ test("a suggested route retains the named stops and their artwork on this device
   await expect(images).toHaveCount(3);
   await expect(images.first()).toHaveAttribute('src','/app/art/baluarte-falls-thumb.webp');
 });
+
+test("local guide profiles the municipality with an isolated field map", async ({
+  page,
+}) => {
+  await page.goto("/app/salcedo?tab=overview");
+  const map = page.locator(".profile-map");
+  await expect(map.locator(".atlas-mask")).toBeAttached();
+  await expect(
+    map.getByRole("button", { name: /Map layers\s*Field map/i }),
+  ).toBeVisible();
+  await expect(page.getByText("Isolated municipal map")).toBeVisible();
+});

@@ -3,6 +3,7 @@ import {
   getAllBarangaysWithCounts,
   getPublishedArticlesAndGuides,
   getPublishedEvents,
+  getPublishedPlaces,
   getPublishedProducts,
 } from "@/lib/queries/public-tourism";
 import { SalcedoInfoClient } from "@/components/app/SalcedoInfoClient";
@@ -20,8 +21,9 @@ export const metadata = pageMetadata({
 export const dynamic = "force-dynamic";
 
 export default async function SalcedoInfoPage() {
-  const [barangays, editorial, events, products] = await Promise.all([
+  const [barangays, places, editorial, events, products] = await Promise.all([
     getAllBarangaysWithCounts(),
+    getPublishedPlaces(),
     getPublishedArticlesAndGuides(),
     getPublishedEvents(),
     getPublishedProducts(),
@@ -56,6 +58,7 @@ export default async function SalcedoInfoPage() {
       >
         <SalcedoInfoClient
           barangays={barangays}
+          places={places}
           historicalArticles={editorial.historical}
           culturalArticles={editorial.cultural}
           events={events}

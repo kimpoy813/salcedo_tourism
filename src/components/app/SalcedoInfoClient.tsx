@@ -2,6 +2,8 @@
 
 import React, { useMemo, useState } from "react";
 import { GuideImage } from "./GuideImage";
+import { BrowserAtlas } from "./BrowserAtlas";
+import type { PlaceCardData } from "./PlaceCard";
 import { FactList } from "@/components/ui/FactList";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -14,6 +16,8 @@ interface BarangayItem {
   name: string;
   slug: string;
   district: string;
+  latitude: number;
+  longitude: number;
   population2020: number | null;
   elevationMeters: number | null;
   summary: string;
@@ -76,6 +80,7 @@ interface ContactItem {
 
 interface SalcedoDataProps {
   barangays: BarangayItem[];
+  places: PlaceCardData[];
   historicalArticles: ArticleItem[];
   culturalArticles: ArticleItem[];
   events: EventItem[];
@@ -108,6 +113,7 @@ export function SalcedoInfoClient(data: SalcedoDataProps) {
 function SalcedoInfoInner({
   initialTab,
   barangays,
+  places,
   historicalArticles,
   culturalArticles,
   events,
@@ -150,7 +156,7 @@ function SalcedoInfoInner({
       <div className="profile-content">
       {tab === "overview" && (
         <div className="profile-overview">
-          <div className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
+          <div className="profile-summary bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-3">
             <div className="flex items-center gap-3">
               <img
                 src="/images/salcedo/municipal-seal.webp"
@@ -170,11 +176,28 @@ function SalcedoInfoInner({
               {municipalInfo.find((m) => m.key === "profile_overview")?.content ||
                 "Known historically as Baugen, Salcedo is a serene valley municipality along the Buaya River near Tirad Pass. Celebrated as the \"Rambutan Basket of the North\", it welcomes travelers with cool inland springs, waterfalls, and heritage cacao tablea."}
             </p>
-            <img
-              src="/images/salcedo/ilocos-sur-locator-map.jpg"
-              alt="Locator Map of Salcedo, Ilocos Sur"
-              className="locator-map"
-            />
+          </div>
+
+          <div className="profile-map-card bg-white rounded-2xl border border-[#EAE7E0] p-4 space-y-3">
+            <div>
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-[#616E69]">
+                Isolated municipal map
+              </p>
+              <h2 className="font-display text-lg font-bold text-[#1A2421]">
+                Salcedo municipality map
+              </h2>
+              <p className="text-xs text-[#616E69] leading-relaxed">
+                Terrain, rivers, roads, barangays and visitor places, clipped to
+                the municipal limit so neighboring towns never crowd the view.
+              </p>
+            </div>
+            <div className="profile-map">
+              <BrowserAtlas
+                places={places}
+                barangays={barangays}
+                mode="embedded"
+              />
+            </div>
           </div>
 
           <section className="municipal-facts"><h2>Municipal figures</h2><FactList rows={[["Population (2020)","11,110"],["Barangays",barangays.length],["Land area","103.44 km²"],["ZIP code","2711"]]} numeric/></section>

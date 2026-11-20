@@ -48,6 +48,16 @@ describe("Salcedo Sample Data, Rankings, Tourist Ratings & Geo-Boundary Verifica
   it("highlights Salcedo municipality accurately across all 21 official barangays", () => {
     expect(SALCEDO_MUNICIPAL_POLYGON.length).toBeGreaterThanOrEqual(30);
     expect(SALCEDO_MASK_OUTER_RING).toHaveLength(4);
+    for (const [lat, lng] of SALCEDO_MUNICIPAL_POLYGON) {
+      expect(pointInPolygon(lat, lng, SALCEDO_MASK_OUTER_RING)).toBe(true);
+    }
+    expect(
+      SALCEDO_MASK_OUTER_RING.some(
+        ([lat, lng]) =>
+          lat < SALCEDO_BOUNDS.south - 1 &&
+          lng < SALCEDO_BOUNDS.west - 1,
+      ),
+    ).toBe(true);
     expect(SALCEDO_BARANGAY_POLYGONS).toHaveLength(21);
     expect(SALCEDO_BOUNDS.south).toBeLessThan(SALCEDO_BOUNDS.north);
     expect(SALCEDO_BOUNDS.west).toBeLessThan(SALCEDO_BOUNDS.east);
