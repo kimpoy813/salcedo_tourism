@@ -1,6 +1,8 @@
 # Salcedo field atlas
 
-The full map (`/app/map`, optionally `?place=<published-slug>`) and the Discover map (`/app/discover?view=map`) use the same Leaflet renderer. The field map is local data, not a cache of third-party raster tiles. Use it to locate a place; **Directions** deliberately opens Google Maps rather than implying that a drawn road is a verified visitor route.
+The full map (`/app/map`, optionally `?place=<published-slug>`), the Discover map (`/app/discover?view=map`), and the overview in the Local guide (`/app/salcedo?tab=overview`) use the same Leaflet renderer. The field map is local data, not a cache of third-party raster tiles. Use it to locate a place; **Directions** deliberately opens Google Maps rather than implying that a drawn road is a verified visitor route.
+
+**Isolate Salcedo** is on by default. It fills everything outside the PSA / NAMRIA municipal polygon with the map paper colour, so the guide shows one isolated municipality rather than a slice of Ilocos Sur. Turn it off in **Map layers** when surrounding roads and towns are useful context.
 
 ## Data and attribution
 
@@ -27,6 +29,7 @@ The script clips/simplifies WGS84 geometry, retains only name and cartographic c
 ## Behavior and checks
 
 - Nearby places group in **screen space**. Select a group to zoom; coincident pins have a chooser. The accessible place index can always select an individual place. The same preview offers details, directions, bookmarks and trip actions in both views.
+- The isolation mask sits above the relief and field lines but below the municipal edge, labels and pins, so the boundary and every visitor label stay legible. It applies to both the offline field map and online basemaps; no external tiles are needed for the isolated view.
 - Typing searches the local place, barangay and named road/water index. Online OpenStreetMap search is explicit, not live autocomplete. The installed production PWA precaches the field geometry and map code. Optional tiles, live weather/elevation, and external navigation require a connection. A lost tile provider does not disable pins or browsing.
 - GPS runs only when **Find my location** is pressed. The fix stays in the browser; out-of-municipality fixes are not plotted. Optional Open-Meteo requests use the public town/destination coordinates instead.
 

@@ -36,6 +36,7 @@ import {
 import {
   addBoundaries,
   addFieldLines,
+  addMunicipalMask,
   addPinsAndLabels,
   municipalBounds,
   node,
@@ -189,6 +190,7 @@ export function AtlasCanvas({
     [borders, setBorders] = useState(true),
     [labels, setLabels] = useState(true),
     [shade, setShade] = useState(true),
+    [isolate, setIsolate] = useState(true),
     [options, setOptions] = useState(false),
     [locating, setLocating] = useState(false),
     [tileNotice, setTileNotice] = useState("");
@@ -231,6 +233,7 @@ export function AtlasCanvas({
       ["atlasShade", 240],
       ["atlasAreas", 260],
       ["atlasLines", 295],
+      ["atlasMask", 300],
       ["atlasBoundary", 315],
       ["atlasLabels", 365],
     ] as const) {
@@ -343,6 +346,14 @@ export function AtlasCanvas({
     const timer = window.setTimeout(() => setTileNotice(""), 12000);
     return () => window.clearTimeout(timer);
   }, [tileNotice]);
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !isolate) return;
+    const mask = addMunicipalMask(map, isField);
+    return () => {
+      mask.remove();
+    };
+  }, [isolate, isField]);
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -719,12 +730,21 @@ export function AtlasCanvas({
                 />
                 3D relief
               </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={isolate}
+                  onChange={(e) => setIsolate(e.target.checked)}
+                />
+                Isolate Salcedo
+              </label>
             </div>
             <MapKey />
             <p className="atlas-source-note">
-              Select a numbered circle to explore its places. The field map is
-              for orientation, not turn-by-turn navigation. Generalized relief:
-              GEBCO 2020.{" "}
+              Select a numbered circle to explore its places. “Isolate Salcedo”
+              papers out neighboring towns so only the municipality remains.
+              The field map is for orientation, not turn-by-turn navigation.
+              Generalized relief: GEBCO 2020.{" "}
               <a href="/app/maps/salcedo-field.geojson" download>
                 Local OSM extract
               </a>{" "}

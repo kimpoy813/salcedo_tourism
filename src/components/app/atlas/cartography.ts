@@ -13,6 +13,7 @@ import {
 } from "@/lib/geo/atlas";
 import {
   SALCEDO_BARANGAY_POLYGONS,
+  SALCEDO_MASK_OUTER_RING,
   SALCEDO_MUNICIPAL_POLYGON,
   SALCEDO_BOUNDS,
   type LatLngTuple,
@@ -52,6 +53,20 @@ function pinGlyph(tone: Tone) {
     path.setAttribute(k, v);
   svg.append(path);
   return svg;
+}
+/** Paper out everything beyond the municipal limit so the atlas reads as one
+ *  isolated town, not a slice of Ilocos Sur. Drawn above the relief and field
+ *  lines but below the municipal edge, labels and pins. */
+export function addMunicipalMask(map: L.Map, field: boolean) {
+  return L.polygon([SALCEDO_MASK_OUTER_RING, SALCEDO_MUNICIPAL_POLYGON], {
+    pane: "atlasMask",
+    stroke: false,
+    fill: true,
+    fillColor: field ? "#f1f0e7" : "#e9ebdf",
+    fillOpacity: 1,
+    interactive: false,
+    className: "atlas-mask",
+  }).addTo(map);
 }
 export function addBoundaries(
   map: L.Map,

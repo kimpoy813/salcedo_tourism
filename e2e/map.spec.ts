@@ -177,6 +177,12 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
   await expect(d.getByRole("radio")).toHaveCount(4);
   await expect(d.getByRole("radio", { name: /^Light/ })).toHaveCount(0);
   await expect(d.getByLabel("3D relief")).toBeChecked();
+  await expect(d.getByLabel("Isolate Salcedo")).toBeChecked();
+  await expect(page.locator(".atlas-mask")).toBeAttached();
+  await d.getByLabel("Isolate Salcedo").uncheck();
+  await expect(page.locator(".atlas-mask")).toHaveCount(0);
+  await d.getByLabel("Isolate Salcedo").check();
+  await expect(page.locator(".atlas-mask")).toHaveCount(1);
   await d.getByLabel("Barangay boundaries").uncheck();
   await d.getByLabel("Map labels").uncheck();
   await d.getByRole("radio", { name: /^Street/ }).check();
@@ -200,10 +206,14 @@ test("layers, explicit online lookup, failure fallback and local-only mode", asy
       Number(getComputedStyle(document.querySelector(sel)!).zIndex);
     return {
       shade: z(".leaflet-atlasShade-pane"),
+      mask: z(".leaflet-atlasMask-pane"),
+      boundary: z(".leaflet-atlasBoundary-pane"),
       tile: z(".leaflet-tile-pane"),
     };
   });
   expect(panes.shade).toBeGreaterThan(panes.tile);
+  expect(panes.mask).toBeGreaterThan(panes.shade);
+  expect(panes.mask).toBeLessThan(panes.boundary);
   const edge = page.locator(".atlas-municipal-edge").first();
   await expect(edge).toBeAttached();
   await expect(edge).toHaveCSS("filter", "none");
