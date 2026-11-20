@@ -1,0 +1,3 @@
+# Source masters are only needed when regenerating committed derivatives.
+assets/photo-masters
+.local-pgdata

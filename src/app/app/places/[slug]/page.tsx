@@ -3,18 +3,32 @@ import {cache} from "react";
 import {notFound} from "next/navigation";
 import {ArrowRight, ExternalLink, MapPin, Star} from "lucide-react";
 import {getPublishedPlaceByIdOrSlug} from "@/lib/queries/public-tourism";
-import {placeMedia} from "@/lib/visitor-media";
+import {guideArtSrc, placeMedia} from "@/lib/visitor-media";
 import {typeLabels} from "@/lib/guide-interests";
 import {PlaceDetailActions, PlaceTools, PlaceRatingsSection} from "@/components/app/PlaceDetailClient";
 import {PlaceCard} from "@/components/app/PlaceCard";
 import {PlaceGallery} from "@/components/app/PlaceGallery";
 import {PlaceLocator} from "@/components/app/PlaceLocator";
 import {FactList, type Fact} from "@/components/ui/FactList";
+import {absoluteUrl, SITE_DESCRIPTION} from "@/lib/site";
+import {jsonLdString, placeJsonLd} from "@/lib/structured-data";
 
 export const dynamic="force-dynamic";
 const loadPlace=cache(getPublishedPlaceByIdOrSlug);
 export async function generateMetadata({params}:{params:Promise<{slug:string}>}) {
- const p=await loadPlace((await params).slug);return {title:p?.name||"Place not found",description:p?.shortDescription};
+ const p=await loadPlace((await params).slug);
+ if(!p)return {title:"Place not found",robots:{index:false,follow:false}};
+ const image=absoluteUrl(`/api/og/place/${p.slug}`);
+ const summary=(p.shortDescription || p.description || SITE_DESCRIPTION).trim();
+ const description=summary.length>155 ? `${summary.slice(0,152).trimEnd()}…` : summary;
+ const url=`/app/places/${p.slug}`;
+ return {
+   title:p.name,
+   description,
+   alternates:{canonical:url},
+   openGraph:{type:"article",url,title:p.name,description,images:[{url:image,alt:p.name}]},
+   twitter:{card:"summary_large_image",title:p.name,description,images:[image]},
+ };
 }
 const days=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 const yesNo=(v:boolean|null|undefined)=>v==null?null:v?'Available':'Not available';
@@ -61,6 +75,7 @@ export default async function PlaceDetailPage({params}:{params:Promise<{slug:str
      {place.operatingHours.length>0 && <details className="weekly-hours"><summary>Opening hours <small>Philippine time</small></summary><dl>{[...place.operatingHours].sort((a,b)=>a.dayOfWeek-b.dayOfWeek).map(h=><div key={h.id} className={h.dayOfWeek===today?'is-today':''}><dt>{days[h.dayOfWeek]}{h.dayOfWeek===today?' (today)':''}</dt><dd>{h.isClosed?'Closed':h.openTime && h.closeTime?`${h.openTime.slice(0,5)} – ${h.closeTime.slice(0,5)}`:'Not listed'}</dd></div>)}</dl></details>}
    </aside></div>
    <div id="community-reviews" className="detail-reviews"><PlaceRatingsSection placeId={place.id} placeName={place.name} initialSummary={place.ratingsSummary}/></div>
+   <script type="application/ld+json" dangerouslySetInnerHTML={{__html:jsonLdString(placeJsonLd({name,slug:place.slug,description:place.description,shortDescription:place.shortDescription,address:place.address,placeType:place.placeType,latitude:place.latitude,longitude:place.longitude,phone:place.phone,websiteUrl:place.websiteUrl,socialMediaUrl:place.socialMediaUrl,averageRating:place.averageRating,ratingCount:place.ratingCount,barangay:place.barangay,images:[...new Set(media.map(m=>guideArtSrc(m.url,"cover") ?? m.url))],operatingHours:place.operatingHours}))}}/>
    {place.relatedPlaces.length>0 && <section className="detail-related"><div className="section-heading"><h2>More in Salcedo</h2><Link className="text-link" href="/app/discover">Place directory <ArrowRight size={15}/></Link></div><div className="related-rail">{place.relatedPlaces.map(p=><PlaceCard key={p.id} place={p} variant="rail"/>)}</div></section>}
  </div>;
 }

@@ -267,6 +267,12 @@ export function TripsPlannerClient({
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [passBusy, setPassBusy] = useState<"rotate" | "delete" | null>(null);
   const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
+  const [finishedRegisteredTrip, setFinishedRegisteredTrip] = useState<{
+    referenceNumber: string;
+    title: string;
+    message: string;
+    completedAt: string;
+  } | null>(null);
 
   const [notebookState, setNotebookState] = useState<"opening" | "ready" | "error">("opening");
   useEffect(() => {
@@ -517,16 +523,31 @@ export function TripsPlannerClient({
         setRetError(data.error || "Could not complete this trip.");
         return;
       }
-      setRetrieved({ ...retrieved, status: "completed", completedAt: data.completedAt,
-        stops: retrieved.stops.map(s => ({ ...s, visitedAt: s.visitedAt || (visitedStops[s.placeId] ? data.completedAt : null) })),
-      });
       const receipt = localReceipts.find((r) => r.referenceNumber === retrieved.referenceNumber);
       if (receipt) {
         await saveLocalReceipt({ ...receipt, status: "completed", completedAt: data.completedAt, ratings: stopRatings });
         setLocalReceipts(await listLocalReceipts());
       }
-      setCompletionNotice(data.message);
-      showToast("Trip completed & counted — thank you!", { tone: "success" });
+      setFinishedRegisteredTrip({
+        referenceNumber: retrieved.referenceNumber,
+        title: retrieved.title,
+        message: data.message || "Trip completed and counted by the Tourism Office.",
+        completedAt: data.completedAt,
+      });
+      // Done means done: a completed itinerary should not linger on the
+      // retrieval screen. The reference and receipt remain available if the
+      // visitor needs to look it up again.
+      setRetrieved(null);
+      setRotatedCode(null);
+      setCompletionNotice(null);
+      setRetError(null);
+      setDeleteSuccess(null);
+      setConfirmingDelete(false);
+      setStopRatings({});
+      setStopComments({});
+      setVisitedStops({});
+      setCommentOpen({});
+      showToast("Trip completed & counted — itinerary cleared.", { tone: "success" });
     } catch {
       setRetError("Network error while completing trip.");
     } finally {
@@ -565,6 +586,7 @@ export function TripsPlannerClient({
     setSubmissionResult(null);
     setVisitorSubmittedRef(null);
     setCompletionNotice(null);
+    setFinishedRegisteredTrip(null);
     await persistDraft(fresh);
     setActiveTab("builder");
     showToast("New trip started", { tone: "success" });
@@ -819,6 +841,7 @@ export function TripsPlannerClient({
         return;
       }
       passReviews.clear();
+      setFinishedRegisteredTrip(null);
       setRetrieved(data.itinerary);
       void trackItineraryEvent({
         eventType: "retrieved",
@@ -876,6 +899,7 @@ export function TripsPlannerClient({
         setRetCode("");
         setRetRef("");
         setRotatedCode(null);
+        setFinishedRegisteredTrip(null);
         passReviews.clear();
         setDeleteSuccess(data.message);
       }
@@ -895,6 +919,7 @@ export function TripsPlannerClient({
     setRotatedCode(null);
     setRetError(null);
     setDeleteSuccess(null);
+    setFinishedRegisteredTrip(null);
     setConfirmingDelete(false);
   }
 
@@ -1656,6 +1681,55 @@ export function TripsPlannerClient({
       {/* TAB 3: RETRIEVE & MANAGE PASS */}
       {activeTab === "retrieve" && (
         <div className="space-y-4">
+          {finishedRegisteredTrip && !retrieved && (
+            <section className="surface-card p-5 space-y-3" aria-live="polite">
+              <div className="flex items-start gap-2">
+                <BadgeCheck className="w-5 h-5 text-[#164237] shrink-0 mt-0.5" />
+                <div className="min-w-0">
+                  <h2 className="font-display text-base font-bold text-[#1A2421]">
+                    Trip completed &amp; counted
+                  </h2>
+                  <p className="text-xs text-[#616E69] mt-0.5">
+                    {finishedRegisteredTrip.title} • {finishedRegisteredTrip.referenceNumber}
+                    {finishedRegisteredTrip.completedAt
+                      ? ` • completed ${String(finishedRegisteredTrip.completedAt).slice(0, 10)}`
+                      : ""}
+                  </p>
+                </div>
+              </div>
+              <p className="rounded-xl bg-[#164237]/5 border border-[#164237]/15 p-3 text-xs text-[#164237]">
+                {finishedRegisteredTrip.message}
+              </p>
+              <p className="text-xs text-[#616E69]">
+                Your itinerary has been cleared from this screen. Keep your reference and private
+                code if you need to retrieve it again.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => { setFinishedRegisteredTrip(null); void handleStartNewTrip(); }}
+                  className="inline-flex items-center gap-1.5 rounded-full btn-primary-pro px-4 min-h-[40px] text-xs font-semibold active:scale-[0.98] transition cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Plan another trip
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("saved")}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-[#EAE7E0] bg-white px-4 min-h-[40px] text-xs font-semibold text-[#164237] cursor-pointer"
+                >
+                  <Bookmark className="w-3.5 h-3.5" /> View saved trips
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFinishedRegisteredTrip(null)}
+                  className="inline-flex items-center gap-1 rounded-full px-3 min-h-[40px] text-xs font-semibold text-[#616E69] cursor-pointer"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </section>
+          )}
+
           {localReceipts.length > 0 && (
             <div className="bg-white rounded-2xl border border-[#EAE7E0] divide-y divide-[#EAE7E0] overflow-hidden">
               <p className="px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-[#616E69] bg-[#FAF9F6]">

@@ -7,6 +7,7 @@ import {
   hashRetrievalCode,
   sha256Hex,
 } from "../lib/crypto";
+import { isProductionRuntime, seedPasswordFor, seedUsernameFor } from "../lib/admin-security";
 
 const VERIFIED_DATE = "2026-11-13";
 const OFFICIAL_CENSUS_SOURCE =
@@ -381,39 +382,62 @@ export async function seedDatabase(db: AppDatabase): Promise<void> {
     }
   }
 
-  // 2. Seed Default Admin Accounts (overridable via environment variables)
+  // 2. Seed Default Admin Accounts. Production must supply each password via
+  // environment; the old fixed fallbacks are public and are now development-only.
   const adminSeeds = [
     {
-      username: process.env.ADMIN_USERNAME || "cedo_superadmin",
+      username: seedUsernameFor("ADMIN_USERNAME", "cedo_superadmin"),
       email: process.env.ADMIN_EMAIL || "tourism@salcedo-ilocossur.gov.ph",
       fullName: "CEDO Super Administrator",
-      password: process.env.ADMIN_PASSWORD || "SalcedoAdmin2026!",
+      password: seedPasswordFor("ADMIN_PASSWORD", "SalcedoAdmin2026!"),
+      passwordEnv: "ADMIN_PASSWORD",
       roleSlug: "super_admin",
     },
     {
-      username: process.env.TOURISM_ADMIN_USERNAME || "tourism_officer",
+      username: seedUsernameFor("TOURISM_ADMIN_USERNAME", "tourism_officer"),
       email: "officer@salcedo-ilocossur.gov.ph",
       fullName: "Municipal Tourism Officer",
-      password: process.env.TOURISM_ADMIN_PASSWORD || "SalcedoTourism2026!",
+      password: seedPasswordFor("TOURISM_ADMIN_PASSWORD", "SalcedoTourism2026!"),
+      passwordEnv: "TOURISM_ADMIN_PASSWORD",
       roleSlug: "tourism_admin",
     },
     {
-      username: process.env.EDITOR_USERNAME || "cedo_editor",
+      username: seedUsernameFor("EDITOR_USERNAME", "cedo_editor"),
       email: "editor@salcedo-ilocossur.gov.ph",
       fullName: "Tourism Content Editor",
-      password: process.env.EDITOR_PASSWORD || "SalcedoEditor2026!",
+      password: seedPasswordFor("EDITOR_PASSWORD", "SalcedoEditor2026!"),
+      passwordEnv: "EDITOR_PASSWORD",
       roleSlug: "content_editor",
     },
     {
-      username: process.env.DATA_OFFICER_USERNAME || "data_officer",
+      username: seedUsernameFor("DATA_OFFICER_USERNAME", "data_officer"),
       email: "dpo@salcedo-ilocossur.gov.ph",
       fullName: "Authorized Visitor Data Officer",
-      password: process.env.DATA_OFFICER_PASSWORD || "SalcedoDPO2026!",
+      password: seedPasswordFor("DATA_OFFICER_PASSWORD", "SalcedoDPO2026!"),
+      passwordEnv: "DATA_OFFICER_PASSWORD",
       roleSlug: "visitor_data_officer",
     },
   ];
 
+  if (isProductionRuntime() && adminSeeds.every((account) => !account.password)) {
+    const [existingAdmin] = await db
+      .select({ id: schema.adminUsers.id })
+      .from(schema.adminUsers)
+      .limit(1);
+    if (!existingAdmin) {
+      throw new Error(
+        "Set ADMIN_PASSWORD (and the other *_PASSWORD variables) before seeding an empty production database."
+      );
+    }
+  }
+
   for (const acc of adminSeeds) {
+    if (!acc.password) {
+      console.warn(
+        `[admin] Skipping seed for '${acc.username}': set ${acc.passwordEnv} to a 12+ character password.`
+      );
+      continue;
+    }
     const existingUser = await db
       .select()
       .from(schema.adminUsers)

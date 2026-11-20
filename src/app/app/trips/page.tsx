@@ -5,8 +5,13 @@ import { getPublishedPlaces } from "@/lib/queries/public-tourism";
 import { TripsPlannerClient } from "@/components/app/TripsPlannerClient";
 
 import { PageIntro } from "@/components/ui/FieldGuide";
+import { pageMetadata } from "@/lib/site";
 
-export const metadata = { title: "My trip notebook" };
+export const metadata = pageMetadata({
+  title: "My trip notebook",
+  description: "Build a day-by-day Salcedo itinerary, estimate travel time and keep it on this device.",
+  path: "/app/trips",
+});
 export const dynamic = "force-dynamic";
 
 export default async function TripsPage() {

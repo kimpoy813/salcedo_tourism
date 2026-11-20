@@ -164,7 +164,7 @@
  .atlas-dialog { padding:18px; }.atlas-list-dialog .atlas-index button { padding-block:10px; }
  .atlas-embed-head { padding:10px; }.atlas-embed-head strong { font-size:17px; }.atlas-embed-head a { font-size:11px; }
 }
-@media (max-width:365px) { .atlas-embed-head small { display:none; }.atlas-preview-actions { gap:3px; }.atlas-preview-actions a,.atlas-preview-actions button { font-size:10px; padding-inline:5px; }.atlas-intro p { font-size:9px; } }
+@media (max-width:365px) { .atlas-embed-head small { display:none; }.atlas-preview-actions { gap:3px; }.atlas-preview-actions a,.atlas-preview-actions button { font-size:10px; padding-inline:5px; }.atlas-intro { padding:8px 12px; gap:8px; }.atlas-intro h1 { font-size:23px; white-space:nowrap; }.atlas-intro p { font-size:9px; white-space:nowrap; }.atlas-muni { display:none; } }
 @media (max-height:570px) and (max-width:940px) { .atlas-tools { display:flex; top:8px; right:8px; transform:none; }.atlas-tools>div { display:flex; }.atlas-tools button+button { border-top:0; border-left:1px solid #dce0d1; }.atlas-north { display:none; }.atlas-preview { bottom:15px; }.atlas-intro { padding-block:6px; }.atlas-corner { display:none; } }
 
 .atlas-preview h2:focus { outline:none; }

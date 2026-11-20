@@ -2,7 +2,7 @@
 
 import { StaffNotice } from "./StaffNotice";
 import React, { useState } from "react";
-import { FileClock, Shield, Upload, UserPlus } from "lucide-react";
+import { FileClock, LockKeyhole, Shield, Upload, UserPlus } from "lucide-react";
 
 export { AdminContentPanel } from "./AdminContentPanel";
 
@@ -206,6 +206,8 @@ export function AdminGovernancePanel({
     <div className="space-y-4">
       <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
 
+      <AdminPasswordPanel />
+
       {canUsers && <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         <form
           onSubmit={handleCreateUser}
@@ -242,10 +244,10 @@ export function AdminGovernancePanel({
           <input
             required
             type="password"
-            minLength={8}
+            minLength={12}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password (min 8 chars)"
+            placeholder="Password (min 12 chars)"
             className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2"
           />
           <label className="grid gap-1 font-medium">Staff role
@@ -347,6 +349,79 @@ export function AdminGovernancePanel({
           ))}
         </ul>
       </div>}
+    </div>
+  );
+}
+
+/** Available to every signed-in staff member, independent of governance access. */
+export function AdminPasswordPanel() {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [changing, setChanging] = useState(false);
+  const [notice, setNotice] = useState<{ text: string; tone: "ok" | "err" } | null>(null);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNotice(null);
+    if (newPassword !== confirmPassword) {
+      setNotice({ text: "The new passwords do not match.", tone: "err" });
+      return;
+    }
+    setChanging(true);
+    try {
+      const res = await fetch("/api/admin/auth/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setNotice({ text: data.error || "The password could not be changed.", tone: "err" });
+        return;
+      }
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setNotice({ text: "Your password has been changed.", tone: "ok" });
+    } catch {
+      setNotice({ text: "The password could not be confirmed. Try again before signing out.", tone: "err" });
+    } finally {
+      setChanging(false);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      <StaffNotice notice={notice} dismiss={() => setNotice(null)} />
+      <form onSubmit={submit} className="bg-white rounded-2xl border border-[#EAE7E0] p-5 space-y-2.5 text-xs">
+        <div className="flex items-center gap-1.5 font-display text-sm font-bold text-[#1A2421]">
+          <LockKeyhole className="w-4 h-4 text-[#164237]" />
+          Change my password
+        </div>
+        <p className="text-[11px] text-[#66736d]">
+          Use at least 12 characters. You will stay signed in on this device.
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+          <input required type="password" autoComplete="current-password" value={currentPassword}
+            aria-label="Current password"
+            onChange={(e) => setCurrentPassword(e.target.value)} placeholder="Current password"
+            className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2" />
+          <input required type="password" autoComplete="new-password" minLength={12} value={newPassword}
+            aria-label="New password"
+            onChange={(e) => setNewPassword(e.target.value)} placeholder="New password (12+ chars)"
+            className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2" />
+          <input required type="password" autoComplete="new-password" minLength={12} value={confirmPassword}
+            aria-label="Confirm new password"
+            onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Confirm new password"
+            className="w-full rounded-xl border border-[#EAE7E0] bg-[#FAF9F6] px-3 py-2" />
+        </div>
+        <button type="submit" disabled={changing}
+          className="inline-flex items-center gap-1.5 rounded-full bg-[#164237] text-white px-4 py-2 font-semibold disabled:opacity-60 cursor-pointer">
+          <LockKeyhole className="w-3.5 h-3.5" />
+          {changing ? "Changing…" : "Change password"}
+        </button>
+      </form>
     </div>
   );
 }

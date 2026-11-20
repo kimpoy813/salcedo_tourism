@@ -11,6 +11,7 @@ import {
   ExternalLink,
   FileText,
   Image as ImageIcon,
+  KeyRound,
   LogOut,
   MapPin,
   Menu,
@@ -30,10 +31,11 @@ import {
   AdminContentPanel,
   AdminGovernancePanel,
   AdminMediaPanel,
+  AdminPasswordPanel,
 } from "./AdminContentGovernancePanel";
 
 type AdminTab =
-  "overview" | "places" | "content" | "visitors" | "checkins" | "media" | "governance";
+  "overview" | "places" | "content" | "visitors" | "checkins" | "media" | "governance" | "security";
 
 export function AdminDashboardClient({ principal }: { principal: AdminPrincipal }) {
   const router = useRouter();
@@ -115,6 +117,7 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
         return response.json();
       };
       setLoadErrors((previous) => ({ ...previous, [tab]: undefined }));
+      if (tab === "security") return;
       try {
         if (tab === "overview") setDashboard(await read("dashboard"));
         if (tab === "places") setPlacesData(await read("places"));
@@ -180,6 +183,7 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
     { id: "checkins", label: "Check-ins", icon: CheckSquare, visible: canCheckins },
     { id: "media", label: "Media library", icon: ImageIcon, visible: canMedia },
     { id: "governance", label: "Users, logs & privacy", icon: Settings, visible: canAdminGov },
+    { id: "security", label: "Password & security", icon: KeyRound, visible: true },
   ];
 
   const currentData = {
@@ -190,6 +194,7 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
     checkins: checkinsData,
     media: mediaData,
     governance: govData,
+    security: true,
   }[activeTab];
   const title = navItems.find((n) => n.id === activeTab)?.label;
   const navigation = (
@@ -335,6 +340,7 @@ export function AdminDashboardClient({ principal }: { principal: AdminPrincipal 
               onReload={() => loadActiveTab("media")}
             />
           )}
+          {activeTab === "security" && <AdminPasswordPanel />}
           {activeTab === "governance" && govData && (
             <AdminGovernancePanel
               canUsers={canUsers} canAudit={canAudit} canSettings={canSettings}

@@ -44,7 +44,15 @@ export default function AdminLoginPage() {
   return (
     <main className="staff-login">
       <aside className="office-cover" aria-label="Tourism office">
-        <img src="/images/salcedo/guide-valley.webp" width="1408" height="768" alt="Illustrated valley landscape"/>
+        <img
+          src="/images/salcedo/guide-valley-640.webp"
+          srcSet="/images/salcedo/guide-valley-640.webp 640w, /images/salcedo/guide-valley-960.webp 960w"
+          sizes="(max-width: 900px) 100vw, 46vw"
+          width="1408"
+          height="768"
+          decoding="async"
+          alt="Illustrated valley landscape"
+        />
         <div><span>Municipality of Salcedo</span><h2>Tourism office</h2><p>Staff access to the directory and visitor records.</p></div>
       </aside>
       <section className="staff-login-form">
