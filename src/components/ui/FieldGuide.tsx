@@ -5,7 +5,7 @@ export function Wordmark({ subtitle = "Tourism guide" }: { subtitle?: string }) 
     <span className="guide-brand">
       <img
         className="municipal-mark"
-        src="/images/salcedo/municipal-seal.webp"
+        src="/app/icons/cedo-logo.png"
         width="48"
         height="48"
         alt=""
